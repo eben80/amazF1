@@ -22,6 +22,8 @@ logger.remove()
 logger.add(sys.stderr, level=LOG_LEVEL)
 
 SIGNALR_URL = "https://livetiming.formula1.com/signalr"
+# Correct Jolpica API base
+JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
 # --- State ---
 class F1State:
@@ -60,11 +62,11 @@ def update_live_status():
         state.is_live = False
 
 async def fetch_race_schedule():
-    """Fetch next and previous race from Jolpica-F1 API (async)"""
+    """Fetch next and previous race from corrected Jolpica-F1 API (async)"""
     try:
         async with aiohttp.ClientSession() as session:
             # Next Race
-            async with session.get("https://api.jolpica.net/f1/current/next.json", timeout=10) as resp:
+            async with session.get(f"{JOLPICA_BASE}/current/next.json", timeout=10) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     race = data['MRData']['RaceTable']['Races'][0]
@@ -75,7 +77,7 @@ async def fetch_race_schedule():
                         "locality": race['Circuit']['Location']['locality']
                     }
             # Previous Race
-            async with session.get("https://api.jolpica.net/f1/current/last/results.json", timeout=10) as resp:
+            async with session.get(f"{JOLPICA_BASE}/current/last/results.json", timeout=10) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     race = data['MRData']['RaceTable']['Races'][0]
