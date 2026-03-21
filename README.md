@@ -34,7 +34,17 @@ To develop and test the watch app on a Windows device:
     Edit `app-side/index.js` and replace `BRIDGE_URL` with your server's address if different.
 5.  **Build & Preview:**
     *   To build the `.zab` package: `zeus build`
-    *   To preview in the simulator (requires [Zepp Simulator](https://docs.zepp.com/docs/guides/tools/simulator/)): `zeus dev`
+    *   To preview in the simulator: `zeus dev`
+
+---
+
+## 🎨 Design Specifications (Image Sizes)
+
+The app uses several assets located in the `assets/` directory. For best results, replace the placeholders with PNG images matching these dimensions:
+
+*   **App Icon (`icon.png`):** 80x80 px or 100x100 px (Square).
+*   **F1 Logo (`f1_logo.png`):** 120x40 px (Transparent background).
+*   **Tire Compound Icons (`soft.png`, `medium.png`, `hard.png`):** 24x24 px (Circular icons with transparent background).
 
 ---
 
@@ -59,30 +69,12 @@ To host the data bridge on an Ubuntu EC2 instance:
 
 ### Managing the Middleware as a Service (systemd)
 
-The bridge is configured as a systemd service named `f1bridge`. You can control it and view logs using the following commands:
+The bridge is configured as a systemd service named `f1bridge`:
 
-*   **Restart the service:**
-    ```bash
-    sudo systemctl restart f1bridge
-    ```
-*   **Stop the service:**
-    ```bash
-    sudo systemctl stop f1bridge
-    ```
-*   **Check service status:**
-    ```bash
-    sudo systemctl status f1bridge
-    ```
-*   **View real-time logs:**
-    ```bash
-    sudo journalctl -u f1bridge -f
-    ```
-*   **View all logs:**
-    ```bash
-    sudo journalctl -u f1bridge
-    ```
+*   **Restart/Stop/Status:** `sudo systemctl [restart|stop|status] f1bridge`
+*   **View Logs:** `sudo journalctl -u f1bridge -f`
 
 ---
 
 ## Graphics & Features
-The app uses tire compound icons (`soft.png`, `medium.png`, `hard.png`) in `assets/` to visually indicate strategy. It automatically toggles between **Live Timing** during sessions and an **Idle Dashboard** (Previous winner + Next race) during off-periods.
+The app automatically toggles between **Live Timing** during sessions and an **Idle Dashboard** (Previous winner + Next race) during off-periods. It uses tire compound graphics and team-specific colors to provide a professional-looking timing tower.
