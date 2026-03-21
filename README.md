@@ -1,6 +1,6 @@
-# F1 Live Timing for Amazfit Bip 6
+# AmazF1 - Live Timing for Amazfit Bip 6
 
-This project consists of a Zepp OS mini-program and a Python middleware bridge to display live Formula 1 timing data on an Amazfit Bip 6 (390x450 resolution).
+This project consists of a Zepp OS mini-program and a Python middleware bridge to display live Formula 1 timing data on an Amazfit Bip 6 (390x450 resolution) using **Zepp OS 4.0 API**.
 
 ## Architecture
 
@@ -8,9 +8,9 @@ This project consists of a Zepp OS mini-program and a Python middleware bridge t
     *   Connects to the official F1 SignalR feed.
     *   Fetches previous and next race information via the [Jolpica API](https://api.jolpi.ca/ergast/f1/).
     *   Serves JSON status at `http://ebski.co:8000/status`.
-2.  **Zepp OS App:**
+2.  **Zepp OS App (API 4.0):**
     *   **Side Service (`app-side/index.js`):** Polls the middleware from the phone.
-    *   **Device App (`pages/index.js`):** Displays a real-time timing tower, race status, and weather.
+    *   **Device App (`page/index/index.js`):** Displays a real-time timing tower, race status, and weather.
 
 ---
 
@@ -31,7 +31,7 @@ To develop and test the watch app on a Windows device:
     npm install
     ```
 4.  **Configure Bridge URL:**
-    Edit `app-side/index.js` and replace `BRIDGE_URL` with your server's address if different.
+    The app is pre-configured to use `http://ebski.co:8000/status`. To change this, edit `app-side/index.js`.
 5.  **Build & Preview:**
     *   To build the `.zab` package: `zeus build`
     *   To preview in the simulator: `zeus dev`
@@ -40,11 +40,11 @@ To develop and test the watch app on a Windows device:
 
 ## 🎨 Design Specifications (Image Sizes)
 
-The app uses several assets located in the `assets/` directory. For best results, replace the placeholders with PNG images matching these dimensions:
+The app uses assets located in the `assets/` directory. Replace the placeholders with PNG images matching these dimensions:
 
-*   **App Icon (`icon.png`):** 80x80 px or 100x100 px (Square).
-*   **F1 Logo (`f1_logo.png`):** 120x40 px (Transparent background).
-*   **Tire Compound Icons (`soft.png`, `medium.png`, `hard.png`):** 24x24 px (Circular icons with transparent background).
+*   **App Icon (`assets/icon.png`):** 102x102 px (Square).
+*   **F1 Logo (`assets/f1_logo.png`):** 120x40 px (Transparent).
+*   **Tire Compound Icons (`assets/soft.png`, `assets/medium.png`, `assets/hard.png`):** 24x24 px (Circular, Transparent).
 
 ---
 
