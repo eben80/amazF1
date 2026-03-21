@@ -7,7 +7,7 @@ This project consists of a Zepp OS mini-program and a Python middleware bridge t
 1.  **Python Middleware (`middleware/f1_bridge.py`):**
     *   Connects to the official F1 SignalR feed.
     *   Fetches previous and next race information via the [Jolpica API](https://api.jolpi.ca/ergast/f1/).
-    *   Serves JSON status at `http://YOUR_EC2_IP:8000/status`.
+    *   Serves JSON status at `http://ebski.co:8000/status`.
 2.  **Zepp OS App:**
     *   **Side Service (`app-side/index.js`):** Polls the middleware from the phone.
     *   **Device App (`pages/index.js`):** Displays a real-time timing tower, race status, and weather.
@@ -31,7 +31,7 @@ To develop and test the watch app on a Windows device:
     npm install
     ```
 4.  **Configure Bridge URL:**
-    Edit `app-side/index.js` and replace `YOUR_EC2_IP` with your EC2's public IP address.
+    Edit `app-side/index.js` and replace `BRIDGE_URL` with your server's address if different.
 5.  **Build & Preview:**
     *   To build the `.zab` package: `zeus build`
     *   To preview in the simulator (requires [Zepp Simulator](https://docs.zepp.com/docs/guides/tools/simulator/)): `zeus dev`
@@ -56,13 +56,31 @@ To host the data bridge on an Ubuntu EC2 instance:
     ```bash
     pip install -r requirements.txt
     ```
-4.  **Run in Background:**
-    Use `nohup` or `screen` to keep the bridge running:
+
+### Managing the Middleware as a Service (systemd)
+
+The bridge is configured as a systemd service named `f1bridge`. You can control it and view logs using the following commands:
+
+*   **Restart the service:**
     ```bash
-    nohup python3 f1_bridge.py > bridge.log 2>&1 &
+    sudo systemctl restart f1bridge
     ```
-5.  **Security Group:**
-    Ensure your EC2 Security Group allows **Inbound TCP traffic on port 8000** from any IP (or your phone's network).
+*   **Stop the service:**
+    ```bash
+    sudo systemctl stop f1bridge
+    ```
+*   **Check service status:**
+    ```bash
+    sudo systemctl status f1bridge
+    ```
+*   **View real-time logs:**
+    ```bash
+    sudo journalctl -u f1bridge -f
+    ```
+*   **View all logs:**
+    ```bash
+    sudo journalctl -u f1bridge
+    ```
 
 ---
 
