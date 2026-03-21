@@ -161,6 +161,7 @@ async def get_status():
             "num": dnum,
             "name": dinfo["abbrev"],
             "team": dinfo["team"],
+            "teamColor": dinfo["color"],
             "pos": data.get("pos", "99"),
             "gap": data.get("gap", ""),
             "comp": data.get("compound", ""),
