@@ -1,9 +1,8 @@
 import * as hmUI from "@zos/ui";
-import * as hmSetting from "@zos/sensor";
+import { getDeviceInfo } from "@zos/device";
 import { BasePage } from '@zeppos/zml/base-page'
 
-// Use global hmSetting for device info to avoid import resolution warnings in some CLI versions
-const { width: DEVICE_WIDTH, height: DEVICE_HEIGHT } = hmSetting.getDeviceInfo()
+const { width: DEVICE_WIDTH, height: DEVICE_HEIGHT } = getDeviceInfo()
 
 const COLORS = {
   F1_RED: 0xFF1801,

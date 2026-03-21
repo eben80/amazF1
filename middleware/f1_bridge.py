@@ -97,8 +97,6 @@ async def fetch_race_schedule():
 
 # --- Message Handlers ---
 async def on_feed(args):
-    state.last_data_time = time.time()
-    state.is_live = True
     try:
         topic = None
         for arg in args:
@@ -106,8 +104,11 @@ async def on_feed(args):
                 topic = arg
                 continue
 
-            if topic == "Heartbeat":
+            if topic == "Heartbeat" or not topic:
                 continue
+
+            state.last_data_time = time.time()
+            state.is_live = True
 
             if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
@@ -146,7 +147,11 @@ async def on_feed(args):
 @app.get("/status")
 async def get_status():
     update_live_status()
-    if not state.is_live and (not state.upcoming_race or not state.previous_race):
+
+    # If we have no session info, it's not really a live session we can display
+    effective_live = state.is_live and bool(state.session_info.get("name"))
+
+    if not effective_live and (not state.upcoming_race or not state.previous_race):
         await fetch_race_schedule()
 
     sorted_timing = []
@@ -163,7 +168,7 @@ async def get_status():
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
 
     return {
-        "live": state.is_live,
+        "live": effective_live,
         "session": state.session_info,
         "weather": state.weather_data,
         "track": state.track_status,
