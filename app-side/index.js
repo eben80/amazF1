@@ -1,6 +1,7 @@
 import { BaseSideService } from '@zeppos/zml/base-side'
 
-const BRIDGE_URL = 'http://ebski.co:8000/status'
+// Using HTTPS for secure communication as requested
+const BRIDGE_URL = 'https://ebski.co/status'
 
 AppSideService(
   BaseSideService({
