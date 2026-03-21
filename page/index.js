@@ -135,7 +135,11 @@ Page(
           x: 5, y: yPos, w: 25, h: 30, text: item.pos, color: COLORS.WHITE, text_size: 18
         })
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 35, y: yPos, w: 60, h: 30, text: item.name, color: parseInt(item.col, 16) || COLORS.WHITE, text_size: 18, text_style: hmUI.text_style.BOLD
+          x: 35, y: yPos, w: 45, h: 30, text: item.name, color: parseInt(item.col, 16) || COLORS.WHITE, text_size: 18, text_style: hmUI.text_style.BOLD
+        })
+
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: 85, y: yPos + 2, w: 60, h: 20, text: item.team, color: COLORS.GRAY, text_size: 14
         })
 
         if (item.comp) {
@@ -143,12 +147,12 @@ Page(
           if (item.comp === 'MEDIUM') tireImg = 'medium.png'
           else if (item.comp === 'HARD') tireImg = 'hard.png'
           this.rootGroup.createWidget(hmUI.widget.IMG, {
-            x: 100, y: yPos + 4, src: tireImg
+            x: 150, y: yPos + 4, src: tireImg
           })
         }
 
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 125, y: yPos, w: DEVICE_WIDTH - 130, h: 30,
+          x: 175, y: yPos, w: DEVICE_WIDTH - 180, h: 30,
           text: item.gap || '+0.000', color: COLORS.GRAY, align_h: hmUI.align.RIGHT, text_size: 16
         })
       })

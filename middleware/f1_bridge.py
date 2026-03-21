@@ -160,6 +160,7 @@ async def get_status():
         sorted_timing.append({
             "num": dnum,
             "name": dinfo["abbrev"],
+            "team": dinfo["team"],
             "pos": data.get("pos", "99"),
             "gap": data.get("gap", ""),
             "comp": data.get("compound", ""),
