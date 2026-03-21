@@ -1,6 +1,5 @@
 import { BaseSideService } from '@zeppos/zml/base-side'
 
-// Using HTTPS for secure communication as requested
 const BRIDGE_URL = 'https://ebski.co/status'
 
 AppSideService(
@@ -9,21 +8,25 @@ AppSideService(
       console.log('AppSideService onInit')
     },
 
-    async onMessage(message) {
-      if (message.action === 'FETCH_F1_DATA') {
+    async onRequest(req, res) {
+      if (req.method === 'GET_F1_DATA') {
         try {
-          const response = await fetch(BRIDGE_URL)
-          const data = await response.json()
+          const response = await fetch({
+            url: BRIDGE_URL,
+            method: 'GET'
+          })
 
-          this.sendToDevice({
-            action: 'F1_DATA_UPDATE',
-            payload: data
+          const data = typeof response.body === 'string'
+            ? JSON.parse(response.body)
+            : response.body
+
+          res(null, {
+            result: data
           })
         } catch (e) {
           console.error('Fetch error:', e)
-          this.sendToDevice({
-            action: 'F1_DATA_ERROR',
-            payload: e.message
+          res(null, {
+            result: { error: e.message }
           })
         }
       }

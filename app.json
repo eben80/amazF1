@@ -13,6 +13,8 @@
     "description": "F1 Live Timing"
   },
   "permissions": [
+    "data:os.device.info",
+    "device:os.local_storage",
     "device:os:display",
     "device:os:network"
   ],
@@ -24,7 +26,7 @@
     }
   },
   "targets": {
-    "default": {
+    "common": {
       "module": {
         "page": {
           "pages": [

@@ -1,3 +1,5 @@
+import * as hmUI from "@zos/ui";
+import * as hmSetting from "@zos/sensor";
 import { BasePage } from '@zeppos/zml/base-page'
 
 // Use global hmSetting for device info to avoid import resolution warnings in some CLI versions
@@ -25,17 +27,19 @@ Page(
     },
 
     fetchData() {
-      this.request({ action: 'FETCH_F1_DATA' })
-    },
-
-    onMessage(data) {
-      if (data.action === 'F1_DATA_UPDATE') {
-        this.setState({ f1Data: data.payload, loading: false, error: null })
+      this.request({
+        method: 'GET_F1_DATA'
+      })
+      .then((data) => {
+        const { result } = data
+        this.setState({ f1Data: result, loading: false, error: null })
         this.render()
-      } else if (data.action === 'F1_DATA_ERROR') {
+      })
+      .catch((err) => {
+        console.log('ERROR:', err)
         this.setState({ error: 'Update failed', loading: false })
         this.render()
-      }
+      })
     },
 
     build() {
@@ -50,7 +54,8 @@ Page(
 
       const data = this.state.f1Data
       if (this.state.loading) this.renderLoading()
-      else if (!data || !data.live) this.renderIdle(data)
+      else if (!data || (!data.live && !data.upcoming && !data.previous)) this.renderNoData()
+      else if (!data.live) this.renderIdle(data)
       else this.renderLive(data)
     },
 
@@ -58,6 +63,13 @@ Page(
       this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: 0, y: DEVICE_HEIGHT / 2 - 20, w: DEVICE_WIDTH, h: 40,
         text: 'Syncing F1 Data...', color: COLORS.WHITE, align_h: hmUI.align.CENTER_H, text_size: 20
+      })
+    },
+
+    renderNoData() {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 0, y: DEVICE_HEIGHT / 2 - 20, w: DEVICE_WIDTH, h: 40,
+        text: 'NO DATA', color: COLORS.GRAY, align_h: hmUI.align.CENTER_H, text_size: 20
       })
     },
 
@@ -95,11 +107,6 @@ Page(
             text: dateStr, color: COLORS.YELLOW, align_h: hmUI.align.CENTER_H, text_size: 28, text_style: hmUI.text_style.BOLD
           })
         }
-      } else {
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 0, y: DEVICE_HEIGHT / 2, w: DEVICE_WIDTH, h: 40,
-          text: 'NO DATA', color: COLORS.GRAY, align_h: hmUI.align.CENTER_H, text_size: 20
-        })
       }
     },
 
