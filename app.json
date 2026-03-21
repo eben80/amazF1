@@ -1,45 +1,55 @@
 {
+  "configVersion": "v3",
   "app": {
-    "bundleId": "com.f1.livetiming.bip6",
+    "appId": 12345,
+    "appName": "F1 Live",
+    "appType": "app",
+    "vender": "F1Fans",
     "version": {
       "code": 1,
       "name": "1.0.0"
     },
     "icon": "assets/icon.png",
-    "vendor": "F1Fans",
-    "name": "F1 Live",
-    "description": "F1 Live Timing for Bip 6",
-    "appType": "app"
+    "description": "F1 Live Timing for Bip 6"
+  },
+  "runtime": {
+    "apiVersion": {
+      "min": "2.0",
+      "max": "4.5"
+    }
   },
   "permissions": [
     "device:os:display",
     "device:os:network"
   ],
-  "runtime": {
-    "apiVersion": "2.0"
-  },
   "targets": {
     "amazfit-bip-6": {
       "designWidth": 390,
       "designHeight": 450,
-      "platform": "zeppos",
-      "shape": "square"
+      "shape": "square",
+      "module": {
+        "page": {
+          "pages/index": {
+            "path": "pages/index"
+          }
+        },
+        "app": {
+          "path": "app"
+        },
+        "app-side": {
+          "path": "app-side/index"
+        },
+        "setting": {
+          "path": "setting/index"
+        }
+      },
+      "platforms": [
+        {
+          "name": "zeppos",
+          "apiVersion": "2.0"
+        }
+      ]
     }
   },
-  "module": {
-    "page": {
-      "pages/index": {
-        "path": "pages/index"
-      }
-    },
-    "app": {
-      "path": "app"
-    },
-    "app-side": {
-      "path": "app-side/index"
-    },
-    "setting": {
-      "path": "setting/index"
-    }
-  }
+  "defaultLanguage": "en-US"
 }
