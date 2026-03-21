@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+requests
+fastf1-livetiming
+loguru
+pydantic
+aiohttp
+python-dateutil
