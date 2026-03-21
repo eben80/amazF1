@@ -178,6 +178,38 @@ async def get_status():
         "previous": state.previous_race
     }
 
+@app.get("/previous_results")
+async def get_previous_results():
+    """Fetch results from the last race with Name, Surname, Constructor, Position, and Points"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{JOLPICA_BASE}/current/last/results.json", timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
+                    if races:
+                        race = races[0]
+                        results = race.get('Results', [])
+                        formatted_results = []
+                        for res in results:
+                            driver = res.get('Driver', {})
+                            constructor = res.get('Constructor', {})
+                            formatted_results.append({
+                                "firstName": driver.get('givenName'),
+                                "lastName": driver.get('familyName'),
+                                "constructor": constructor.get('name'),
+                                "position": res.get('position'),
+                                "points": res.get('points')
+                            })
+                        return {
+                            "raceName": race.get('raceName'),
+                            "results": formatted_results
+                        }
+        return {"error": "No results found"}
+    except Exception as e:
+        logger.error(f"Error fetching previous results: {e}")
+        return {"error": str(e)}
+
 # --- SignalR Background Task ---
 async def signalr_worker():
     session = requests.Session()
