@@ -1,12 +1,12 @@
 {
-  "name": "f1-live-bip6",
+  "name": "AmazF1",
   "version": "1.0.0",
   "description": "F1 Live Timing for Bip 6",
   "main": "app.js",
-  "author": "F1Fans",
+  "author": "eben",
   "license": "MIT",
   "devDependencies": {
-    "@zeppos/zeus-cli": "^1.8.2"
+    "@zeppos/zeus-cli": "latest"
   },
   "dependencies": {
     "@zeppos/zml": "latest"

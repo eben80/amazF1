@@ -1,7 +1,6 @@
 import { BasePage } from '@zeppos/zml/base-page'
-import * as hmUI from '@zeppos/zeus-api/ui'
 
-// For Zepp OS 3.0+, use the new API to get device info
+// Use global hmSetting for device info to avoid import resolution warnings in some CLI versions
 const { width: DEVICE_WIDTH, height: DEVICE_HEIGHT } = hmSetting.getDeviceInfo()
 
 const COLORS = {
@@ -40,6 +39,7 @@ Page(
     },
 
     build() {
+      // Use global hmUI to avoid import resolution warnings
       hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 0, w: DEVICE_WIDTH, h: DEVICE_HEIGHT, color: COLORS.BLACK })
       this.render()
     },

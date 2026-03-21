@@ -10,7 +10,7 @@ This project consists of a Zepp OS mini-program and a Python middleware bridge t
     *   Serves JSON status at `http://ebski.co:8000/status`.
 2.  **Zepp OS App (API 4.0):**
     *   **Side Service (`app-side/index.js`):** Polls the middleware from the phone.
-    *   **Device App (`page/index/index.js`):** Displays a real-time timing tower, race status, and weather.
+    *   **Device App (`page/index.js`):** Displays a real-time timing tower, race status, and weather.
 
 ---
 
@@ -30,6 +30,7 @@ To develop and test the watch app on a Windows device:
     cd <project_directory>
     npm install
     ```
+    *Note: If you see build warnings about unresolved ZML imports, ensure `npm install` has completed successfully in the project root.*
 4.  **Configure Bridge URL:**
     The app is pre-configured to use `http://ebski.co:8000/status`. To change this, edit `app-side/index.js`.
 5.  **Build & Preview:**
