@@ -28,7 +28,7 @@
       "module": {
         "page": {
           "pages": [
-            "page/index/index"
+            "page/index"
           ]
         },
         "app-side": {
