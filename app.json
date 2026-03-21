@@ -8,7 +8,8 @@
     "icon": "assets/icon.png",
     "vendor": "F1Fans",
     "name": "F1 Live",
-    "description": "F1 Live Timing for Bip 6"
+    "description": "F1 Live Timing for Bip 6",
+    "appType": "app"
   },
   "permissions": [
     "device:os:display",
