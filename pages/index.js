@@ -61,8 +61,7 @@ Page(
     },
 
     renderIdle(data) {
-      // Top section: Previous Race Result
-      if (data && data.previous) {
+      if (data && data.previous && data.previous.name) {
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: 0, y: 10, w: DEVICE_WIDTH, h: 30,
           text: 'PREVIOUS RACE', color: COLORS.GRAY, align_h: hmUI.align.CENTER_H, text_size: 16
@@ -74,25 +73,31 @@ Page(
         })
       }
 
-      // Middle section: Divider
       this.rootGroup.createWidget(hmUI.widget.FILL_RECT, {
         x: 40, y: 110, w: DEVICE_WIDTH - 80, h: 2, color: COLORS.F1_RED
       })
 
-      // Bottom section: Next Race
       this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: 0, y: 125, w: DEVICE_WIDTH, h: 30,
         text: 'UPCOMING', color: COLORS.F1_RED, align_h: hmUI.align.CENTER_H, text_size: 20, text_style: hmUI.text_style.BOLD
       })
 
-      if (data && data.upcoming) {
+      if (data && data.upcoming && data.upcoming.name) {
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: 20, y: 160, w: DEVICE_WIDTH - 40, h: 80,
           text: data.upcoming.name, color: COLORS.WHITE, align_h: hmUI.align.CENTER_H, text_size: 24, text_style: hmUI.text_style.WRAP
         })
+        const dateStr = (data.upcoming.date || '').split('T')[0]
+        if (dateStr) {
+          this.rootGroup.createWidget(hmUI.widget.TEXT, {
+            x: 0, y: 240, w: DEVICE_WIDTH, h: 40,
+            text: dateStr, color: COLORS.YELLOW, align_h: hmUI.align.CENTER_H, text_size: 28, text_style: hmUI.text_style.BOLD
+          })
+        }
+      } else {
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 0, y: 240, w: DEVICE_WIDTH, h: 40,
-          text: data.upcoming.date.split('T')[0], color: COLORS.YELLOW, align_h: hmUI.align.CENTER_H, text_size: 28, text_style: hmUI.text_style.BOLD
+          x: 0, y: DEVICE_HEIGHT / 2, w: DEVICE_WIDTH, h: 40,
+          text: 'NO DATA', color: COLORS.GRAY, align_h: hmUI.align.CENTER_H, text_size: 20
         })
       }
     },
@@ -126,7 +131,6 @@ Page(
           x: 35, y: yPos, w: 60, h: 30, text: item.name, color: parseInt(item.col, 16) || COLORS.WHITE, text_size: 18, text_style: hmUI.text_style.BOLD
         })
 
-        // Tire compound graphic
         if (item.comp) {
           let tireImg = 'soft.png'
           if (item.comp === 'MEDIUM') tireImg = 'medium.png'

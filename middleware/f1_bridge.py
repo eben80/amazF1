@@ -22,7 +22,6 @@ logger.remove()
 logger.add(sys.stderr, level=LOG_LEVEL)
 
 SIGNALR_URL = "https://livetiming.formula1.com/signalr"
-# Correct Jolpica API base
 JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
 # --- State ---
@@ -69,24 +68,30 @@ async def fetch_race_schedule():
             async with session.get(f"{JOLPICA_BASE}/current/next.json", timeout=10) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    race = data['MRData']['RaceTable']['Races'][0]
-                    state.upcoming_race = {
-                        "name": race['raceName'],
-                        "circuit": race['Circuit']['circuitName'],
-                        "date": f"{race['date']}T{race['time']}",
-                        "locality": race['Circuit']['Location']['locality']
-                    }
+                    races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
+                    if races:
+                        race = races[0]
+                        state.upcoming_race = {
+                            "name": race.get('raceName'),
+                            "circuit": race.get('Circuit', {}).get('circuitName'),
+                            "date": f"{race.get('date')}T{race.get('time')}",
+                            "locality": race.get('Circuit', {}).get('Location', {}).get('locality')
+                        }
             # Previous Race
             async with session.get(f"{JOLPICA_BASE}/current/last/results.json", timeout=10) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    race = data['MRData']['RaceTable']['Races'][0]
-                    winner = race['Results'][0]['Driver']
-                    state.previous_race = {
-                        "name": race['raceName'],
-                        "winner": f"{winner['givenName']} {winner['familyName']}",
-                        "team": race['Results'][0]['Constructor']['name']
-                    }
+                    races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
+                    if races:
+                        race = races[0]
+                        results = race.get('Results', [])
+                        if results:
+                            winner = results[0].get('Driver', {})
+                            state.previous_race = {
+                                "name": race.get('raceName'),
+                                "winner": f"{winner.get('givenName')} {winner.get('familyName')}",
+                                "team": results[0].get('Constructor', {}).get('name')
+                            }
     except Exception as e:
         logger.error(f"Error fetching race schedule: {e}")
 
