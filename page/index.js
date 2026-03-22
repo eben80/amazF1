@@ -1,167 +1,409 @@
 import * as hmUI from "@zos/ui";
-import { getDeviceInfo } from "@zos/device";
-import { BasePage } from '@zeppos/zml/base-page'
+import { BasePage } from "@zeppos/zml/base-page";
+import { log as Logger } from "@zos/utils";
+
+const logger = Logger.getLogger("page");
+
+const FONT = {
+  TITLE: 28,
+  HEADER: 24,
+  BODY: 20
+};
+
+const LAYOUT = {
+  X: 18,
+  W: 354
+};
+
+const SAFE_TOP = 56;
 
 const COLORS = {
-  F1_RED: 0xFF1801,
-  BLACK: 0x000000,
+  RED: 0xFF1801,
   WHITE: 0xFFFFFF,
-  GRAY: 0x333333,
-  YELLOW: 0xFFFF00
-}
+  GRAY: 0x888888,
+  YELLOW: 0xFFAA00
+};
 
-Page(
-  BasePage({
-    state: {
-      f1Data: null,
-      loading: true,
-      error: null
-    },
+Page(BasePage({
 
-    onInit() {
-      const { width, height } = getDeviceInfo()
-      this.DEVICE_WIDTH = width
-      this.DEVICE_HEIGHT = height
+  state: {
+    f1Data: null,
+    resultsData: null,
+    currentView: "main"
+  },
 
-      this.fetchData()
-      this.timer = setInterval(() => this.fetchData(), 5000)
-    },
+  build() {
 
-    fetchData() {
-      this.request({
-        method: 'GET_F1_DATA'
+    logger.log("BUILD");
+
+    // =========================
+    // 1. INIT UI FIRST (LOWER LAYER)
+    // =========================
+    this.updateUI(null);
+    this.fetchData();
+
+    // =========================
+    // 2. TOUCH LAYER LAST (TOP LAYER FIX)
+    // =========================
+    this.createTouchLayer();
+  },
+
+  // =========================
+  // TOUCH LAYER (MUST BE LAST CREATED)
+  // =========================
+  createTouchLayer() {
+
+    logger.log("TOUCH LAYER CREATED LAST");
+
+    this.leftTap = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 0,
+      y: 0,
+      w: 195,
+      h: 450,
+      normal_color: 0x000000,
+      press_color: 0x000000,
+      text: "",
+
+      click_func: () => {
+        logger.log("LEFT TAP");
+
+        if (this.state.currentView === "results") {
+          this.state.currentView = "main";
+          this.updateUI(this.state.f1Data);
+        } else {
+          this.loadResults();
+        }
+      }
+    });
+
+    this.rightTap = hmUI.createWidget(hmUI.widget.BUTTON, {
+      x: 195,
+      y: 0,
+      w: 195,
+      h: 450,
+      normal_color: 0x000000,
+      press_color: 0x000000,
+      text: "",
+
+      click_func: () => {
+        logger.log("RIGHT TAP");
+        this.fetchData();
+      }
+    });
+  },
+
+  // =========================
+  // DATA
+  // =========================
+  fetchData() {
+    this.request({ method: "GET_DATA" })
+      .then((res) => {
+        this.state.f1Data = res?.result;
+        this.updateUI(this.state.f1Data);
       })
-      .then((data) => {
-        const { result } = data
-        this.setState({ f1Data: result, loading: false, error: null })
-        this.render()
+      .catch(() => {
+        this.updateUI({ error: true });
+      });
+  },
+
+  loadResults() {
+    this.request({ method: "GET_RESULTS" })
+      .then((res) => {
+        // 'res' is the object returned from the side service
+        // 'res.result' is the 'body' from your fetchStatus/fetchResults
+        const data = res?.result;
+
+        if (data && data.results) {
+          this.state.resultsData = data;
+          this.state.currentView = "results";
+          this.renderResults(data);
+        } else {
+          logger.log("Data received but results missing");
+          this.renderResults({ raceName: "No Data", results: [] });
+        }
       })
       .catch((err) => {
-        console.log('ERROR:', err)
-        this.setState({ error: 'Update failed', loading: false })
-        this.render()
-      })
-    },
+        logger.log("Request failed", err);
+        this.renderResults({ raceName: "Error", results: [] });
+      });
+  },
 
-    build() {
-      hmUI.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 0, w: this.DEVICE_WIDTH, h: this.DEVICE_HEIGHT, color: COLORS.BLACK })
-      this.render()
-    },
-
-    render() {
-      if (this.rootGroup) hmUI.deleteWidget(this.rootGroup)
-      this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, { x: 0, y: 0, w: this.DEVICE_WIDTH, h: this.DEVICE_HEIGHT })
-
-      const data = this.state.f1Data
-      if (this.state.loading) this.renderLoading()
-      else if (!data || (!data.live && !data.upcoming && !data.previous)) this.renderNoData()
-      else if (!data.live) this.renderIdle(data)
-      else this.renderLive(data)
-    },
-
-    renderLoading() {
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
-        x: 0, y: this.DEVICE_HEIGHT / 2 - 20, w: this.DEVICE_WIDTH, h: 40,
-        text: 'Syncing F1 Data...', color: COLORS.WHITE, align_h: hmUI.align.CENTER_H, text_size: 20
-      })
-    },
-
-    renderNoData() {
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
-        x: 0, y: this.DEVICE_HEIGHT / 2 - 20, w: this.DEVICE_WIDTH, h: 40,
-        text: 'NO DATA', color: COLORS.GRAY, align_h: hmUI.align.CENTER_H, text_size: 20
-      })
-    },
-
-    renderIdle(data) {
-      if (data && data.previous && data.previous.name) {
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 0, y: 10, w: this.DEVICE_WIDTH, h: 30,
-          text: 'PREVIOUS RACE', color: COLORS.GRAY, align_h: hmUI.align.CENTER_H, text_size: 16
-        })
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 10, y: 40, w: this.DEVICE_WIDTH - 20, h: 60,
-          text: `${data.previous.name}\nWinner: ${data.previous.winner}`,
-          color: COLORS.WHITE, align_h: hmUI.align.CENTER_H, text_size: 18, text_style: hmUI.text_style.WRAP
-        })
-      }
-
-      this.rootGroup.createWidget(hmUI.widget.FILL_RECT, {
-        x: 40, y: 110, w: this.DEVICE_WIDTH - 80, h: 2, color: COLORS.F1_RED
-      })
-
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
-        x: 0, y: 125, w: this.DEVICE_WIDTH, h: 30,
-        text: 'UPCOMING', color: COLORS.F1_RED, align_h: hmUI.align.CENTER_H, text_size: 20, text_style: hmUI.text_style.BOLD
-      })
-
-      if (data && data.upcoming && data.upcoming.name) {
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 20, y: 160, w: this.DEVICE_WIDTH - 40, h: 80,
-          text: data.upcoming.name, color: COLORS.WHITE, align_h: hmUI.align.CENTER_H, text_size: 24, text_style: hmUI.text_style.WRAP
-        })
-        const dateStr = (data.upcoming.date || '').split('T')[0]
-        if (dateStr) {
-          this.rootGroup.createWidget(hmUI.widget.TEXT, {
-            x: 0, y: 240, w: this.DEVICE_WIDTH, h: 40,
-            text: dateStr, color: COLORS.YELLOW, align_h: hmUI.align.CENTER_H, text_size: 28, text_style: hmUI.text_style.BOLD
-          })
-        }
-      }
-    },
-
-    renderLive(data) {
-      this.rootGroup.createWidget(hmUI.widget.FILL_RECT, { x: 0, y: 0, w: this.DEVICE_WIDTH, h: 60, color: 0x111111 })
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
-        x: 10, y: 10, w: this.DEVICE_WIDTH - 100, h: 24,
-        text: data.session.name || 'LIVE', color: COLORS.WHITE, text_size: 20, text_style: hmUI.text_style.BOLD
-      })
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
-        x: 10, y: 35, w: this.DEVICE_WIDTH - 100, h: 20,
-        text: `LAP ${data.laps.current}/${data.laps.total}`, color: COLORS.GRAY, text_size: 16
-      })
-
-      const statusColor = data.track === 'AllClear' ? 0x00FF00 : COLORS.YELLOW
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
-        x: this.DEVICE_WIDTH - 90, y: 15, w: 80, h: 30,
-        text: data.track, color: statusColor, align_h: hmUI.align.CENTER_H, text_size: 16, text_style: hmUI.text_style.BOLD
-      })
-
-      const timing = data.timing || []
-      timing.forEach((item, index) => {
-        const yPos = 70 + (index * 35)
-        if (yPos > this.DEVICE_HEIGHT - 35) return
-
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 5, y: yPos, w: 25, h: 30, text: item.pos, color: COLORS.WHITE, text_size: 18
-        })
-
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 35, y: yPos, w: 45, h: 30, text: item.name, color: parseInt(item.teamColor, 16) || COLORS.WHITE, text_size: 18, text_style: hmUI.text_style.BOLD
-        })
-
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 85, y: yPos + 2, w: 100, h: 20, text: item.team, color: COLORS.GRAY, text_size: 14
-        })
-
-        if (item.comp) {
-          let tireImg = 'soft.png'
-          if (item.comp === 'MEDIUM') tireImg = 'medium.png'
-          else if (item.comp === 'HARD') tireImg = 'hard.png'
-          this.rootGroup.createWidget(hmUI.widget.IMG, {
-            x: 190, y: yPos + 4, src: tireImg
-          })
-        }
-
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
-          x: 215, y: yPos, w: this.DEVICE_WIDTH - 220, h: 30,
-          text: item.gap || '+0.000', color: COLORS.GRAY, align_h: hmUI.align.RIGHT, text_size: 16
-        })
-      })
-    },
-
-    onDestroy() {
-      if (this.timer) clearInterval(this.timer)
+  // =========================
+  // RESULTS UI
+  // =========================
+  renderResults(data) {
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
     }
-  })
-)
+
+    const results = data?.results || [];
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
+      y: 0,
+      w: 390,
+      h: 450
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y: SAFE_TOP,
+      w: LAYOUT.W,
+      h: 40,
+      text: data?.raceName || "RESULTS",
+      color: COLORS.RED,
+      text_size: FONT.HEADER,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    if (!results.length) {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 0,
+        y: 200,
+        w: 390,
+        h: 40,
+        text: "NO RESULTS",
+        color: COLORS.WHITE,
+        text_size: FONT.BODY,
+        align_h: hmUI.align.CENTER_H
+      });
+      return;
+    }
+
+    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+      x: 0,
+      y: 110,
+      w: 390,
+      h: 340,
+      item_space: 6,
+      item_count: results.length,
+
+      item_creator: (list, index) => {
+        const item = results[index];
+
+        const group = list.createWidget(hmUI.widget.GROUP, {
+          x: 0,
+          y: 0,
+          w: 390,
+          h: 46
+        });
+
+        // Position (P1, P2, etc.)
+        group.createWidget(hmUI.widget.TEXT, {
+          x: 18,
+          y: 8,
+          w: 40,
+          h: 30,
+          text: `P${item.position}`,
+          color: COLORS.WHITE,
+          text_size: 18
+        });
+
+        // Driver Name - Using the flat properties from your Side Service
+        group.createWidget(hmUI.widget.TEXT, {
+          x: 70,
+          y: 6,
+          w: 180,
+          h: 30,
+          text: `${item.firstName} ${item.lastName}`,
+          color: COLORS.WHITE,
+          text_size: 20
+        });
+
+        // Points
+        group.createWidget(hmUI.widget.TEXT, {
+          x: 260,
+          y: 10,
+          w: 110,
+          h: 30,
+          text: `${item.points} pts`,
+          color: COLORS.YELLOW,
+          text_size: 18,
+          align_h: hmUI.align.RIGHT
+        });
+
+        return group;
+      }
+    });
+  },
+
+  // =========================
+  // MAIN UI
+  // =========================
+  updateUI(data) {
+
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
+    }
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
+      y: 0,
+      w: 390,
+      h: 450
+    });
+
+    if (!data) {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 0,
+        y: 190,
+        w: 390,
+        h: 40,
+        text: "SYNCING F1 DATA...",
+        color: COLORS.WHITE,
+        text_size: FONT.HEADER,
+        align_h: hmUI.align.CENTER_H
+      });
+      return;
+    }
+
+    if (!data.live) {
+
+      let y = SAFE_TOP;
+
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: LAYOUT.X,
+        y,
+        w: LAYOUT.W,
+        h: 40,
+        text: "F1 STATUS",
+        color: COLORS.GRAY,
+        text_size: FONT.TITLE,
+        align_h: hmUI.align.CENTER_H
+      });
+
+      y += 40;
+
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: LAYOUT.X,
+        y,
+        w: LAYOUT.W,
+        h: 40,
+        text: "OFF SESSION",
+        color: COLORS.GRAY,
+        text_size: FONT.TITLE,
+        align_h: hmUI.align.CENTER_H
+      });
+
+      y += 50;
+
+      if (data.upcoming?.name) {
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y,
+          w: LAYOUT.W,
+          h: 30,
+          text: "NEXT RACE",
+          color: COLORS.RED,
+          text_size: FONT.HEADER,
+          align_h: hmUI.align.CENTER_H
+        });
+
+        y += 30;
+
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y,
+          w: LAYOUT.W,
+          h: 60,
+          text: `${data.upcoming.name}\n${data.upcoming.date?.split("T")[0]}`,
+          color: COLORS.WHITE,
+          text_size: FONT.BODY,
+          align_h: hmUI.align.CENTER_H
+        });
+
+        y += 70;
+      }
+
+      if (data.previous?.name) {
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y,
+          w: LAYOUT.W,
+          h: 30,
+          text: "LAST RACE",
+          color: COLORS.YELLOW,
+          text_size: FONT.HEADER,
+          align_h: hmUI.align.CENTER_H
+        });
+
+        y += 30;
+
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y,
+          w: LAYOUT.W,
+          h: 60,
+          text: `${data.previous.name}\nWinner: ${data.previous.winner}`,
+          color: COLORS.WHITE,
+          text_size: FONT.BODY,
+          text_style: hmUI.text_style.WRAP,
+          align_h: hmUI.align.CENTER_H
+        });
+      }
+
+      return;
+    }
+
+    // LIVE
+    let y = SAFE_TOP;
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y,
+      w: LAYOUT.W,
+      h: 40,
+      text: "🔴 LIVE SESSION",
+      color: COLORS.RED,
+      text_size: FONT.TITLE,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    y += 45;
+
+    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+      x: 0,
+      y,
+      w: 390,
+      h: 450 - y,
+      item_space: 6,
+      item_count: (data.timing || []).length,
+
+      item_creator: (list, index) => {
+
+        const item = data.timing[index];
+
+        const group = list.createWidget(hmUI.widget.GROUP, {
+          x: 0,
+          y: 0,
+          w: 390,
+          h: 44
+        });
+
+        group.createWidget(hmUI.widget.TEXT, {
+          x: 18,
+          y: 8,
+          w: 40,
+          h: 28,
+          text: `P${item.pos}`,
+          color: COLORS.WHITE,
+          text_size: 18
+        });
+
+        group.createWidget(hmUI.widget.TEXT, {
+          x: 70,
+          y: 6,
+          w: 180,
+          h: 30,
+          text: item.name,
+          color: COLORS.WHITE,
+          text_size: 20
+        });
+
+        return group;
+      }
+    });
+  }
+}));
