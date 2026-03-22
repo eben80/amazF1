@@ -6,9 +6,9 @@
   "author": "eben",
   "license": "MIT",
   "devDependencies": {
-    "@zeppos/zeus-cli": "latest"
+    "@zeppos/device-types": "^3.0.0"
   },
   "dependencies": {
-    "@zeppos/zml": "latest"
+    "@zeppos/zml": "^0.0.38"
   }
 }

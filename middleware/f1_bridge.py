@@ -97,8 +97,6 @@ async def fetch_race_schedule():
 
 # --- Message Handlers ---
 async def on_feed(args):
-    state.last_data_time = time.time()
-    state.is_live = True
     try:
         topic = None
         for arg in args:
@@ -106,8 +104,11 @@ async def on_feed(args):
                 topic = arg
                 continue
 
-            if topic == "Heartbeat":
+            if topic == "Heartbeat" or not topic:
                 continue
+
+            state.last_data_time = time.time()
+            state.is_live = True
 
             if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
@@ -146,7 +147,11 @@ async def on_feed(args):
 @app.get("/status")
 async def get_status():
     update_live_status()
-    if not state.is_live and (not state.upcoming_race or not state.previous_race):
+
+    # If we have no session info, it's not really a live session we can display
+    effective_live = state.is_live and bool(state.session_info.get("name"))
+
+    if not effective_live and (not state.upcoming_race or not state.previous_race):
         await fetch_race_schedule()
 
     sorted_timing = []
@@ -155,6 +160,8 @@ async def get_status():
         sorted_timing.append({
             "num": dnum,
             "name": dinfo["abbrev"],
+            "team": dinfo["team"],
+            "teamColor": dinfo["color"],
             "pos": data.get("pos", "99"),
             "gap": data.get("gap", ""),
             "comp": data.get("compound", ""),
@@ -163,7 +170,7 @@ async def get_status():
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
 
     return {
-        "live": state.is_live,
+        "live": effective_live,
         "session": state.session_info,
         "weather": state.weather_data,
         "track": state.track_status,
@@ -172,6 +179,38 @@ async def get_status():
         "upcoming": state.upcoming_race,
         "previous": state.previous_race
     }
+
+@app.get("/previous_results")
+async def get_previous_results():
+    """Fetch results from the last race with Name, Surname, Constructor, Position, and Points"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{JOLPICA_BASE}/current/last/results.json", timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
+                    if races:
+                        race = races[0]
+                        results = race.get('Results', [])
+                        formatted_results = []
+                        for res in results:
+                            driver = res.get('Driver', {})
+                            constructor = res.get('Constructor', {})
+                            formatted_results.append({
+                                "firstName": driver.get('givenName'),
+                                "lastName": driver.get('familyName'),
+                                "constructor": constructor.get('name'),
+                                "position": res.get('position'),
+                                "points": res.get('points')
+                            })
+                        return {
+                            "raceName": race.get('raceName'),
+                            "results": formatted_results
+                        }
+        return {"error": "No results found"}
+    except Exception as e:
+        logger.error(f"Error fetching previous results: {e}")
+        return {"error": str(e)}
 
 # --- SignalR Background Task ---
 async def signalr_worker():
