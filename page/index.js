@@ -35,7 +35,11 @@ Page(BasePage({
   },
 
   onInit() {
-    display.setStayWake(true);
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    } else {
+      logger.log("display.setStayWake not found");
+    }
 
     onGesture({
       callback: (event) => {
@@ -43,10 +47,10 @@ Page(BasePage({
 
         if (event === GESTURE_LEFT) {
           logger.log("GESTURE_LEFT: Loading Results");
-          if (this.state.currentView !== "results") {
+          if (this.state.currentView === "main") {
             this.loadResults();
+            return true;
           }
-          return true;
         }
 
         if (event === GESTURE_RIGHT) {
@@ -64,7 +68,9 @@ Page(BasePage({
   },
 
   onDestroy() {
-    display.setStayWake(false);
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(false);
+    }
   },
 
   build() {
