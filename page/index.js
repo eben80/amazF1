@@ -1,7 +1,8 @@
 import * as hmUI from "@zos/ui";
 import * as display from "@zos/display";
 import { getDeviceInfo } from "@zos/device";
-import { setScrollMode, SCROLL_MODE_SWIPER_HORIZONTAL } from "@zos/page";
+import { onGesture, GESTURE_LEFT, GESTURE_RIGHT } from "@zos/interaction";
+import { push } from "@zos/router";
 import { BasePage } from "@zeppos/zml/base-page";
 import { log as Logger } from "@zos/utils";
 
@@ -32,7 +33,8 @@ Page(BasePage({
   state: {
     f1Data: null,
     resultsData: null,
-    DEVICE_WIDTH: 390
+    DEVICE_WIDTH: 390,
+    currentView: "main"
   },
 
   onInit() {
@@ -45,17 +47,29 @@ Page(BasePage({
     const { width } = getDeviceInfo();
     this.state.DEVICE_WIDTH = width;
 
-    setScrollMode({
-      mode: SCROLL_MODE_SWIPER_HORIZONTAL,
-      width: width,
-      count: 2,
-      modeParams: {
-        on_page: (index) => {
-          logger.log("SWIPED TO PAGE:", index);
-          if (index === 1) {
+    onGesture({
+      callback: (event) => {
+        logger.log("GESTURE EVENT:", event);
+
+        if (event === GESTURE_LEFT) {
+          logger.log("GESTURE_LEFT: Navigating to Results");
+          if (this.state.currentView === "main") {
+            hmUI.showToast({ text: "Swiping to Results..." });
             this.loadResults();
+            return true;
           }
         }
+
+        if (event === GESTURE_RIGHT) {
+          logger.log("GESTURE_RIGHT: Navigating to Main");
+          if (this.state.currentView === "results") {
+            this.state.currentView = "main";
+            this.updateUI(this.state.f1Data);
+            return true;
+          }
+        }
+
+        return false;
       }
     });
   },
@@ -96,13 +110,14 @@ Page(BasePage({
     this.request({ method: "GET_RESULTS" })
       .then((res) => {
         logger.log("loadResults success:", JSON.stringify(res).substring(0, 200));
-        // 'res' is the object returned from the side service
-        // 'res.result' is the 'body' from your fetchStatus/fetchResults
         const data = res?.result;
 
         if (data && data.results) {
           this.state.resultsData = data;
           this.state.currentView = "results";
+
+          // Animate transition to results
+          hmUI.setLayerScrolling(false);
           this.renderResults(data);
         } else {
           logger.log("Data received but results missing");
@@ -120,22 +135,23 @@ Page(BasePage({
   // =========================
   renderResults(data) {
     logger.log("renderResults called with data:", JSON.stringify(data).substring(0, 200));
-
-    if (this.resultsGroup) {
-      hmUI.deleteWidget(this.resultsGroup);
+    if (this.rootGroup) {
+      logger.log("Deleting old rootGroup");
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
     }
 
     const results = data?.results || [];
     logger.log("Results count:", results.length);
 
-    this.resultsGroup = hmUI.createWidget(hmUI.widget.GROUP, {
-      x: this.state.DEVICE_WIDTH,
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
       y: 0,
-      w: this.state.DEVICE_WIDTH,
+      w: 390,
       h: 450
     });
 
-    this.resultsGroup.createWidget(hmUI.widget.TEXT, {
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
       x: LAYOUT.X,
       y: SAFE_TOP,
       w: LAYOUT.W,
@@ -147,10 +163,10 @@ Page(BasePage({
     });
 
     if (!results.length) {
-      this.resultsGroup.createWidget(hmUI.widget.TEXT, {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: 0,
         y: 200,
-        w: this.state.DEVICE_WIDTH,
+        w: 390,
         h: 40,
         text: "NO RESULTS",
         color: COLORS.WHITE,
@@ -175,10 +191,10 @@ Page(BasePage({
       };
     });
 
-    this.resultsGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
       y: 110,
-      w: this.state.DEVICE_WIDTH,
+      w: 390,
       h: 340,
       item_space: 6,
       item_config: [
@@ -214,31 +230,29 @@ Page(BasePage({
   // =========================
   updateUI(data) {
 
-    if (this.mainGroup) {
-      hmUI.deleteWidget(this.mainGroup);
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
     }
 
-    this.mainGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
       x: 0,
       y: 0,
-      w: this.state.DEVICE_WIDTH,
+      w: 390,
       h: 450
     });
 
     if (!data) {
-      this.mainGroup.createWidget(hmUI.widget.TEXT, {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: 0,
         y: 190,
-        w: this.state.DEVICE_WIDTH,
+        w: 390,
         h: 40,
         text: "SYNCING F1 DATA...",
         color: COLORS.WHITE,
         text_size: FONT.HEADER,
         align_h: hmUI.align.CENTER_H
       });
-
-      // Also render initial empty results page at x: DEVICE_WIDTH
-      this.renderResults(null);
       return;
     }
 
@@ -246,7 +260,7 @@ Page(BasePage({
 
       let y = SAFE_TOP;
 
-      this.mainGroup.createWidget(hmUI.widget.TEXT, {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: LAYOUT.X,
         y,
         w: LAYOUT.W,
@@ -259,7 +273,7 @@ Page(BasePage({
 
       y += 40;
 
-      this.mainGroup.createWidget(hmUI.widget.TEXT, {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: LAYOUT.X,
         y,
         w: LAYOUT.W,
@@ -273,7 +287,7 @@ Page(BasePage({
       y += 50;
 
       if (data.upcoming?.name) {
-        this.mainGroup.createWidget(hmUI.widget.TEXT, {
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -286,7 +300,7 @@ Page(BasePage({
 
         y += 30;
 
-        this.mainGroup.createWidget(hmUI.widget.TEXT, {
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -301,7 +315,7 @@ Page(BasePage({
       }
 
       if (data.previous?.name) {
-        this.mainGroup.createWidget(hmUI.widget.TEXT, {
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -314,7 +328,7 @@ Page(BasePage({
 
         y += 30;
 
-        this.mainGroup.createWidget(hmUI.widget.TEXT, {
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -333,7 +347,7 @@ Page(BasePage({
     // LIVE
     let y = SAFE_TOP;
 
-    this.mainGroup.createWidget(hmUI.widget.TEXT, {
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
       x: LAYOUT.X,
       y,
       w: LAYOUT.W,
@@ -351,10 +365,10 @@ Page(BasePage({
       name: item.name
     }));
 
-    this.mainGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
       y,
-      w: this.state.DEVICE_WIDTH,
+      w: 390,
       h: 450 - y,
       item_space: 6,
       item_config: [
