@@ -14,9 +14,11 @@ async function fetchStatus(res) {
       ? JSON.parse(response.body)
       : response.body;
 
+    console.log("FETCH_RESULTS_BODY:", JSON.stringify(body).substring(0, 200));
     res(null, { result: body });
 
   } catch (error) {
+    console.log("FETCH_RESULTS_ERROR:", error);
     res(null, { result: { error: true } });
   }
 }

@@ -203,13 +203,18 @@ async def get_previous_results():
                                 "position": res.get('position'),
                                 "points": res.get('points')
                             })
-                        return {
+                        res_data = {
                             "raceName": race.get('raceName'),
                             "results": formatted_results
                         }
+                        logger.info(f"Returning previous results: {res_data['raceName']} ({len(res_data['results'])} drivers)")
+                        return res_data
+        logger.warning("No results found in Jolpica response")
         return {"error": "No results found"}
     except Exception as e:
         logger.error(f"Error fetching previous results: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return {"error": str(e)}
 
 # --- SignalR Background Task ---

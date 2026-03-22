@@ -107,8 +107,10 @@ Page(BasePage({
   },
 
   loadResults() {
+    logger.log("loadResults called");
     this.request({ method: "GET_RESULTS" })
       .then((res) => {
+        logger.log("loadResults success:", JSON.stringify(res).substring(0, 200));
         // 'res' is the object returned from the side service
         // 'res.result' is the 'body' from your fetchStatus/fetchResults
         const data = res?.result;
@@ -132,12 +134,15 @@ Page(BasePage({
   // RESULTS UI
   // =========================
   renderResults(data) {
+    logger.log("renderResults called with data:", JSON.stringify(data).substring(0, 200));
     if (this.rootGroup) {
+      logger.log("Deleting old rootGroup");
       hmUI.deleteWidget(this.rootGroup);
       this.rootGroup = null;
     }
 
     const results = data?.results || [];
+    logger.log("Results count:", results.length);
 
     this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
       x: 0,
@@ -171,60 +176,45 @@ Page(BasePage({
       return;
     }
 
+    logger.log("Creating SCROLL_LIST with data_array");
+
+    const data_array = results.map(item => ({
+      pos: `P${item.position}`,
+      name: `${item.firstName} ${item.lastName}`,
+      pts: `${item.points} pts`
+    }));
+
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
       y: 110,
       w: 390,
       h: 340,
       item_space: 6,
-      item_count: results.length,
-
-      item_creator: (list, index) => {
-        const item = results[index];
-
-        const group = list.createWidget(hmUI.widget.GROUP, {
-          x: 0,
-          y: 0,
-          w: 390,
-          h: 46
-        });
-
-        // Position (P1, P2, etc.)
-        group.createWidget(hmUI.widget.TEXT, {
-          x: 18,
-          y: 8,
-          w: 40,
-          h: 30,
-          text: `P${item.position}`,
-          color: COLORS.WHITE,
-          text_size: 18
-        });
-
-        // Driver Name - Using the flat properties from your Side Service
-        group.createWidget(hmUI.widget.TEXT, {
-          x: 70,
-          y: 6,
-          w: 180,
-          h: 30,
-          text: `${item.firstName} ${item.lastName}`,
-          color: COLORS.WHITE,
-          text_size: 20
-        });
-
-        // Points
-        group.createWidget(hmUI.widget.TEXT, {
-          x: 260,
-          y: 10,
-          w: 110,
-          h: 30,
-          text: `${item.points} pts`,
-          color: COLORS.YELLOW,
-          text_size: 18,
-          align_h: hmUI.align.RIGHT
-        });
-
-        return group;
-      }
+      item_config: [
+        {
+          type_id: 1,
+          item_height: 46,
+          item_bg_color: 0x000000,
+          item_bg_radius: 0,
+          text_view: [
+            { x: 18, y: 8, w: 50, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
+            { x: 70, y: 6, w: 180, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20 },
+            { x: 260, y: 10, w: 110, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
+          ],
+          text_view_count: 3
+        }
+      ],
+      item_config_count: 1,
+      data_array: data_array,
+      data_count: data_array.length,
+      data_type_config: [
+        {
+          start: 0,
+          end: Math.max(0, data_array.length - 1),
+          type_id: 1
+        }
+      ],
+      data_type_config_count: 1
     });
   },
 
@@ -363,47 +353,41 @@ Page(BasePage({
 
     y += 45;
 
+    const timing_data = (data.timing || []).map(item => ({
+      pos: `P${item.pos}`,
+      name: item.name
+    }));
+
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
       y,
       w: 390,
       h: 450 - y,
       item_space: 6,
-      item_count: (data.timing || []).length,
-
-      item_creator: (list, index) => {
-
-        const item = data.timing[index];
-
-        const group = list.createWidget(hmUI.widget.GROUP, {
-          x: 0,
-          y: 0,
-          w: 390,
-          h: 44
-        });
-
-        group.createWidget(hmUI.widget.TEXT, {
-          x: 18,
-          y: 8,
-          w: 40,
-          h: 28,
-          text: `P${item.pos}`,
-          color: COLORS.WHITE,
-          text_size: 18
-        });
-
-        group.createWidget(hmUI.widget.TEXT, {
-          x: 70,
-          y: 6,
-          w: 180,
-          h: 30,
-          text: item.name,
-          color: COLORS.WHITE,
-          text_size: 20
-        });
-
-        return group;
-      }
+      item_config: [
+        {
+          type_id: 1,
+          item_height: 44,
+          item_bg_color: 0x000000,
+          item_bg_radius: 0,
+          text_view: [
+            { x: 18, y: 8, w: 40, h: 28, key: 'pos', color: COLORS.WHITE, text_size: 18 },
+            { x: 70, y: 6, w: 180, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20 }
+          ],
+          text_view_count: 2
+        }
+      ],
+      item_config_count: 1,
+      data_array: timing_data,
+      data_count: timing_data.length,
+      data_type_config: [
+        {
+          start: 0,
+          end: Math.max(0, timing_data.length - 1),
+          type_id: 1
+        }
+      ],
+      data_type_config_count: 1
     });
   }
 }));
