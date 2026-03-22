@@ -50,55 +50,6 @@ Page(BasePage({
     // =========================
     this.updateUI(null);
     this.fetchData();
-
-    // =========================
-    // 2. TOUCH LAYER LAST (TOP LAYER FIX)
-    // =========================
-    this.createTouchLayer();
-  },
-
-  // =========================
-  // TOUCH LAYER (MUST BE LAST CREATED)
-  // =========================
-  createTouchLayer() {
-
-    logger.log("TOUCH LAYER CREATED LAST");
-
-    this.leftTap = hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: 0,
-      y: 0,
-      w: 195,
-      h: 450,
-      normal_color: 0x000000,
-      press_color: 0x000000,
-      text: "",
-
-      click_func: () => {
-        logger.log("LEFT TAP");
-
-        if (this.state.currentView === "results") {
-          this.state.currentView = "main";
-          this.updateUI(this.state.f1Data);
-        } else {
-          this.loadResults();
-        }
-      }
-    });
-
-    this.rightTap = hmUI.createWidget(hmUI.widget.BUTTON, {
-      x: 195,
-      y: 0,
-      w: 195,
-      h: 450,
-      normal_color: 0x000000,
-      press_color: 0x000000,
-      text: "",
-
-      click_func: () => {
-        logger.log("RIGHT TAP");
-        this.fetchData();
-      }
-    });
   },
 
   // =========================
@@ -158,6 +109,24 @@ Page(BasePage({
       y: 0,
       w: 390,
       h: 450
+    });
+
+    // BACK BUTTON
+    this.rootGroup.createWidget(hmUI.widget.BUTTON, {
+      x: 10,
+      y: 10,
+      w: 80,
+      h: 40,
+      text: "BACK",
+      text_size: 18,
+      normal_color: 0x333333,
+      press_color: 0x666666,
+      radius: 10,
+      click_func: () => {
+        logger.log("BACK CLICK");
+        this.state.currentView = "main";
+        this.updateUI(this.state.f1Data);
+      }
     });
 
     this.rootGroup.createWidget(hmUI.widget.TEXT, {
@@ -251,6 +220,23 @@ Page(BasePage({
       h: 450
     });
 
+    // REFRESH BUTTON (Always visible on Main)
+    this.rootGroup.createWidget(hmUI.widget.BUTTON, {
+      x: 320,
+      y: 10,
+      w: 60,
+      h: 40,
+      text: "🔄",
+      text_size: 24,
+      normal_color: 0x333333,
+      press_color: 0x666666,
+      radius: 10,
+      click_func: () => {
+        logger.log("REFRESH CLICK");
+        this.fetchData();
+      }
+    });
+
     if (!data) {
       this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: 0,
@@ -324,29 +310,44 @@ Page(BasePage({
       }
 
       if (data.previous?.name) {
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        this.rootGroup.createWidget(hmUI.widget.BUTTON, {
           x: LAYOUT.X,
           y,
+          w: LAYOUT.W,
+          h: 90,
+          text: "",
+          normal_color: 0x111111,
+          press_color: 0x222222,
+          radius: 12,
+          click_func: () => {
+            logger.log("LAST RACE CLICK");
+            this.loadResults();
+          }
+        });
+
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y: y + 5,
           w: LAYOUT.W,
           h: 30,
           text: "LAST RACE",
           color: COLORS.YELLOW,
           text_size: FONT.HEADER,
-          align_h: hmUI.align.CENTER_H
+          align_h: hmUI.align.CENTER_H,
+          pointer_event: false
         });
-
-        y += 30;
 
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
-          y,
+          y: y + 35,
           w: LAYOUT.W,
           h: 60,
           text: `${data.previous.name}\nWinner: ${data.previous.winner}`,
           color: COLORS.WHITE,
           text_size: FONT.BODY,
           text_style: hmUI.text_style.WRAP,
-          align_h: hmUI.align.CENTER_H
+          align_h: hmUI.align.CENTER_H,
+          pointer_event: false
         });
       }
 
