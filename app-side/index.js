@@ -1,39 +1,61 @@
-import { BaseSideService } from '@zeppos/zml/base-side'
+import { BaseSideService } from "@zeppos/zml/base-side";
 
-const BRIDGE_URL = 'https://ebski.co/status'
+// =========================
+// FETCH LIVE STATUS
+// =========================
+async function fetchStatus(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/status',
+      method: 'GET'
+    });
 
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    res(null, { result: body });
+
+  } catch (error) {
+    res(null, { result: { error: true } });
+  }
+}
+
+// =========================
+// FETCH PREVIOUS RESULTS
+// =========================
+async function fetchResults(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/previous_results',
+      method: 'GET'
+    });
+
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    res(null, { result: body });
+
+  } catch (error) {
+    res(null, { result: { error: true } });
+  }
+}
+
+// =========================
+// SERVICE
+// =========================
 AppSideService(
   BaseSideService({
-    onInit() {
-      console.log('AppSideService onInit')
-    },
+    onRequest(req, res) {
 
-    async onRequest(req, res) {
-      if (req.method === 'GET_F1_DATA') {
-        try {
-          const response = await fetch({
-            url: BRIDGE_URL,
-            method: 'GET'
-          })
-
-          const data = typeof response.body === 'string'
-            ? JSON.parse(response.body)
-            : response.body
-
-          res(null, {
-            result: data
-          })
-        } catch (e) {
-          console.error('Fetch error:', e)
-          res(null, {
-            result: { error: e.message }
-          })
-        }
+      if (req.method === "GET_DATA") {
+        fetchStatus(res);
       }
-    },
 
-    onDestroy() {
-      console.log('AppSideService onDestroy')
+      if (req.method === "GET_RESULTS") {
+        fetchResults(res);
+      }
     }
   })
-)
+);
