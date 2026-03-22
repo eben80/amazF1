@@ -52,19 +52,24 @@ Page(BasePage({
         logger.log("GESTURE EVENT:", event);
 
         if (event === GESTURE_LEFT) {
-          logger.log("GESTURE_LEFT: Navigating to Results");
           if (this.state.currentView === "main") {
-            hmUI.showToast({ text: "Swiping to Results..." });
+            hmUI.showToast({ text: "Results" });
             this.loadResults();
+            return true;
+          } else if (this.state.currentView === "results") {
+            hmUI.showToast({ text: "Standings" });
+            this.loadStandings();
             return true;
           }
         }
 
         if (event === GESTURE_RIGHT) {
-          logger.log("GESTURE_RIGHT: Navigating to Main");
           if (this.state.currentView === "results") {
             this.state.currentView = "main";
             this.updateUI(this.state.f1Data);
+            return true;
+          } else if (this.state.currentView === "standings") {
+            this.loadResults();
             return true;
           }
         }
@@ -115,9 +120,6 @@ Page(BasePage({
         if (data && data.results) {
           this.state.resultsData = data;
           this.state.currentView = "results";
-
-          // Animate transition to results
-          hmUI.setLayerScrolling(false);
           this.renderResults(data);
         } else {
           logger.log("Data received but results missing");
@@ -127,6 +129,27 @@ Page(BasePage({
       .catch((err) => {
         logger.log("Request failed", err);
         this.renderResults({ raceName: "Error", results: [] });
+      });
+  },
+
+  loadStandings() {
+    logger.log("loadStandings called");
+    this.request({ method: "GET_STANDINGS" })
+      .then((res) => {
+        logger.log("loadStandings success:", JSON.stringify(res).substring(0, 200));
+        const data = res?.result;
+
+        if (data && data.standings) {
+          this.state.currentView = "standings";
+          this.renderStandings(data);
+        } else {
+          logger.log("Data received but standings missing");
+          this.renderStandings({ standings: [] });
+        }
+      })
+      .catch((err) => {
+        logger.log("Request failed", err);
+        this.renderStandings({ error: true });
       });
   },
 
@@ -207,6 +230,90 @@ Page(BasePage({
             { x: 18, y: 8, w: 50, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
             { x: 70, y: 6, w: 180, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20, align_h: hmUI.align.LEFT },
             { x: 260, y: 10, w: 110, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
+          ],
+          text_view_count: 3
+        }
+      ],
+      item_config_count: 1,
+      data_array: data_array,
+      data_count: data_array.length,
+      data_type_config: [
+        {
+          start: 0,
+          end: Math.max(0, data_array.length - 1),
+          type_id: 1
+        }
+      ],
+      data_type_config_count: 1
+    });
+  },
+
+  // =========================
+  // STANDINGS UI
+  // =========================
+  renderStandings(data) {
+    logger.log("renderStandings called");
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
+    }
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
+      y: 0,
+      w: 390,
+      h: 450
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y: SAFE_TOP,
+      w: LAYOUT.W,
+      h: 40,
+      text: "STANDINGS",
+      color: COLORS.RED,
+      text_size: FONT.HEADER,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    const standings = data?.standings || [];
+
+    if (!standings.length) {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 0,
+        y: 200,
+        w: 390,
+        h: 40,
+        text: data?.error ? "ERROR LOADING" : "NO STANDINGS",
+        color: COLORS.WHITE,
+        text_size: FONT.BODY,
+        align_h: hmUI.align.CENTER_H
+      });
+      return;
+    }
+
+    const data_array = standings.map(item => ({
+      pos: `${item.pos}`,
+      name: `${item.flag} ${item.name}`,
+      pts: `${item.points}`
+    }));
+
+    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+      x: 0,
+      y: 110,
+      w: 390,
+      h: 340,
+      item_space: 6,
+      item_config: [
+        {
+          type_id: 1,
+          item_height: 46,
+          item_bg_color: 0x000000,
+          item_bg_radius: 0,
+          text_view: [
+            { x: 18, y: 8, w: 40, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
+            { x: 65, y: 6, w: 200, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20, align_h: hmUI.align.LEFT },
+            { x: 270, y: 10, w: 100, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
           ],
           text_view_count: 3
         }
