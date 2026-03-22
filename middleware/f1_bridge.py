@@ -293,6 +293,33 @@ async def get_standings():
         logger.error(f"Error fetching standings: {e}")
         return {"error": str(e)}
 
+@app.get("/constructor_standings")
+async def get_constructor_standings():
+    """Fetch constructor standings for the 2026 season"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{JOLPICA_BASE}/2026/constructorstandings.json", timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    standings_lists = data.get('MRData', {}).get('StandingsTable', {}).get('StandingsLists', [])
+                    if standings_lists:
+                        standings = standings_lists[0].get('ConstructorStandings', [])
+                        formatted_standings = []
+                        for s in standings:
+                            constructor = s.get('Constructor', {})
+                            nationality = constructor.get('nationality', '')
+                            formatted_standings.append({
+                                "pos": s.get('position'),
+                                "name": constructor.get('name'),
+                                "flag": FLAG_MAPPING.get(nationality, "🏁"),
+                                "points": s.get('points')
+                            })
+                        return {"standings": formatted_standings}
+        return {"error": "No standings found"}
+    except Exception as e:
+        logger.error(f"Error fetching constructor standings: {e}")
+        return {"error": str(e)}
+
 # --- SignalR Background Task ---
 async def signalr_worker():
     session = requests.Session()

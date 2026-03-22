@@ -53,12 +53,16 @@ Page(BasePage({
 
         if (event === GESTURE_LEFT) {
           if (this.state.currentView === "main") {
-            hmUI.showToast({ text: "Results" });
+            hmUI.showToast({ text: "Last Results" });
             this.loadResults();
             return true;
           } else if (this.state.currentView === "results") {
-            hmUI.showToast({ text: "Standings" });
+            hmUI.showToast({ text: "Driver Standings" });
             this.loadStandings();
+            return true;
+          } else if (this.state.currentView === "standings") {
+            hmUI.showToast({ text: "Constructor Standings" });
+            this.loadConstructorStandings();
             return true;
           }
         }
@@ -70,6 +74,9 @@ Page(BasePage({
             return true;
           } else if (this.state.currentView === "standings") {
             this.loadResults();
+            return true;
+          } else if (this.state.currentView === "constructors") {
+            this.loadStandings();
             return true;
           }
         }
@@ -153,6 +160,27 @@ Page(BasePage({
       });
   },
 
+  loadConstructorStandings() {
+    logger.log("loadConstructorStandings called");
+    this.request({ method: "GET_CONSTRUCTOR_STANDINGS" })
+      .then((res) => {
+        logger.log("loadConstructorStandings success:", JSON.stringify(res).substring(0, 200));
+        const data = res?.result;
+
+        if (data && data.standings) {
+          this.state.currentView = "constructors";
+          this.renderConstructorStandings(data);
+        } else {
+          logger.log("Data received but constructor standings missing");
+          this.renderConstructorStandings({ standings: [] });
+        }
+      })
+      .catch((err) => {
+        logger.log("Request failed", err);
+        this.renderConstructorStandings({ error: true });
+      });
+  },
+
   // =========================
   // RESULTS UI
   // =========================
@@ -230,6 +258,90 @@ Page(BasePage({
             { x: 18, y: 8, w: 50, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
             { x: 70, y: 6, w: 180, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20, align_h: hmUI.align.LEFT },
             { x: 260, y: 10, w: 110, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
+          ],
+          text_view_count: 3
+        }
+      ],
+      item_config_count: 1,
+      data_array: data_array,
+      data_count: data_array.length,
+      data_type_config: [
+        {
+          start: 0,
+          end: Math.max(0, data_array.length - 1),
+          type_id: 1
+        }
+      ],
+      data_type_config_count: 1
+    });
+  },
+
+  // =========================
+  // CONSTRUCTOR STANDINGS UI
+  // =========================
+  renderConstructorStandings(data) {
+    logger.log("renderConstructorStandings called");
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
+    }
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
+      y: 0,
+      w: 390,
+      h: 450
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y: SAFE_TOP,
+      w: LAYOUT.W,
+      h: 40,
+      text: "CONSTRUCTORS",
+      color: COLORS.RED,
+      text_size: FONT.HEADER,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    const standings = data?.standings || [];
+
+    if (!standings.length) {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 0,
+        y: 200,
+        w: 390,
+        h: 40,
+        text: data?.error ? "ERROR LOADING" : "NO STANDINGS",
+        color: COLORS.WHITE,
+        text_size: FONT.BODY,
+        align_h: hmUI.align.CENTER_H
+      });
+      return;
+    }
+
+    const data_array = standings.map(item => ({
+      pos: `${item.pos}`,
+      name: `${item.flag} ${item.name}`,
+      pts: `${item.points}`
+    }));
+
+    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+      x: 0,
+      y: 110,
+      w: 390,
+      h: 340,
+      item_space: 6,
+      item_config: [
+        {
+          type_id: 1,
+          item_height: 46,
+          item_bg_color: 0x000000,
+          item_bg_radius: 0,
+          text_view: [
+            { x: 18, y: 8, w: 40, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
+            { x: 65, y: 6, w: 200, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20, align_h: hmUI.align.LEFT },
+            { x: 270, y: 10, w: 100, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
           ],
           text_view_count: 3
         }
