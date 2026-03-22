@@ -42,9 +42,12 @@ FLAG_MAPPING = {
 
 TEAM_COLORS = {
     "Mercedes": "27F4D2", "Ferrari": "E80020", "Red Bull": "3671C6",
-    "McLaren": "FF8000", "Aston Martin": "229971", "Alpine F1 Team": "0093CC",
-    "RB F1 Team": "6692FF", "Haas F1 Team": "B6BABD", "Williams": "64C4FF",
-    "Audi": "52E252", "Cadillac F1 Team": "FFFFFF"
+    "Red Bull Racing": "3671C6", "McLaren": "FF8000", "Aston Martin": "229971",
+    "Alpine F1 Team": "0093CC", "Alpine": "0093CC", "RB F1 Team": "6692FF",
+    "RB": "6692FF", "Haas F1 Team": "B6BABD", "Haas": "B6BABD",
+    "Williams": "64C4FF", "Audi": "52E252", "Sauber": "52E252",
+    "Cadillac F1 Team": "FFFFFF", "Cadillac": "FFFFFF",
+    "Racing Bulls": "6692FF", "Kick Sauber": "52E252"
 }
 
 # --- State ---
@@ -82,6 +85,21 @@ def update_live_status():
         state.is_live = True
     else:
         state.is_live = False
+
+def get_team_color(name):
+    if not name:
+        return "FFFFFF"
+
+    # Try exact match first
+    if name in TEAM_COLORS:
+        return TEAM_COLORS[name]
+
+    # Try partial matches
+    for k, v in TEAM_COLORS.items():
+        if k.lower() in name.lower() or name.lower() in k.lower():
+            return v
+
+    return "FFFFFF"
 
 async def fetch_race_schedule():
     """Fetch next and previous race from corrected Jolpica-F1 API (async)"""
@@ -122,7 +140,7 @@ async def fetch_race_schedule():
                                 "winner": f"{winner.get('givenName')} {winner.get('familyName')}",
                                 "winnerFlag": FLAG_MAPPING.get(winner_nat, "🏁"),
                                 "team": team,
-                                "teamColor": int(TEAM_COLORS.get(team, "FFFFFF"), 16),
+                                "teamColor": int(get_team_color(team), 16),
                                 "country": country,
                                 "flag": FLAG_MAPPING.get(country, "🏁")
                             }
@@ -314,7 +332,7 @@ async def get_constructor_standings():
                                 "name": name,
                                 "flag": FLAG_MAPPING.get(nationality, "🏁"),
                                 "points": s.get('points'),
-                                "color": int(TEAM_COLORS.get(name, "FFFFFF"), 16)
+                                "color": int(get_team_color(name), 16)
                             })
                         return {"standings": formatted_standings}
         return {"error": "No standings found"}

@@ -341,7 +341,7 @@ Page(BasePage({
           item_bg_radius: 0,
           text_view: [
             { x: 18, y: 8, w: 40, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
-            { x: 65, y: 6, w: 200, h: 30, key: 'name', color_key: 'color', text_size: 20, align_h: hmUI.align.LEFT },
+            { x: 65, y: 6, w: 200, h: 30, key: 'name', color: COLORS.WHITE, color_key: 'color', text_size: 20, align_h: hmUI.align.LEFT },
             { x: 270, y: 10, w: 100, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
           ],
           text_view_count: 3
@@ -498,10 +498,23 @@ Page(BasePage({
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
-          h: 60,
-          text: `NEXT: ${data.upcoming.flag || ""} ${data.upcoming.name}\n${data.upcoming.circuit || ""}`,
+          h: 30,
+          text: "NEXT RACE",
           color: COLORS.RED,
           text_size: FONT.HEADER,
+          align_h: hmUI.align.CENTER_H
+        });
+
+        y += 32;
+
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y,
+          w: LAYOUT.W,
+          h: 60,
+          text: `${data.upcoming.flag || ""} ${data.upcoming.name}\n${data.upcoming.circuit || ""}`,
+          color: COLORS.WHITE,
+          text_size: 20,
           align_h: hmUI.align.CENTER_H
         });
 
@@ -513,12 +526,12 @@ Page(BasePage({
           w: LAYOUT.W,
           h: 30,
           text: `${data.upcoming.date?.split("T")[0]}`,
-          color: COLORS.WHITE,
-          text_size: FONT.BODY,
+          color: COLORS.GRAY,
+          text_size: 18,
           align_h: hmUI.align.CENTER_H
         });
 
-        y += 60;
+        y += 50;
       }
 
       if (data.previous?.name) {
@@ -526,10 +539,23 @@ Page(BasePage({
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
-          h: 60,
-          text: `LAST: ${data.previous.flag || ""} ${data.previous.name}\n${data.previous.circuit || ""}`,
+          h: 30,
+          text: "LAST RACE",
           color: COLORS.YELLOW,
           text_size: FONT.HEADER,
+          align_h: hmUI.align.CENTER_H
+        });
+
+        y += 32;
+
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y,
+          w: LAYOUT.W,
+          h: 60,
+          text: `${data.previous.flag || ""} ${data.previous.name}\n${data.previous.circuit || ""}`,
+          color: COLORS.WHITE,
+          text_size: 20,
           align_h: hmUI.align.CENTER_H
         });
 
@@ -539,14 +565,14 @@ Page(BasePage({
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
-          h: 60,
+          h: 30,
           text: `Winner: ${data.previous.winnerFlag || ""} ${data.previous.winner}`,
           color: COLORS.WHITE,
-          text_size: FONT.BODY,
+          text_size: 18,
           align_h: hmUI.align.CENTER_H
         });
 
-        y += 30;
+        y += 28;
 
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
@@ -555,7 +581,7 @@ Page(BasePage({
           h: 30,
           text: `${data.previous.team}`,
           color: data.previous.teamColor || COLORS.WHITE,
-          text_size: FONT.BODY,
+          text_size: 18,
           align_h: hmUI.align.CENTER_H
         });
       }
