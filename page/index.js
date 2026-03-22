@@ -1,4 +1,5 @@
 import * as hmUI from "@zos/ui";
+import * as display from "@zos/display";
 import { BasePage } from "@zeppos/zml/base-page";
 import { log as Logger } from "@zos/utils";
 
@@ -30,6 +31,14 @@ Page(BasePage({
     f1Data: null,
     resultsData: null,
     currentView: "main"
+  },
+
+  onInit() {
+    display.setStayWake(true);
+  },
+
+  onDestroy() {
+    display.setStayWake(false);
   },
 
   build() {
