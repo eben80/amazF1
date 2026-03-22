@@ -51,6 +51,10 @@ Page(BasePage({
       callback: (keyCode, keyEvent) => {
         if (keyCode === KEY_BACK && keyEvent === KEY_EVENT_UP) {
           logger.log("BACK KEY PRESSED");
+          if (this.state.currentView === "event_detail") {
+            this.renderCalendar(this.state.calendarData);
+            return true;
+          }
           if (this.state.currentView !== "main") {
             this.state.currentView = "main";
             this.updateUI(this.state.f1Data);
@@ -85,6 +89,10 @@ Page(BasePage({
             hmUI.showToast({ text: "Constructor Standings" });
             this.loadConstructorStandings();
             return true;
+          } else if (this.state.currentView === "constructors") {
+            hmUI.showToast({ text: "Calendar" });
+            this.loadCalendar();
+            return true;
           }
         }
 
@@ -101,6 +109,12 @@ Page(BasePage({
             return true;
           } else if (this.state.currentView === "constructors") {
             this.loadStandings();
+            return true;
+          } else if (this.state.currentView === "calendar") {
+            this.loadConstructorStandings();
+            return true;
+          } else if (this.state.currentView === "event_detail") {
+            this.renderCalendar(this.state.calendarData);
             return true;
           }
         }
@@ -202,6 +216,26 @@ Page(BasePage({
       .catch((err) => {
         logger.log("Request failed", err);
         this.renderConstructorStandings({ error: true });
+      });
+  },
+
+  loadCalendar() {
+    logger.log("loadCalendar called");
+    this.request({ method: "GET_CALENDAR" })
+      .then((res) => {
+        logger.log("loadCalendar success");
+        const data = res?.result;
+        if (data && data.calendar) {
+          this.state.calendarData = data;
+          this.state.currentView = "calendar";
+          this.renderCalendar(data);
+        } else {
+          this.renderCalendar({ calendar: [] });
+        }
+      })
+      .catch((err) => {
+        logger.log("Request failed", err);
+        this.renderCalendar({ error: true });
       });
   },
 
@@ -470,6 +504,146 @@ Page(BasePage({
         }
       ],
       data_type_config_count: 1
+    });
+  },
+
+  // =========================
+  // CALENDAR UI
+  // =========================
+  renderCalendar(data) {
+    logger.log("renderCalendar called");
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
+    }
+
+    this.state.currentView = "calendar";
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
+      y: 0,
+      w: 390,
+      h: 450
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y: SAFE_TOP,
+      w: LAYOUT.W,
+      h: 40,
+      text: "CALENDAR",
+      color: COLORS.RED,
+      text_size: FONT.HEADER,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    const calendar = data?.calendar || [];
+
+    if (!calendar.length) {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 0,
+        y: 200,
+        w: 390,
+        h: 40,
+        text: data?.error ? "ERROR LOADING" : "NO DATA",
+        color: COLORS.WHITE,
+        text_size: FONT.BODY,
+        align_h: hmUI.align.CENTER_H
+      });
+      return;
+    }
+
+    const data_array = calendar.map(item => ({
+      name: `${item.flag} ${item.name}`,
+      date: item.date
+    }));
+
+    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+      x: 0,
+      y: 110,
+      w: 390,
+      h: 340,
+      item_space: 6,
+      item_config: [
+        {
+          type_id: 1,
+          item_height: 54,
+          item_bg_color: 0x111111,
+          item_bg_radius: 10,
+          text_view: [
+            { x: 18, y: 4, w: 354, h: 26, key: 'name', color: COLORS.WHITE, text_size: 18 },
+            { x: 18, y: 28, w: 354, h: 22, key: 'date', color: COLORS.GRAY, text_size: 16 }
+          ],
+          text_view_count: 2
+        }
+      ],
+      item_config_count: 1,
+      data_array: data_array,
+      data_count: data_array.length,
+      data_type_config: [{ start: 0, end: data_array.length - 1, type_id: 1 }],
+      data_type_config_count: 1,
+      item_click_func: (list, index) => {
+        logger.log("Calendar item clicked:", index);
+        this.renderEventDetail(calendar[index]);
+      }
+    });
+  },
+
+  renderEventDetail(race) {
+    logger.log("renderEventDetail called");
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
+    }
+
+    this.state.currentView = "event_detail";
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
+      y: 0,
+      w: 390,
+      h: 450
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y: SAFE_TOP,
+      w: LAYOUT.W,
+      h: 70,
+      text: `${race.flag} ${race.name}\n${race.circuit}`,
+      color: COLORS.RED,
+      text_size: 20,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    let y = 140;
+    race.sessions.forEach(s => {
+      const utcDate = new Date(s.time.replace("Z", ""));
+      const localTime = `${utcDate.getHours().toString().padStart(2, "0")}:${utcDate.getMinutes().toString().padStart(2, "0")}`;
+      const localDate = `${(utcDate.getMonth() + 1)}/${utcDate.getDate()}`;
+
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 40,
+        y,
+        w: 120,
+        h: 26,
+        text: s.name,
+        color: COLORS.YELLOW,
+        text_size: 18
+      });
+
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 160,
+        y,
+        w: 190,
+        h: 26,
+        text: `${localDate}  ${localTime}`,
+        color: COLORS.WHITE,
+        text_size: 18,
+        align_h: hmUI.align.RIGHT
+      });
+
+      y += 32;
     });
   },
 

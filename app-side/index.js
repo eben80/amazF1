@@ -24,6 +24,29 @@ async function fetchStatus(res) {
 }
 
 // =========================
+// FETCH CALENDAR
+// =========================
+async function fetchCalendar(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/calendar',
+      method: 'GET'
+    });
+
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    console.log("FETCH_CALENDAR_BODY:", JSON.stringify(body).substring(0, 200));
+    res(null, { result: body });
+
+  } catch (error) {
+    console.log("FETCH_CALENDAR_ERROR:", error);
+    res(null, { result: { error: true } });
+  }
+}
+
+// =========================
 // FETCH CONSTRUCTOR STANDINGS
 // =========================
 async function fetchConstructorStandings(res) {
@@ -111,6 +134,10 @@ AppSideService(
 
       if (req.method === "GET_CONSTRUCTOR_STANDINGS") {
         fetchConstructorStandings(res);
+      }
+
+      if (req.method === "GET_CALENDAR") {
+        fetchCalendar(res);
       }
     }
   })

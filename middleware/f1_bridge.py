@@ -366,6 +366,45 @@ async def get_constructor_standings():
         logger.error(f"Error fetching constructor standings: {e}")
         return {"error": str(e)}
 
+@app.get("/calendar")
+async def get_calendar():
+    """Fetch the full 2026 race calendar with all session times"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{JOLPICA_BASE}/2026.json", timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
+                    formatted_calendar = []
+
+                    for race in races:
+                        country = race.get('Circuit', {}).get('Location', {}).get('country', '')
+
+                        sessions = []
+                        session_map = {
+                            "FirstPractice": "FP1", "SecondPractice": "FP2", "ThirdPractice": "FP3",
+                            "Qualifying": "Qualifying", "Sprint": "Sprint", "SprintQualifying": "Sprint Quali"
+                        }
+                        for key, label in session_map.items():
+                            s = race.get(key)
+                            if s:
+                                sessions.append({"name": label, "time": f"{s.get('date')}T{s.get('time')}"})
+
+                        sessions.append({"name": "Race", "time": f"{race.get('date')}T{race.get('time')}"})
+
+                        formatted_calendar.append({
+                            "name": race.get('raceName'),
+                            "circuit": race.get('Circuit', {}).get('circuitName'),
+                            "date": race.get('date'),
+                            "flag": FLAG_MAPPING.get(country, "🏁"),
+                            "sessions": sessions
+                        })
+                    return {"calendar": formatted_calendar}
+        return {"error": "No calendar found"}
+    except Exception as e:
+        logger.error(f"Error fetching calendar: {e}")
+        return {"error": str(e)}
+
 # --- SignalR Background Task ---
 async def signalr_worker():
     session = requests.Session()
