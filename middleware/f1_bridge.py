@@ -118,6 +118,7 @@ async def fetch_race_schedule():
                             winner_nat = winner.get('nationality', '')
                             state.previous_race = {
                                 "name": race.get('raceName'),
+                                "circuit": race.get('Circuit', {}).get('circuitName'),
                                 "winner": f"{winner.get('givenName')} {winner.get('familyName')}",
                                 "winnerFlag": FLAG_MAPPING.get(winner_nat, "🏁"),
                                 "team": team,

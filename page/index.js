@@ -278,14 +278,14 @@ Page(BasePage({
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
-          h: 30,
-          text: `NEXT: ${data.upcoming.flag || ""} ${data.upcoming.name}`,
+          h: 60,
+          text: `NEXT: ${data.upcoming.flag || ""} ${data.upcoming.name}\n${data.upcoming.circuit || ""}`,
           color: COLORS.RED,
           text_size: FONT.HEADER,
           align_h: hmUI.align.CENTER_H
         });
 
-        y += 32;
+        y += 62;
 
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
@@ -306,14 +306,14 @@ Page(BasePage({
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
-          h: 30,
-          text: `LAST: ${data.previous.flag || ""} ${data.previous.name}`,
+          h: 60,
+          text: `LAST: ${data.previous.flag || ""} ${data.previous.name}\n${data.previous.circuit || ""}`,
           color: COLORS.YELLOW,
           text_size: FONT.HEADER,
           align_h: hmUI.align.CENTER_H
         });
 
-        y += 32;
+        y += 62;
 
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
