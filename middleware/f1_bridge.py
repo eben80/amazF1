@@ -113,13 +113,39 @@ async def fetch_race_schedule():
                     if races:
                         race = races[0]
                         country = race.get('Circuit', {}).get('Location', {}).get('country', '')
+
+                        sessions = []
+                        session_map = {
+                            "FirstPractice": "FP1",
+                            "SecondPractice": "FP2",
+                            "ThirdPractice": "FP3",
+                            "Qualifying": "Qualifying",
+                            "Sprint": "Sprint",
+                            "SprintQualifying": "Sprint Quali"
+                        }
+
+                        for key, label in session_map.items():
+                            s = race.get(key)
+                            if s:
+                                sessions.append({
+                                    "name": label,
+                                    "time": f"{s.get('date')}T{s.get('time')}"
+                                })
+
+                        # Add main race
+                        sessions.append({
+                            "name": "Race",
+                            "time": f"{race.get('date')}T{race.get('time')}"
+                        })
+
                         state.upcoming_race = {
                             "name": race.get('raceName'),
                             "circuit": race.get('Circuit', {}).get('circuitName'),
                             "date": f"{race.get('date')}T{race.get('time')}",
                             "locality": race.get('Circuit', {}).get('Location', {}).get('locality'),
                             "country": country,
-                            "flag": FLAG_MAPPING.get(country, "🏁")
+                            "flag": FLAG_MAPPING.get(country, "🏁"),
+                            "sessions": sessions
                         }
             # Previous Race
             async with session.get(f"{JOLPICA_BASE}/current/last/results.json", timeout=10) as resp:

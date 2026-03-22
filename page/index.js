@@ -57,6 +57,10 @@ Page(BasePage({
             this.loadResults();
             return true;
           } else if (this.state.currentView === "results") {
+            hmUI.showToast({ text: "Next Race" });
+            this.renderNextRace(this.state.f1Data?.upcoming);
+            return true;
+          } else if (this.state.currentView === "next") {
             hmUI.showToast({ text: "Driver Standings" });
             this.loadStandings();
             return true;
@@ -72,8 +76,11 @@ Page(BasePage({
             this.state.currentView = "main";
             this.updateUI(this.state.f1Data);
             return true;
-          } else if (this.state.currentView === "standings") {
+          } else if (this.state.currentView === "next") {
             this.loadResults();
+            return true;
+          } else if (this.state.currentView === "standings") {
+            this.renderNextRace(this.state.f1Data?.upcoming);
             return true;
           } else if (this.state.currentView === "constructors") {
             this.loadStandings();
@@ -179,6 +186,94 @@ Page(BasePage({
         logger.log("Request failed", err);
         this.renderConstructorStandings({ error: true });
       });
+  },
+
+  // =========================
+  // NEXT RACE UI
+  // =========================
+  renderNextRace(data) {
+    logger.log("renderNextRace called");
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
+    }
+
+    this.state.currentView = "next";
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0,
+      y: 0,
+      w: 390,
+      h: 450
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y: SAFE_TOP,
+      w: LAYOUT.W,
+      h: 40,
+      text: "NEXT RACE",
+      color: COLORS.RED,
+      text_size: FONT.HEADER,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    if (!data) {
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 0,
+        y: 200,
+        w: 390,
+        h: 40,
+        text: "NO DATA",
+        color: COLORS.WHITE,
+        text_size: FONT.BODY,
+        align_h: hmUI.align.CENTER_H
+      });
+      return;
+    }
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: LAYOUT.X,
+      y: 100,
+      w: LAYOUT.W,
+      h: 60,
+      text: `${data.flag || ""} ${data.name}\n${data.circuit || ""}`,
+      color: COLORS.WHITE,
+      text_size: 20,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    const sessions = data.sessions || [];
+    let y = 170;
+
+    sessions.forEach(s => {
+      const utcDate = new Date(s.time.replace("Z", ""));
+      const localTime = `${utcDate.getHours().toString().padStart(2, "0")}:${utcDate.getMinutes().toString().padStart(2, "0")}`;
+      const localDate = `${(utcDate.getMonth() + 1)}/${utcDate.getDate()}`;
+
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 40,
+        y,
+        w: 120,
+        h: 26,
+        text: s.name,
+        color: COLORS.YELLOW,
+        text_size: 18
+      });
+
+      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 160,
+        y,
+        w: 190,
+        h: 26,
+        text: `${localDate}  ${localTime}`,
+        color: COLORS.WHITE,
+        text_size: 18,
+        align_h: hmUI.align.RIGHT
+      });
+
+      y += 32;
+    });
   },
 
   // =========================
