@@ -30,7 +30,14 @@ FLAG_MAPPING = {
     "French": "🇫🇷", "New Zealander": "🇳🇿", "Austrian": "🇦🇹", "Spanish": "🇪🇸",
     "Argentine": "🇦🇷", "Finnish": "🇫🇮", "Mexican": "🇲🇽", "Dutch": "🇳🇱",
     "Australian": "🇦🇺", "Brazilian": "🇧🇷", "Thai": "🇹🇭", "Japanese": "🇯🇵",
-    "Canadian": "🇨🇦", "American": "🇺🇸", "Danish": "🇩🇰", "Chinese": "🇨🇳"
+    "Canadian": "🇨🇦", "American": "🇺🇸", "Danish": "🇩🇰", "Chinese": "🇨🇳",
+    "United Kingdom": "🇬🇧", "Germany": "🇩🇪", "Italy": "🇮🇹", "Monaco": "🇲🇨",
+    "France": "🇫🇷", "New Zealand": "🇳🇿", "Austria": "🇦🇹", "Spain": "🇪🇸",
+    "Argentina": "🇦🇷", "Finland": "🇫🇮", "Mexico": "🇲🇽", "Netherlands": "🇳🇱",
+    "Australia": "🇦🇺", "Brazil": "🇧🇷", "Thailand": "🇹🇭", "Japan": "🇯🇵",
+    "Canada": "🇨🇦", "USA": "🇺🇸", "Denmark": "🇩🇰", "China": "🇨🇳",
+    "UK": "🇬🇧", "United Arab Emirates": "🇦🇪", "Saudi Arabia": "🇸🇦", "Bahrain": "🇧🇭",
+    "Hungary": "🇭🇺", "Belgium": "🇧🇪", "Singapore": "🇸🇬", "Azerbaijan": "🇦🇿"
 }
 
 TEAM_COLORS = {
@@ -87,11 +94,14 @@ async def fetch_race_schedule():
                     races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
                     if races:
                         race = races[0]
+                        country = race.get('Circuit', {}).get('Location', {}).get('country', '')
                         state.upcoming_race = {
                             "name": race.get('raceName'),
                             "circuit": race.get('Circuit', {}).get('circuitName'),
                             "date": f"{race.get('date')}T{race.get('time')}",
-                            "locality": race.get('Circuit', {}).get('Location', {}).get('locality')
+                            "locality": race.get('Circuit', {}).get('Location', {}).get('locality'),
+                            "country": country,
+                            "flag": FLAG_MAPPING.get(country, "🏁")
                         }
             # Previous Race
             async with session.get(f"{JOLPICA_BASE}/current/last/results.json", timeout=10) as resp:
@@ -103,10 +113,17 @@ async def fetch_race_schedule():
                         results = race.get('Results', [])
                         if results:
                             winner = results[0].get('Driver', {})
+                            team = results[0].get('Constructor', {}).get('name', '')
+                            country = race.get('Circuit', {}).get('Location', {}).get('country', '')
+                            winner_nat = winner.get('nationality', '')
                             state.previous_race = {
                                 "name": race.get('raceName'),
                                 "winner": f"{winner.get('givenName')} {winner.get('familyName')}",
-                                "team": results[0].get('Constructor', {}).get('name')
+                                "winnerFlag": FLAG_MAPPING.get(winner_nat, "🏁"),
+                                "team": team,
+                                "teamColor": int(TEAM_COLORS.get(team, "FFFFFF"), 16),
+                                "country": country,
+                                "flag": FLAG_MAPPING.get(country, "🏁")
                             }
     except Exception as e:
         logger.error(f"Error fetching race schedule: {e}")

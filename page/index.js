@@ -187,8 +187,7 @@ Page(BasePage({
       return {
         pos: `P${item.position}`,
         name: `${item.flag} ${item.firstName} ${item.lastName}`,
-        pts: pts_text,
-        color: item.color || COLORS.WHITE
+        pts: pts_text
       };
     });
 
@@ -206,7 +205,7 @@ Page(BasePage({
           item_bg_radius: 0,
           text_view: [
             { x: 18, y: 8, w: 50, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
-            { x: 70, y: 6, w: 180, h: 30, key: 'name', color_key: 'color', text_size: 20, align_h: hmUI.align.LEFT },
+            { x: 70, y: 6, w: 180, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20, align_h: hmUI.align.LEFT },
             { x: 260, y: 10, w: 110, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
           ],
           text_view_count: 3
@@ -266,26 +265,13 @@ Page(BasePage({
         y,
         w: LAYOUT.W,
         h: 40,
-        text: "F1 STATUS",
-        color: COLORS.GRAY,
-        text_size: FONT.TITLE,
-        align_h: hmUI.align.CENTER_H
-      });
-
-      y += 40;
-
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
-        x: LAYOUT.X,
-        y,
-        w: LAYOUT.W,
-        h: 40,
         text: "OFF SESSION",
         color: COLORS.GRAY,
         text_size: FONT.TITLE,
         align_h: hmUI.align.CENTER_H
       });
 
-      y += 50;
+      y += 55;
 
       if (data.upcoming?.name) {
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
@@ -293,26 +279,26 @@ Page(BasePage({
           y,
           w: LAYOUT.W,
           h: 30,
-          text: "NEXT RACE",
+          text: `NEXT: ${data.upcoming.flag || ""} ${data.upcoming.name}`,
           color: COLORS.RED,
           text_size: FONT.HEADER,
           align_h: hmUI.align.CENTER_H
         });
 
-        y += 30;
+        y += 32;
 
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
-          h: 60,
-          text: `${data.upcoming.name}\n${data.upcoming.date?.split("T")[0]}`,
+          h: 30,
+          text: `${data.upcoming.date?.split("T")[0]}`,
           color: COLORS.WHITE,
           text_size: FONT.BODY,
           align_h: hmUI.align.CENTER_H
         });
 
-        y += 70;
+        y += 60;
       }
 
       if (data.previous?.name) {
@@ -321,9 +307,22 @@ Page(BasePage({
           y,
           w: LAYOUT.W,
           h: 30,
-          text: "LAST RACE",
+          text: `LAST: ${data.previous.flag || ""} ${data.previous.name}`,
           color: COLORS.YELLOW,
           text_size: FONT.HEADER,
+          align_h: hmUI.align.CENTER_H
+        });
+
+        y += 32;
+
+        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+          x: LAYOUT.X,
+          y,
+          w: LAYOUT.W,
+          h: 60,
+          text: `Winner: ${data.previous.winnerFlag || ""} ${data.previous.winner}`,
+          color: COLORS.WHITE,
+          text_size: FONT.BODY,
           align_h: hmUI.align.CENTER_H
         });
 
@@ -333,11 +332,10 @@ Page(BasePage({
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
-          h: 60,
-          text: `${data.previous.name}\nWinner: ${data.previous.winner}`,
-          color: COLORS.WHITE,
+          h: 30,
+          text: `${data.previous.team}`,
+          color: data.previous.teamColor || COLORS.WHITE,
           text_size: FONT.BODY,
-          text_style: hmUI.text_style.WRAP,
           align_h: hmUI.align.CENTER_H
         });
       }
