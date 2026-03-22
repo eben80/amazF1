@@ -24,6 +24,22 @@ logger.add(sys.stderr, level=LOG_LEVEL)
 SIGNALR_URL = "https://livetiming.formula1.com/signalr"
 JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
+# --- Mappings ---
+FLAG_MAPPING = {
+    "British": "🇬🇧", "German": "🇩🇪", "Italian": "🇮🇹", "Monegasque": "🇲🇨",
+    "French": "🇫🇷", "New Zealander": "🇳🇿", "Austrian": "🇦🇹", "Spanish": "🇪🇸",
+    "Argentine": "🇦🇷", "Finnish": "🇫🇮", "Mexican": "🇲🇽", "Dutch": "🇳🇱",
+    "Australian": "🇦🇺", "Brazilian": "🇧🇷", "Thai": "🇹🇭", "Japanese": "🇯🇵",
+    "Canadian": "🇨🇦", "American": "🇺🇸", "Danish": "🇩🇰", "Chinese": "🇨🇳"
+}
+
+TEAM_COLORS = {
+    "Mercedes": "27F4D2", "Ferrari": "E80020", "Red Bull": "3671C6",
+    "McLaren": "FF8000", "Aston Martin": "229971", "Alpine F1 Team": "0093CC",
+    "RB F1 Team": "6692FF", "Haas F1 Team": "B6BABD", "Williams": "64C4FF",
+    "Audi": "52E252", "Cadillac F1 Team": "FFFFFF"
+}
+
 # --- State ---
 class F1State:
     def __init__(self):
@@ -204,12 +220,19 @@ async def get_previous_results():
                             elif status == "Did not start":
                                 points_display = "DNS"
 
+                            nationality = driver.get('nationality', '')
+                            flag = FLAG_MAPPING.get(nationality, "🏁")
+                            team_name = constructor.get('name', '')
+                            team_color = TEAM_COLORS.get(team_name, "FFFFFF")
+
                             formatted_results.append({
                                 "firstName": driver.get('givenName'),
                                 "lastName": driver.get('familyName'),
-                                "constructor": constructor.get('name'),
+                                "constructor": team_name,
                                 "position": res.get('position'),
-                                "points": points_display
+                                "points": points_display,
+                                "flag": flag,
+                                "color": int(team_color, 16)
                             })
                         res_data = {
                             "raceName": race.get('raceName'),

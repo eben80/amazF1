@@ -186,8 +186,9 @@ Page(BasePage({
 
       return {
         pos: `P${item.position}`,
-        name: `${item.firstName} ${item.lastName}`,
-        pts: pts_text
+        name: `${item.flag} ${item.firstName} ${item.lastName}`,
+        pts: pts_text,
+        color: item.color || COLORS.WHITE
       };
     });
 
@@ -205,7 +206,7 @@ Page(BasePage({
           item_bg_radius: 0,
           text_view: [
             { x: 18, y: 8, w: 50, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
-            { x: 70, y: 6, w: 180, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20 },
+            { x: 70, y: 6, w: 180, h: 30, key: 'name', color_key: 'color', text_size: 20, align_h: hmUI.align.LEFT },
             { x: 260, y: 10, w: 110, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
           ],
           text_view_count: 3
