@@ -1,6 +1,7 @@
 import * as hmUI from "@zos/ui";
 import * as display from "@zos/display";
-import { onGesture, GESTURE_LEFT, GESTURE_RIGHT } from "@zos/interaction";
+import { getDeviceInfo } from "@zos/device";
+import { setScrollMode, SCROLL_MODE_SWIPER_HORIZONTAL } from "@zos/page";
 import { BasePage } from "@zeppos/zml/base-page";
 import { log as Logger } from "@zos/utils";
 
@@ -31,7 +32,7 @@ Page(BasePage({
   state: {
     f1Data: null,
     resultsData: null,
-    currentView: "main"
+    DEVICE_WIDTH: 390
   },
 
   onInit() {
@@ -41,28 +42,20 @@ Page(BasePage({
       logger.log("display.setStayWake not found");
     }
 
-    onGesture({
-      callback: (event) => {
-        logger.log("GESTURE EVENT:", event);
+    const { width } = getDeviceInfo();
+    this.state.DEVICE_WIDTH = width;
 
-        if (event === GESTURE_LEFT) {
-          logger.log("GESTURE_LEFT: Loading Results");
-          if (this.state.currentView === "main") {
+    setScrollMode({
+      mode: SCROLL_MODE_SWIPER_HORIZONTAL,
+      width: width,
+      count: 2,
+      modeParams: {
+        on_page: (index) => {
+          logger.log("SWIPED TO PAGE:", index);
+          if (index === 1) {
             this.loadResults();
-            return true;
           }
         }
-
-        if (event === GESTURE_RIGHT) {
-          logger.log("GESTURE_RIGHT: Back to Main");
-          if (this.state.currentView === "results") {
-            this.state.currentView = "main";
-            this.updateUI(this.state.f1Data);
-            return true;
-          }
-        }
-
-        return false;
       }
     });
   },
@@ -127,23 +120,22 @@ Page(BasePage({
   // =========================
   renderResults(data) {
     logger.log("renderResults called with data:", JSON.stringify(data).substring(0, 200));
-    if (this.rootGroup) {
-      logger.log("Deleting old rootGroup");
-      hmUI.deleteWidget(this.rootGroup);
-      this.rootGroup = null;
+
+    if (this.resultsGroup) {
+      hmUI.deleteWidget(this.resultsGroup);
     }
 
     const results = data?.results || [];
     logger.log("Results count:", results.length);
 
-    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
-      x: 0,
+    this.resultsGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: this.state.DEVICE_WIDTH,
       y: 0,
-      w: 390,
+      w: this.state.DEVICE_WIDTH,
       h: 450
     });
 
-    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+    this.resultsGroup.createWidget(hmUI.widget.TEXT, {
       x: LAYOUT.X,
       y: SAFE_TOP,
       w: LAYOUT.W,
@@ -155,10 +147,10 @@ Page(BasePage({
     });
 
     if (!results.length) {
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      this.resultsGroup.createWidget(hmUI.widget.TEXT, {
         x: 0,
         y: 200,
-        w: 390,
+        w: this.state.DEVICE_WIDTH,
         h: 40,
         text: "NO RESULTS",
         color: COLORS.WHITE,
@@ -183,10 +175,10 @@ Page(BasePage({
       };
     });
 
-    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+    this.resultsGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
       y: 110,
-      w: 390,
+      w: this.state.DEVICE_WIDTH,
       h: 340,
       item_space: 6,
       item_config: [
@@ -222,29 +214,31 @@ Page(BasePage({
   // =========================
   updateUI(data) {
 
-    if (this.rootGroup) {
-      hmUI.deleteWidget(this.rootGroup);
-      this.rootGroup = null;
+    if (this.mainGroup) {
+      hmUI.deleteWidget(this.mainGroup);
     }
 
-    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+    this.mainGroup = hmUI.createWidget(hmUI.widget.GROUP, {
       x: 0,
       y: 0,
-      w: 390,
+      w: this.state.DEVICE_WIDTH,
       h: 450
     });
 
     if (!data) {
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      this.mainGroup.createWidget(hmUI.widget.TEXT, {
         x: 0,
         y: 190,
-        w: 390,
+        w: this.state.DEVICE_WIDTH,
         h: 40,
         text: "SYNCING F1 DATA...",
         color: COLORS.WHITE,
         text_size: FONT.HEADER,
         align_h: hmUI.align.CENTER_H
       });
+
+      // Also render initial empty results page at x: DEVICE_WIDTH
+      this.renderResults(null);
       return;
     }
 
@@ -252,7 +246,7 @@ Page(BasePage({
 
       let y = SAFE_TOP;
 
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      this.mainGroup.createWidget(hmUI.widget.TEXT, {
         x: LAYOUT.X,
         y,
         w: LAYOUT.W,
@@ -265,7 +259,7 @@ Page(BasePage({
 
       y += 40;
 
-      this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      this.mainGroup.createWidget(hmUI.widget.TEXT, {
         x: LAYOUT.X,
         y,
         w: LAYOUT.W,
@@ -279,7 +273,7 @@ Page(BasePage({
       y += 50;
 
       if (data.upcoming?.name) {
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        this.mainGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -292,7 +286,7 @@ Page(BasePage({
 
         y += 30;
 
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        this.mainGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -307,7 +301,7 @@ Page(BasePage({
       }
 
       if (data.previous?.name) {
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        this.mainGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -320,7 +314,7 @@ Page(BasePage({
 
         y += 30;
 
-        this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        this.mainGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
           y,
           w: LAYOUT.W,
@@ -339,7 +333,7 @@ Page(BasePage({
     // LIVE
     let y = SAFE_TOP;
 
-    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+    this.mainGroup.createWidget(hmUI.widget.TEXT, {
       x: LAYOUT.X,
       y,
       w: LAYOUT.W,
@@ -357,10 +351,10 @@ Page(BasePage({
       name: item.name
     }));
 
-    this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
+    this.mainGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
       y,
-      w: 390,
+      w: this.state.DEVICE_WIDTH,
       h: 450 - y,
       item_space: 6,
       item_config: [
