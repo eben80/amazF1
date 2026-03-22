@@ -1,7 +1,7 @@
 import * as hmUI from "@zos/ui";
 import * as display from "@zos/display";
 import { getDeviceInfo } from "@zos/device";
-import { onGesture, GESTURE_LEFT, GESTURE_RIGHT } from "@zos/interaction";
+import { onGesture, GESTURE_LEFT, GESTURE_RIGHT, onKey, KEY_BACK, KEY_EVENT_UP } from "@zos/interaction";
 import { push } from "@zos/router";
 import { BasePage } from "@zeppos/zml/base-page";
 import { log as Logger } from "@zos/utils";
@@ -46,6 +46,23 @@ Page(BasePage({
 
     const { width } = getDeviceInfo();
     this.state.DEVICE_WIDTH = width;
+
+    onKey({
+      callback: (keyCode, keyEvent) => {
+        if (keyCode === KEY_BACK && keyEvent === KEY_EVENT_UP) {
+          logger.log("BACK KEY PRESSED");
+          if (this.state.currentView !== "main") {
+            this.state.currentView = "main";
+            this.updateUI(this.state.f1Data);
+            return true;
+          }
+          // On main screen, return true to prevent exit from back button
+          // User must use other system methods to close if they really want to
+          return true;
+        }
+        return false;
+      }
+    });
 
     onGesture({
       callback: (event) => {
