@@ -196,12 +196,20 @@ async def get_previous_results():
                         for res in results:
                             driver = res.get('Driver', {})
                             constructor = res.get('Constructor', {})
+                            status = res.get('status', '')
+
+                            points_display = res.get('points')
+                            if status == "Retired":
+                                points_display = "DNF"
+                            elif status == "Did not start":
+                                points_display = "DNS"
+
                             formatted_results.append({
                                 "firstName": driver.get('givenName'),
                                 "lastName": driver.get('familyName'),
                                 "constructor": constructor.get('name'),
                                 "position": res.get('position'),
-                                "points": res.get('points')
+                                "points": points_display
                             })
                         res_data = {
                             "raceName": race.get('raceName'),

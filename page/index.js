@@ -187,11 +187,18 @@ Page(BasePage({
 
     logger.log("Creating SCROLL_LIST with data_array");
 
-    const data_array = results.map(item => ({
-      pos: `P${item.position}`,
-      name: `${item.firstName} ${item.lastName}`,
-      pts: `${item.points} pts`
-    }));
+    const data_array = results.map(item => {
+      let pts_text = `${item.points}`;
+      if (item.points !== "DNF" && item.points !== "DNS") {
+        pts_text += " pts";
+      }
+
+      return {
+        pos: `P${item.position}`,
+        name: `${item.firstName} ${item.lastName}`,
+        pts: pts_text
+      };
+    });
 
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
