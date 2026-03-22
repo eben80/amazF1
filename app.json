@@ -1,22 +1,20 @@
 {
   "configVersion": "v3",
   "app": {
-    "appId": 25415,
+    "appId": 21625,
     "appName": "AmazF1",
     "appType": "app",
     "version": {
       "code": 1,
-      "name": "1.0.0"
+      "name": "1.0.1"
     },
     "icon": "icon.png",
     "vender": "zepp",
-    "description": "F1 Live Timing"
+    "description": "F1 Fan App"
   },
   "permissions": [
     "data:os.device.info",
-    "device:os:local_storage",
-    "device:os:display",
-    "device:os:network"
+    "device:os.local_storage"
   ],
   "runtime": {
     "apiVersion": {
@@ -26,32 +24,29 @@
     }
   },
   "targets": {
-    "common": {
-      "module": {
-        "page": {
-          "pages": [
-            "page/index"
-          ]
-        },
-        "app-side": {
-          "path": "app-side/index"
-        },
-        "setting": {
-          "path": "setting/index"
-        }
+  "common": {
+    "module": {
+      "page": {
+        "pages": [
+          "page/index"
+        ]
       },
-      "platforms": [
-        {
-          "st": "r",
-          "dw": 480
-        },
-        {
-          "st": "s",
-          "dw": 390
-        }
-      ]
-    }
-  },
+      "app-side": {
+        "path": "app-side/index"
+      }
+    },
+    "platforms": [
+      {
+        "st": "r",
+        "dw": 480
+      },
+      {
+        "st": "s",
+        "dw": 390
+      }
+    ]
+  }
+},
   "i18n": {
     "en-US": {
       "appName": "AmazF1"
