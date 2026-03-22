@@ -47,6 +47,11 @@ Page(BasePage({
     const { width } = getDeviceInfo();
     this.state.DEVICE_WIDTH = width;
 
+    // Polling every 30 seconds
+    this.pollInterval = setInterval(() => {
+      this.fetchData();
+    }, 30000);
+
     onKey({
       callback: (keyCode, keyEvent) => {
         if (keyCode === KEY_BACK && keyEvent === KEY_EVENT_UP) {
@@ -125,6 +130,9 @@ Page(BasePage({
   },
 
   onDestroy() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+    }
     if (typeof display.setStayWake === "function") {
       display.setStayWake(false);
     }
@@ -148,10 +156,14 @@ Page(BasePage({
     this.request({ method: "GET_DATA" })
       .then((res) => {
         this.state.f1Data = res?.result;
-        this.updateUI(this.state.f1Data);
+        if (this.state.currentView === "main") {
+          this.updateUI(this.state.f1Data);
+        }
       })
       .catch(() => {
-        this.updateUI({ error: true });
+        if (this.state.currentView === "main") {
+          this.updateUI({ error: true });
+        }
       });
   },
 
@@ -883,7 +895,7 @@ Page(BasePage({
       y,
       w: LAYOUT.W,
       h: 40,
-      text: "🔴 LIVE SESSION",
+      text: "🔴 LIVE",
       color: COLORS.RED,
       text_size: FONT.TITLE,
       align_h: hmUI.align.CENTER_H
@@ -893,7 +905,10 @@ Page(BasePage({
 
     const timing_data = (data.timing || []).map(item => ({
       pos: `P${item.pos}`,
-      name: item.name
+      name: item.name,
+      color: parseInt(item.teamColor || "FFFFFF", 16),
+      gap: item.gap || "",
+      comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
     }));
 
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
@@ -905,14 +920,19 @@ Page(BasePage({
       item_config: [
         {
           type_id: 1,
-          item_height: 44,
-          item_bg_color: 0x000000,
-          item_bg_radius: 0,
+          item_height: 50,
+          item_bg_color: 0x111111,
+          item_bg_radius: 8,
           text_view: [
-            { x: 18, y: 8, w: 40, h: 28, key: 'pos', color: COLORS.WHITE, text_size: 18 },
-            { x: 70, y: 6, w: 180, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20 }
+            { x: 10, y: 10, w: 40, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
+            { x: 55, y: 8, w: 70, h: 32, key: 'name', color_key: 'color', text_size: 22, align_h: hmUI.align.LEFT },
+            { x: 230, y: 12, w: 100, h: 26, key: 'gap', color: COLORS.GRAY, text_size: 16, align_h: hmUI.align.RIGHT }
           ],
-          text_view_count: 2
+          text_view_count: 3,
+          image_view: [
+            { x: 345, y: 13, w: 24, h: 24, key: 'comp' }
+          ],
+          image_view_count: 1
         }
       ],
       item_config_count: 1,

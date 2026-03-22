@@ -185,8 +185,10 @@ async def on_feed(args):
             if topic == "Heartbeat" or not topic:
                 continue
 
-            state.last_data_time = time.time()
-            state.is_live = True
+            # Check if it's actual data and not an empty update
+            if isinstance(arg, (dict, str)) and len(str(arg)) > 2:
+                state.last_data_time = time.time()
+                state.is_live = True
 
             if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
@@ -205,7 +207,15 @@ async def on_feed(args):
                         stints = line.get("Stints", [])
                         if stints:
                             last_stint = list(stints.values())[-1] if isinstance(stints, dict) else stints[-1]
-                            td["compound"] = last_stint.get("Compound")
+                            compound = last_stint.get("Compound")
+                            if compound:
+                                compound = compound.upper()
+                                if "SOFT" in compound: td["compound"] = "soft"
+                                elif "MEDIUM" in compound: td["compound"] = "medium"
+                                elif "HARD" in compound: td["compound"] = "hard"
+                                elif "INTER" in compound: td["compound"] = "intermediate"
+                                elif "WET" in compound: td["compound"] = "wet"
+                                else: td["compound"] = compound.lower()
 
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
