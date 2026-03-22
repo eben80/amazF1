@@ -323,7 +323,8 @@ Page(BasePage({
     const data_array = standings.map(item => ({
       pos: `${item.pos}`,
       name: `${item.flag} ${item.name}`,
-      pts: `${item.points}`
+      pts: `${item.points} pts`,
+      color: item.color || COLORS.WHITE
     }));
 
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
@@ -340,7 +341,7 @@ Page(BasePage({
           item_bg_radius: 0,
           text_view: [
             { x: 18, y: 8, w: 40, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
-            { x: 65, y: 6, w: 200, h: 30, key: 'name', color: COLORS.WHITE, text_size: 20, align_h: hmUI.align.LEFT },
+            { x: 65, y: 6, w: 200, h: 30, key: 'name', color_key: 'color', text_size: 20, align_h: hmUI.align.LEFT },
             { x: 270, y: 10, w: 100, h: 30, key: 'pts', color: COLORS.YELLOW, text_size: 18, align_h: hmUI.align.RIGHT }
           ],
           text_view_count: 3
@@ -382,7 +383,7 @@ Page(BasePage({
       y: SAFE_TOP,
       w: LAYOUT.W,
       h: 40,
-      text: "STANDINGS",
+      text: "DRIVERS",
       color: COLORS.RED,
       text_size: FONT.HEADER,
       align_h: hmUI.align.CENTER_H
@@ -407,7 +408,7 @@ Page(BasePage({
     const data_array = standings.map(item => ({
       pos: `${item.pos}`,
       name: `${item.flag} ${item.name}`,
-      pts: `${item.points}`
+      pts: `${item.points} pts`
     }));
 
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {

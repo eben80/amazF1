@@ -308,11 +308,13 @@ async def get_constructor_standings():
                         for s in standings:
                             constructor = s.get('Constructor', {})
                             nationality = constructor.get('nationality', '')
+                            name = constructor.get('name', '')
                             formatted_standings.append({
                                 "pos": s.get('position'),
-                                "name": constructor.get('name'),
+                                "name": name,
                                 "flag": FLAG_MAPPING.get(nationality, "🏁"),
-                                "points": s.get('points')
+                                "points": s.get('points'),
+                                "color": int(TEAM_COLORS.get(name, "FFFFFF"), 16)
                             })
                         return {"standings": formatted_standings}
         return {"error": "No standings found"}
