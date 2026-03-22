@@ -1,5 +1,6 @@
 import * as hmUI from "@zos/ui";
 import * as display from "@zos/display";
+import { onGesture, GESTURE_LEFT, GESTURE_RIGHT } from "@zos/interaction";
 import { BasePage } from "@zeppos/zml/base-page";
 import { log as Logger } from "@zos/utils";
 
@@ -35,6 +36,31 @@ Page(BasePage({
 
   onInit() {
     display.setStayWake(true);
+
+    onGesture({
+      callback: (event) => {
+        logger.log("GESTURE EVENT:", event);
+
+        if (event === GESTURE_LEFT) {
+          logger.log("GESTURE_LEFT: Loading Results");
+          if (this.state.currentView !== "results") {
+            this.loadResults();
+          }
+          return true;
+        }
+
+        if (event === GESTURE_RIGHT) {
+          logger.log("GESTURE_RIGHT: Back to Main");
+          if (this.state.currentView === "results") {
+            this.state.currentView = "main";
+            this.updateUI(this.state.f1Data);
+            return true;
+          }
+        }
+
+        return false;
+      }
+    });
   },
 
   onDestroy() {
@@ -109,24 +135,6 @@ Page(BasePage({
       y: 0,
       w: 390,
       h: 450
-    });
-
-    // BACK BUTTON
-    this.rootGroup.createWidget(hmUI.widget.BUTTON, {
-      x: 10,
-      y: 10,
-      w: 80,
-      h: 40,
-      text: "BACK",
-      text_size: 18,
-      normal_color: 0x333333,
-      press_color: 0x666666,
-      radius: 10,
-      click_func: () => {
-        logger.log("BACK CLICK");
-        this.state.currentView = "main";
-        this.updateUI(this.state.f1Data);
-      }
     });
 
     this.rootGroup.createWidget(hmUI.widget.TEXT, {
@@ -220,23 +228,6 @@ Page(BasePage({
       h: 450
     });
 
-    // REFRESH BUTTON (Always visible on Main)
-    this.rootGroup.createWidget(hmUI.widget.BUTTON, {
-      x: 320,
-      y: 10,
-      w: 60,
-      h: 40,
-      text: "🔄",
-      text_size: 24,
-      normal_color: 0x333333,
-      press_color: 0x666666,
-      radius: 10,
-      click_func: () => {
-        logger.log("REFRESH CLICK");
-        this.fetchData();
-      }
-    });
-
     if (!data) {
       this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: 0,
@@ -310,44 +301,29 @@ Page(BasePage({
       }
 
       if (data.previous?.name) {
-        this.rootGroup.createWidget(hmUI.widget.BUTTON, {
-          x: LAYOUT.X,
-          y,
-          w: LAYOUT.W,
-          h: 90,
-          text: "",
-          normal_color: 0x111111,
-          press_color: 0x222222,
-          radius: 12,
-          click_func: () => {
-            logger.log("LAST RACE CLICK");
-            this.loadResults();
-          }
-        });
-
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
-          y: y + 5,
+          y,
           w: LAYOUT.W,
           h: 30,
           text: "LAST RACE",
           color: COLORS.YELLOW,
           text_size: FONT.HEADER,
-          align_h: hmUI.align.CENTER_H,
-          pointer_event: false
+          align_h: hmUI.align.CENTER_H
         });
+
+        y += 30;
 
         this.rootGroup.createWidget(hmUI.widget.TEXT, {
           x: LAYOUT.X,
-          y: y + 35,
+          y,
           w: LAYOUT.W,
           h: 60,
           text: `${data.previous.name}\nWinner: ${data.previous.winner}`,
           color: COLORS.WHITE,
           text_size: FONT.BODY,
           text_style: hmUI.text_style.WRAP,
-          align_h: hmUI.align.CENTER_H,
-          pointer_event: false
+          align_h: hmUI.align.CENTER_H
         });
       }
 
