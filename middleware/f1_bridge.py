@@ -101,6 +101,35 @@ def get_team_color(name):
 
     return "FFFFFF"
 
+def format_sessions(race):
+    sessions = []
+    session_map = {
+        "FirstPractice": "FP1",
+        "SecondPractice": "FP2",
+        "ThirdPractice": "FP3",
+        "Qualifying": "Qualifying",
+        "Sprint": "Sprint",
+        "SprintQualifying": "Sprint Quali"
+    }
+
+    for key, label in session_map.items():
+        s = race.get(key)
+        if s:
+            sessions.append({
+                "name": label,
+                "time": f"{s.get('date')}T{s.get('time')}"
+            })
+
+    # Add main race
+    sessions.append({
+        "name": "Race",
+        "time": f"{race.get('date')}T{race.get('time')}"
+    })
+
+    # Sort sessions by time
+    sessions.sort(key=lambda x: x['time'])
+    return sessions
+
 async def fetch_race_schedule():
     """Fetch next and previous race from corrected Jolpica-F1 API (async)"""
     try:
@@ -114,30 +143,7 @@ async def fetch_race_schedule():
                         race = races[0]
                         country = race.get('Circuit', {}).get('Location', {}).get('country', '')
 
-                        sessions = []
-                        session_map = {
-                            "FirstPractice": "FP1",
-                            "SecondPractice": "FP2",
-                            "ThirdPractice": "FP3",
-                            "Qualifying": "Qualifying",
-                            "Sprint": "Sprint",
-                            "SprintQualifying": "Sprint Quali"
-                        }
-
-                        for key, label in session_map.items():
-                            s = race.get(key)
-                            if s:
-                                sessions.append({
-                                    "name": label,
-                                    "time": f"{s.get('date')}T{s.get('time')}"
-                                })
-
-                        # Add main race
-                        sessions.append({
-                            "name": "Race",
-                            "time": f"{race.get('date')}T{race.get('time')}"
-                        })
-
+                        sessions = format_sessions(race)
                         state.upcoming_race = {
                             "name": race.get('raceName'),
                             "circuit": race.get('Circuit', {}).get('circuitName'),
@@ -389,19 +395,7 @@ async def get_calendar():
 
                     for race in races:
                         country = race.get('Circuit', {}).get('Location', {}).get('country', '')
-
-                        sessions = []
-                        session_map = {
-                            "FirstPractice": "FP1", "SecondPractice": "FP2", "ThirdPractice": "FP3",
-                            "Qualifying": "Qualifying", "Sprint": "Sprint", "SprintQualifying": "Sprint Quali"
-                        }
-                        for key, label in session_map.items():
-                            s = race.get(key)
-                            if s:
-                                sessions.append({"name": label, "time": f"{s.get('date')}T{s.get('time')}"})
-
-                        sessions.append({"name": "Race", "time": f"{race.get('date')}T{race.get('time')}"})
-
+                        sessions = format_sessions(race)
                         formatted_calendar.append({
                             "name": race.get('raceName'),
                             "circuit": race.get('Circuit', {}).get('circuitName'),
