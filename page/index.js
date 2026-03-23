@@ -1,7 +1,7 @@
 import * as hmUI from "@zos/ui";
 import * as display from "@zos/display";
 import { getDeviceInfo } from "@zos/device";
-import { onGesture, GESTURE_LEFT, GESTURE_RIGHT, onKey, KEY_BACK, KEY_EVENT_UP } from "@zos/interaction";
+import { onGesture, GESTURE_LEFT, GESTURE_RIGHT, GESTURE_DOWN, onKey, KEY_BACK, KEY_EVENT_UP } from "@zos/interaction";
 import { push } from "@zos/router";
 import { BasePage } from "@zeppos/zml/base-page";
 import { log as Logger } from "@zos/utils";
@@ -80,6 +80,13 @@ Page(BasePage({
     onGesture({
       callback: (event) => {
         logger.log("GESTURE EVENT:", event);
+
+        if (event === GESTURE_DOWN) {
+          this.state.testMode = !this.state.testMode;
+          hmUI.showToast({ text: this.state.testMode ? "SIM ON" : "SIM OFF" });
+          this.fetchData();
+          return true;
+        }
 
         if (event === GESTURE_LEFT) {
           if (this.state.currentView === "main") {
@@ -859,23 +866,16 @@ Page(BasePage({
       h: 450
     });
 
-    // SIM / REFRESH area
+    // REFRESH BUTTON
     this.rootGroup.createWidget(hmUI.widget.BUTTON, {
       x: 310, y: 10, w: 70, h: 40,
-      text: this.state.testMode ? "SIM" : "REF",
+      text: "REF",
       text_size: 16,
-      normal_color: this.state.testMode ? 0x00FF00 : 0x333333,
+      normal_color: 0x333333,
       press_color: 0x666666,
       radius: 10,
       click_func: () => {
-        if (this.state.testMode) {
-          this.state.testMode = false;
-          hmUI.showToast({ text: "SIM OFF" });
-        } else {
-          // Double click or similar could be used for SIM, but for now let's just make it a refresh
-          // Unless we want a dedicated hidden way to enter SIM
-          this.fetchData();
-        }
+        this.fetchData();
       }
     });
 
@@ -908,18 +908,6 @@ Page(BasePage({
         align_h: hmUI.align.CENTER_H
       });
 
-      // Hidden SIM toggle (Top Left)
-      this.rootGroup.createWidget(hmUI.widget.BUTTON, {
-        x: 10, y: 10, w: 60, h: 40,
-        text: "",
-        normal_color: 0x000000,
-        press_color: 0x222222,
-        click_func: () => {
-          this.state.testMode = !this.state.testMode;
-          hmUI.showToast({ text: this.state.testMode ? "SIM ON" : "SIM OFF" });
-          this.fetchData();
-        }
-      });
 
       y += 55;
 
