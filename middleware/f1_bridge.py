@@ -25,6 +25,14 @@ SIGNALR_URL = "https://livetiming.formula1.com/signalr"
 JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
 # --- Mappings ---
+TRACK_STATUS_MAP = {
+    "1": "Normal/Clear",
+    "2": "Yellow Flag",
+    "4": "Safety Car",
+    "5": "Red Flag",
+    "6": "VSC",
+    "7": "VSC Ending"
+}
 FLAG_MAPPING = {
     "British": "🇬🇧", "German": "🇩🇪", "Italian": "🇮🇹", "Monegasque": "🇲🇨",
     "French": "🇫🇷", "New Zealander": "🇳🇿", "Austrian": "🇦🇹", "Spanish": "🇪🇸",
@@ -226,14 +234,20 @@ async def on_feed(args):
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
                 elif topic == "SessionInfo":
-                    state.session_info = {"name": decoded.get("SessionName"), "type": decoded.get("Type"), "circuit": decoded.get("CircuitName")}
+                    state.session_info = {
+                        "name": decoded.get("SessionName"),
+                        "type": decoded.get("Type"),
+                        "circuit": decoded.get("CircuitName"),
+                        "status": decoded.get("Status")
+                    }
                 elif topic == "LapCount":
                     state.lap_count = {"current": decoded.get("CurrentLap"), "total": decoded.get("TotalLaps")}
                 elif topic == "DriverList":
                     for dnum, info in decoded.items():
                         state.driver_list[dnum] = {"name": info.get("FullName"), "team": info.get("TeamName"), "color": info.get("TeamColour"), "abbrev": info.get("Tla")}
                 elif topic == "TrackStatus":
-                    state.track_status = decoded.get("Status", "AllClear")
+                    status_code = decoded.get("Status", "1")
+                    state.track_status = TRACK_STATUS_MAP.get(status_code, "Normal/Clear")
     except Exception as e:
         logger.error(f"Error in on_feed: {e}")
 
@@ -263,11 +277,16 @@ async def get_status():
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
 
+    # If session is over, indicate it
+    track_display = state.track_status
+    if state.session_info.get("status") == "Finished":
+        track_display = "Chequered Flag"
+
     return {
         "live": effective_live,
         "session": state.session_info,
         "weather": state.weather_data,
-        "track": state.track_status,
+        "track": track_display,
         "laps": state.lap_count,
         "timing": sorted_timing[:10],
         "upcoming": state.upcoming_race,

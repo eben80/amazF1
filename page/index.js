@@ -47,10 +47,10 @@ Page(BasePage({
     const { width } = getDeviceInfo();
     this.state.DEVICE_WIDTH = width;
 
-    // Polling every 30 seconds
+    // Polling every 5 seconds for live updates
     this.pollInterval = setInterval(() => {
       this.fetchData();
-    }, 30000);
+    }, 5000);
 
     onKey({
       callback: (keyCode, keyEvent) => {
@@ -948,12 +948,31 @@ Page(BasePage({
     this.rootGroup.createWidget(hmUI.widget.TEXT, {
       x: LAYOUT.X,
       y,
-      w: LAYOUT.W,
+      w: 100,
       h: 40,
       text: "🔴 LIVE",
       color: COLORS.RED,
-      text_size: FONT.TITLE,
-      align_h: hmUI.align.CENTER_H
+      text_size: 24,
+      align_h: hmUI.align.LEFT
+    });
+
+    // Track Status
+    let status_color = COLORS.WHITE;
+    const status = data.track || "";
+    if (status.includes("Yellow")) status_color = COLORS.YELLOW;
+    else if (status.includes("Red")) status_color = COLORS.RED;
+    else if (status.includes("Clear") || status.includes("Normal")) status_color = 0x00FF00;
+    else if (status.includes("SC") || status.includes("Safety")) status_color = COLORS.YELLOW;
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: 120,
+      y,
+      w: 250,
+      h: 40,
+      text: status.toUpperCase(),
+      color: status_color,
+      text_size: 20,
+      align_h: hmUI.align.RIGHT
     });
 
     y += 45;
