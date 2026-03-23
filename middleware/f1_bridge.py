@@ -293,6 +293,32 @@ async def get_status():
         "previous": state.previous_race
     }
 
+@app.get("/mock_status")
+async def get_mock_status():
+    """Return a fake live session for UI testing"""
+    mock_timing = [
+        {"num": "1", "name": "VER", "team": "Red Bull", "teamColor": "3671C6", "pos": "1", "gap": "LEADER", "comp": "soft"},
+        {"num": "4", "name": "NOR", "team": "McLaren", "teamColor": "FF8000", "pos": "2", "gap": "+1.234", "comp": "soft"},
+        {"num": "44", "name": "HAM", "team": "Ferrari", "teamColor": "E80020", "pos": "3", "gap": "+5.678", "comp": "medium"},
+        {"num": "63", "name": "RUS", "team": "Mercedes", "teamColor": "27F4D2", "pos": "4", "gap": "+6.102", "comp": "medium"},
+        {"num": "16", "name": "LEC", "team": "Ferrari", "teamColor": "E80020", "pos": "5", "gap": "+8.991", "comp": "hard"},
+        {"num": "81", "name": "PIA", "team": "McLaren", "teamColor": "FF8000", "pos": "6", "gap": "+12.456", "comp": "soft"},
+        {"num": "14", "name": "ALO", "team": "Aston Martin", "teamColor": "229971", "pos": "7", "gap": "+15.003", "comp": "hard"},
+        {"num": "10", "name": "GAS", "team": "Alpine", "teamColor": "0093CC", "pos": "8", "gap": "+18.224", "comp": "medium"},
+        {"num": "27", "name": "HUL", "team": "Haas", "teamColor": "B6BABD", "pos": "9", "gap": "+20.556", "comp": "soft"},
+        {"num": "23", "name": "ALB", "team": "Williams", "teamColor": "64C4FF", "pos": "10", "gap": "+22.100", "comp": "medium"}
+    ]
+    return {
+        "live": True,
+        "session": {"name": "Mock Grand Prix", "type": "Race", "circuit": "Test Circuit"},
+        "weather": {"air": "25", "track": "38", "hum": "45", "rain": False},
+        "track": "Yellow Flag",
+        "laps": {"current": 15, "total": 50},
+        "timing": mock_timing,
+        "upcoming": state.upcoming_race,
+        "previous": state.previous_race
+    }
+
 @app.get("/previous_results")
 async def get_previous_results():
     """Fetch results from the last race with Name, Surname, Constructor, Position, and Points"""

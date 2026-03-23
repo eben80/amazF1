@@ -136,6 +136,32 @@ async function fetchResults(res) {
 }
 
 // =========================
+// FETCH MOCK DATA
+// =========================
+async function fetchMockStatus(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/mock_status',
+      method: 'GET'
+    });
+
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    res(null, { result: body });
+
+  } catch (error) {
+    res(null, { result: { error: "NO_INTERNET" } });
+  }
+}
+
+// =========================
 // SERVICE
 // =========================
 AppSideService(
@@ -144,6 +170,10 @@ AppSideService(
 
       if (req.method === "GET_DATA") {
         fetchStatus(res);
+      }
+
+      if (req.method === "GET_MOCK_DATA") {
+        fetchMockStatus(res);
       }
 
       if (req.method === "GET_RESULTS") {

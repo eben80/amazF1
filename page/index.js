@@ -34,7 +34,8 @@ Page(BasePage({
     f1Data: null,
     resultsData: null,
     DEVICE_WIDTH: 390,
-    currentView: "main"
+    currentView: "main",
+    testMode: false
   },
 
   onInit() {
@@ -153,7 +154,8 @@ Page(BasePage({
   // DATA
   // =========================
   fetchData() {
-    this.request({ method: "GET_DATA" })
+    const method = this.state.testMode ? "GET_MOCK_DATA" : "GET_DATA";
+    this.request({ method })
       .then((res) => {
         this.state.f1Data = res?.result;
         if (this.state.currentView === "main") {
@@ -842,6 +844,21 @@ Page(BasePage({
         color: COLORS.GRAY,
         text_size: FONT.TITLE,
         align_h: hmUI.align.CENTER_H
+      });
+
+      // TEST MODE BUTTON
+      this.rootGroup.createWidget(hmUI.widget.BUTTON, {
+        x: 320, y: 10, w: 60, h: 40,
+        text: "🧪",
+        text_size: 20,
+        normal_color: this.state.testMode ? 0x00FF00 : 0x333333,
+        press_color: 0x666666,
+        radius: 10,
+        click_func: () => {
+          this.state.testMode = !this.state.testMode;
+          hmUI.showToast({ text: this.state.testMode ? "Test Mode ON" : "Test Mode OFF" });
+          this.fetchData();
+        }
       });
 
       y += 55;
