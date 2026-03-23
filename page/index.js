@@ -50,6 +50,9 @@ Page(BasePage({
 
     // Polling every 5 seconds for live updates
     this.pollInterval = setInterval(() => {
+      if (typeof display.setStayWake === "function") {
+        display.setStayWake(true);
+      }
       this.fetchData();
     }, 5000);
 
@@ -856,6 +859,26 @@ Page(BasePage({
       h: 450
     });
 
+    // SIM / REFRESH area
+    this.rootGroup.createWidget(hmUI.widget.BUTTON, {
+      x: 310, y: 10, w: 70, h: 40,
+      text: this.state.testMode ? "SIM" : "REF",
+      text_size: 16,
+      normal_color: this.state.testMode ? 0x00FF00 : 0x333333,
+      press_color: 0x666666,
+      radius: 10,
+      click_func: () => {
+        if (this.state.testMode) {
+          this.state.testMode = false;
+          hmUI.showToast({ text: "SIM OFF" });
+        } else {
+          // Double click or similar could be used for SIM, but for now let's just make it a refresh
+          // Unless we want a dedicated hidden way to enter SIM
+          this.fetchData();
+        }
+      }
+    });
+
     if (!data) {
       this.rootGroup.createWidget(hmUI.widget.TEXT, {
         x: 0,
@@ -885,17 +908,15 @@ Page(BasePage({
         align_h: hmUI.align.CENTER_H
       });
 
-      // TEST MODE BUTTON
+      // Hidden SIM toggle (Top Left)
       this.rootGroup.createWidget(hmUI.widget.BUTTON, {
-        x: 310, y: 10, w: 70, h: 40,
-        text: "SIM",
-        text_size: 18,
-        normal_color: this.state.testMode ? 0x00FF00 : 0x333333,
-        press_color: 0x666666,
-        radius: 10,
+        x: 10, y: 10, w: 60, h: 40,
+        text: "",
+        normal_color: 0x000000,
+        press_color: 0x222222,
         click_func: () => {
           this.state.testMode = !this.state.testMode;
-          hmUI.showToast({ text: this.state.testMode ? "Test Mode ON" : "Test Mode OFF" });
+          hmUI.showToast({ text: this.state.testMode ? "SIM ON" : "SIM OFF" });
           this.fetchData();
         }
       });
