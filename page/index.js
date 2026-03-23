@@ -41,8 +41,12 @@ Page(BasePage({
   onInit() {
     if (typeof display.setStayWake === "function") {
       display.setStayWake(true);
-    } else {
-      logger.log("display.setStayWake not found");
+    }
+    if (typeof display.resetBrightTime === "function") {
+      display.resetBrightTime();
+    }
+    if (typeof display.setBrightTime === "function") {
+      display.setBrightTime(600); // 10 minutes
     }
 
     const { width } = getDeviceInfo();
@@ -52,6 +56,9 @@ Page(BasePage({
     this.pollInterval = setInterval(() => {
       if (typeof display.setStayWake === "function") {
         display.setStayWake(true);
+      }
+      if (typeof display.resetBrightTime === "function") {
+        display.resetBrightTime();
       }
       this.fetchData();
     }, 5000);
@@ -869,9 +876,9 @@ Page(BasePage({
     // REFRESH BUTTON
     this.rootGroup.createWidget(hmUI.widget.BUTTON, {
       x: 310, y: 10, w: 70, h: 40,
-      text: "REF",
+      text: this.state.testMode ? "SIM" : "REF",
       text_size: 16,
-      normal_color: 0x333333,
+      normal_color: this.state.testMode ? 0x00FF00 : 0x333333,
       press_color: 0x666666,
       radius: 10,
       click_func: () => {
