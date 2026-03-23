@@ -10,16 +10,20 @@ async function fetchStatus(res) {
       method: 'GET'
     });
 
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
     const body = typeof response.body === 'string'
       ? JSON.parse(response.body)
       : response.body;
 
-    console.log("FETCH_RESULTS_BODY:", JSON.stringify(body).substring(0, 200));
     res(null, { result: body });
 
   } catch (error) {
-    console.log("FETCH_RESULTS_ERROR:", error);
-    res(null, { result: { error: true } });
+    console.log("FETCH_STATUS_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
   }
 }
 
@@ -33,16 +37,20 @@ async function fetchCalendar(res) {
       method: 'GET'
     });
 
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
     const body = typeof response.body === 'string'
       ? JSON.parse(response.body)
       : response.body;
 
-    console.log("FETCH_CALENDAR_BODY:", JSON.stringify(body).substring(0, 200));
     res(null, { result: body });
 
   } catch (error) {
     console.log("FETCH_CALENDAR_ERROR:", error);
-    res(null, { result: { error: true } });
+    res(null, { result: { error: "NO_INTERNET" } });
   }
 }
 
@@ -56,16 +64,20 @@ async function fetchConstructorStandings(res) {
       method: 'GET'
     });
 
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
     const body = typeof response.body === 'string'
       ? JSON.parse(response.body)
       : response.body;
 
-    console.log("FETCH_CONSTRUCTOR_STANDINGS_BODY:", JSON.stringify(body).substring(0, 200));
     res(null, { result: body });
 
   } catch (error) {
-    console.log("FETCH_CONSTRUCTOR_STANDINGS_ERROR:", error);
-    res(null, { result: { error: true } });
+    console.log("FETCH_CONSTRUCTORS_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
   }
 }
 
@@ -79,16 +91,20 @@ async function fetchStandings(res) {
       method: 'GET'
     });
 
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
     const body = typeof response.body === 'string'
       ? JSON.parse(response.body)
       : response.body;
 
-    console.log("FETCH_STANDINGS_BODY:", JSON.stringify(body).substring(0, 200));
     res(null, { result: body });
 
   } catch (error) {
     console.log("FETCH_STANDINGS_ERROR:", error);
-    res(null, { result: { error: true } });
+    res(null, { result: { error: "NO_INTERNET" } });
   }
 }
 
@@ -102,6 +118,11 @@ async function fetchResults(res) {
       method: 'GET'
     });
 
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
     const body = typeof response.body === 'string'
       ? JSON.parse(response.body)
       : response.body;
@@ -109,7 +130,8 @@ async function fetchResults(res) {
     res(null, { result: body });
 
   } catch (error) {
-    res(null, { result: { error: true } });
+    console.log("FETCH_RESULTS_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
   }
 }
 

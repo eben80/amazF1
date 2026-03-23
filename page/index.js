@@ -160,9 +160,10 @@ Page(BasePage({
           this.updateUI(this.state.f1Data);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        logger.log("fetchData failed", err);
         if (this.state.currentView === "main") {
-          this.updateUI({ error: true });
+          this.showError("Ensure the Zepp App is open on your phone and Bluetooth is on.");
         }
       });
   },
@@ -171,21 +172,22 @@ Page(BasePage({
     logger.log("loadResults called");
     this.request({ method: "GET_RESULTS" })
       .then((res) => {
-        logger.log("loadResults success:", JSON.stringify(res).substring(0, 200));
         const data = res?.result;
+        if (data?.error === "NO_INTERNET") {
+          this.showError("The phone has no internet connection.");
+          return;
+        }
 
         if (data && data.results) {
           this.state.resultsData = data;
           this.state.currentView = "results";
           this.renderResults(data);
         } else {
-          logger.log("Data received but results missing");
           this.renderResults({ raceName: "No Data", results: [] });
         }
       })
-      .catch((err) => {
-        logger.log("Request failed", err);
-        this.renderResults({ raceName: "Error", results: [] });
+      .catch(() => {
+        this.showError("Bluetooth connection lost with phone.");
       });
   },
 
@@ -193,20 +195,21 @@ Page(BasePage({
     logger.log("loadStandings called");
     this.request({ method: "GET_STANDINGS" })
       .then((res) => {
-        logger.log("loadStandings success:", JSON.stringify(res).substring(0, 200));
         const data = res?.result;
+        if (data?.error === "NO_INTERNET") {
+          this.showError("The phone has no internet connection.");
+          return;
+        }
 
         if (data && data.standings) {
           this.state.currentView = "standings";
           this.renderStandings(data);
         } else {
-          logger.log("Data received but standings missing");
           this.renderStandings({ standings: [] });
         }
       })
-      .catch((err) => {
-        logger.log("Request failed", err);
-        this.renderStandings({ error: true });
+      .catch(() => {
+        this.showError("Bluetooth connection lost with phone.");
       });
   },
 
@@ -214,20 +217,21 @@ Page(BasePage({
     logger.log("loadConstructorStandings called");
     this.request({ method: "GET_CONSTRUCTOR_STANDINGS" })
       .then((res) => {
-        logger.log("loadConstructorStandings success:", JSON.stringify(res).substring(0, 200));
         const data = res?.result;
+        if (data?.error === "NO_INTERNET") {
+          this.showError("The phone has no internet connection.");
+          return;
+        }
 
         if (data && data.standings) {
           this.state.currentView = "constructors";
           this.renderConstructorStandings(data);
         } else {
-          logger.log("Data received but constructor standings missing");
           this.renderConstructorStandings({ standings: [] });
         }
       })
-      .catch((err) => {
-        logger.log("Request failed", err);
-        this.renderConstructorStandings({ error: true });
+      .catch(() => {
+        this.showError("Bluetooth connection lost with phone.");
       });
   },
 
@@ -235,8 +239,12 @@ Page(BasePage({
     logger.log("loadCalendar called");
     this.request({ method: "GET_CALENDAR" })
       .then((res) => {
-        logger.log("loadCalendar success");
         const data = res?.result;
+        if (data?.error === "NO_INTERNET") {
+          this.showError("The phone has no internet connection.");
+          return;
+        }
+
         if (data && data.calendar) {
           this.state.calendarData = data;
           this.state.currentView = "calendar";
@@ -245,9 +253,8 @@ Page(BasePage({
           this.renderCalendar({ calendar: [] });
         }
       })
-      .catch((err) => {
-        logger.log("Request failed", err);
-        this.renderCalendar({ error: true });
+      .catch(() => {
+        this.showError("Bluetooth connection lost with phone.");
       });
   },
 
@@ -744,9 +751,57 @@ Page(BasePage({
   },
 
   // =========================
+  // ERROR UI
+  // =========================
+  showError(message) {
+    logger.log("SHOW_ERROR:", message);
+    if (this.rootGroup) {
+      hmUI.deleteWidget(this.rootGroup);
+      this.rootGroup = null;
+    }
+
+    this.rootGroup = hmUI.createWidget(hmUI.widget.GROUP, {
+      x: 0, y: 0, w: 390, h: 450
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: 0, y: 150, w: 390, h: 50,
+      text: "⚠️ CONNECTION ERROR",
+      color: COLORS.RED,
+      text_size: 24,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: 20, y: 210, w: 350, h: 100,
+      text: message,
+      color: COLORS.WHITE,
+      text_size: 20,
+      text_style: hmUI.text_style.WRAP,
+      align_h: hmUI.align.CENTER_H
+    });
+
+    this.rootGroup.createWidget(hmUI.widget.BUTTON, {
+      x: 100, y: 320, w: 190, h: 50,
+      text: "RETRY",
+      normal_color: 0x333333,
+      press_color: 0x666666,
+      radius: 12,
+      click_func: () => {
+        this.fetchData();
+      }
+    });
+  },
+
+  // =========================
   // MAIN UI
   // =========================
   updateUI(data) {
+
+    if (data?.error === "NO_INTERNET") {
+      this.showError("The phone has no internet connection or the server is down.");
+      return;
+    }
 
     if (this.rootGroup) {
       hmUI.deleteWidget(this.rootGroup);
