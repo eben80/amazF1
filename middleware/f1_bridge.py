@@ -295,10 +295,22 @@ async def get_status():
 
 @app.get("/mock_status")
 async def get_mock_status():
-    """Return a fake live session for UI testing"""
+    """Return a dynamic fake live session for UI testing, loops every 30s"""
+    step = int(time.time() % 30)
+
+    # Simulate track status changes
+    status = "Normal/Clear"
+    if 10 <= step < 20: status = "Yellow Flag"
+    elif 20 <= step < 25: status = "Safety Car"
+
+    # Simulate an overtake (NOR and VER swap at step 15)
+    p1, p2 = ("VER", "NOR") if step < 15 else ("NOR", "VER")
+    c1, c2 = ("3671C6", "FF8000") if step < 15 else ("FF8000", "3671C6")
+    t1, t2 = ("Red Bull", "McLaren") if step < 15 else ("McLaren", "Red Bull")
+
     mock_timing = [
-        {"num": "1", "name": "VER", "team": "Red Bull", "teamColor": "3671C6", "pos": "1", "gap": "LEADER", "comp": "soft"},
-        {"num": "4", "name": "NOR", "team": "McLaren", "teamColor": "FF8000", "pos": "2", "gap": "+1.234", "comp": "soft"},
+        {"num": "1", "name": p1, "team": t1, "teamColor": c1, "pos": "1", "gap": "LEADER", "comp": "soft"},
+        {"num": "4", "name": p2, "team": t2, "teamColor": c2, "pos": "2", "gap": f"+{0.5 + step/10:.3f}", "comp": "soft"},
         {"num": "44", "name": "HAM", "team": "Ferrari", "teamColor": "E80020", "pos": "3", "gap": "+5.678", "comp": "medium"},
         {"num": "63", "name": "RUS", "team": "Mercedes", "teamColor": "27F4D2", "pos": "4", "gap": "+6.102", "comp": "medium"},
         {"num": "16", "name": "LEC", "team": "Ferrari", "teamColor": "E80020", "pos": "5", "gap": "+8.991", "comp": "hard"},
@@ -310,10 +322,10 @@ async def get_mock_status():
     ]
     return {
         "live": True,
-        "session": {"name": "Mock Grand Prix", "type": "Race", "circuit": "Test Circuit"},
-        "weather": {"air": "25", "track": "38", "hum": "45", "rain": False},
-        "track": "Yellow Flag",
-        "laps": {"current": 15, "total": 50},
+        "session": {"name": "Simulated Race", "type": "Race", "circuit": "Dynamic Test Circuit"},
+        "weather": {"air": str(20 + step % 5), "track": str(30 + step % 10), "hum": "50", "rain": step > 25},
+        "track": status,
+        "laps": {"current": 1 + step // 5, "total": 50},
         "timing": mock_timing,
         "upcoming": state.upcoming_race,
         "previous": state.previous_race
