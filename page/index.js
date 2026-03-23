@@ -265,6 +265,11 @@ Page(BasePage({
   // =========================
   renderNextRace(data) {
     logger.log("renderNextRace called");
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    }
+
     if (this.rootGroup) {
       hmUI.deleteWidget(this.rootGroup);
       this.rootGroup = null;
@@ -353,6 +358,11 @@ Page(BasePage({
   // =========================
   renderResults(data) {
     logger.log("renderResults called with data:", JSON.stringify(data).substring(0, 200));
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    }
+
     if (this.rootGroup) {
       logger.log("Deleting old rootGroup");
       hmUI.deleteWidget(this.rootGroup);
@@ -448,6 +458,11 @@ Page(BasePage({
   // =========================
   renderConstructorStandings(data) {
     logger.log("renderConstructorStandings called");
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    }
+
     if (this.rootGroup) {
       hmUI.deleteWidget(this.rootGroup);
       this.rootGroup = null;
@@ -533,6 +548,11 @@ Page(BasePage({
   // =========================
   renderCalendar(data) {
     logger.log("renderCalendar called");
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    }
+
     if (this.rootGroup) {
       hmUI.deleteWidget(this.rootGroup);
       this.rootGroup = null;
@@ -612,6 +632,11 @@ Page(BasePage({
 
   renderEventDetail(race) {
     logger.log("renderEventDetail called");
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    }
+
     if (this.rootGroup) {
       hmUI.deleteWidget(this.rootGroup);
       this.rootGroup = null;
@@ -673,6 +698,11 @@ Page(BasePage({
   // =========================
   renderStandings(data) {
     logger.log("renderStandings called");
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    }
+
     if (this.rootGroup) {
       hmUI.deleteWidget(this.rootGroup);
       this.rootGroup = null;
@@ -757,6 +787,11 @@ Page(BasePage({
   // =========================
   showError(message) {
     logger.log("SHOW_ERROR:", message);
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(false);
+    }
+
     if (this.rootGroup) {
       hmUI.deleteWidget(this.rootGroup);
       this.rootGroup = null;
@@ -799,6 +834,10 @@ Page(BasePage({
   // MAIN UI
   // =========================
   updateUI(data) {
+
+    if (typeof display.setStayWake === "function") {
+      display.setStayWake(true);
+    }
 
     if (data?.error === "NO_INTERNET") {
       this.showError("The phone has no internet connection or the server is down.");
@@ -848,9 +887,9 @@ Page(BasePage({
 
       // TEST MODE BUTTON
       this.rootGroup.createWidget(hmUI.widget.BUTTON, {
-        x: 320, y: 10, w: 60, h: 40,
-        text: "🧪",
-        text_size: 20,
+        x: 310, y: 10, w: 70, h: 40,
+        text: "SIM",
+        text_size: 18,
         normal_color: this.state.testMode ? 0x00FF00 : 0x333333,
         press_color: 0x666666,
         radius: 10,
