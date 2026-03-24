@@ -17,7 +17,7 @@ static lv_obj_t * winner_flag_img;
 
 void ui_init() {
     screen = lv_scr_act();
-    lv_obj_set_style_bg_color(screen, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(screen, lv_color_hex(0x000000), LV_PART_MAIN);
 
     // Header Area
     info_label = lv_label_create(screen);
@@ -76,6 +76,25 @@ void ui_init() {
 
     winner_flag_img = lv_img_create(idle_container);
     lv_obj_align(winner_flag_img, LV_ALIGN_TOP_LEFT, 0, 125);
+
+    // Color Calibration Bars (at the bottom for testing)
+    lv_obj_t * red_bar = lv_obj_create(screen);
+    lv_obj_set_size(red_bar, 40, 15);
+    lv_obj_set_style_bg_color(red_bar, lv_color_hex(0xFF0000), LV_PART_MAIN);
+    lv_obj_set_style_border_width(red_bar, 0, 0);
+    lv_obj_align(red_bar, LV_ALIGN_BOTTOM_LEFT, 10, -5);
+
+    lv_obj_t * green_bar = lv_obj_create(screen);
+    lv_obj_set_size(green_bar, 40, 15);
+    lv_obj_set_style_bg_color(green_bar, lv_color_hex(0x00FF00), LV_PART_MAIN);
+    lv_obj_set_style_border_width(green_bar, 0, 0);
+    lv_obj_align(green_bar, LV_ALIGN_BOTTOM_LEFT, 55, -5);
+
+    lv_obj_t * blue_bar = lv_obj_create(screen);
+    lv_obj_set_size(blue_bar, 40, 15);
+    lv_obj_set_style_bg_color(blue_bar, lv_color_hex(0x0000FF), LV_PART_MAIN);
+    lv_obj_set_style_border_width(blue_bar, 0, 0);
+    lv_obj_align(blue_bar, LV_ALIGN_BOTTOM_LEFT, 100, -5);
 }
 
 void ui_update_status(const JsonObject& data) {
