@@ -272,6 +272,8 @@ async def get_status():
             "teamColor": dinfo["color"],
             "pos": data.get("pos", "99"),
             "gap": data.get("gap", ""),
+            "int": data.get("int", ""),
+            "last": data.get("last", ""),
             "comp": data.get("compound", ""),
             "col": dinfo["color"]
         })
@@ -288,7 +290,7 @@ async def get_status():
         "weather": state.weather_data,
         "track": track_display,
         "laps": state.lap_count,
-        "timing": sorted_timing[:10],
+        "timing": sorted_timing,
         "upcoming": state.upcoming_race,
         "previous": state.previous_race
     }
@@ -309,16 +311,18 @@ async def get_mock_status():
     t1, t2 = ("Red Bull", "McLaren") if step < 15 else ("McLaren", "Red Bull")
 
     mock_timing = [
-        {"num": "1", "name": p1, "team": t1, "teamColor": c1, "pos": "1", "gap": "LEADER", "comp": "soft"},
-        {"num": "4", "name": p2, "team": t2, "teamColor": c2, "pos": "2", "gap": f"+{0.5 + step/10:.3f}", "comp": "soft"},
-        {"num": "44", "name": "HAM", "team": "Ferrari", "teamColor": "E80020", "pos": "3", "gap": "+5.678", "comp": "medium"},
-        {"num": "63", "name": "RUS", "team": "Mercedes", "teamColor": "27F4D2", "pos": "4", "gap": "+6.102", "comp": "medium"},
-        {"num": "16", "name": "LEC", "team": "Ferrari", "teamColor": "E80020", "pos": "5", "gap": "+8.991", "comp": "hard"},
-        {"num": "81", "name": "PIA", "team": "McLaren", "teamColor": "FF8000", "pos": "6", "gap": "+12.456", "comp": "soft"},
-        {"num": "14", "name": "ALO", "team": "Aston Martin", "teamColor": "229971", "pos": "7", "gap": "+15.003", "comp": "hard"},
-        {"num": "10", "name": "GAS", "team": "Alpine", "teamColor": "0093CC", "pos": "8", "gap": "+18.224", "comp": "medium"},
-        {"num": "27", "name": "HUL", "team": "Haas", "teamColor": "B6BABD", "pos": "9", "gap": "+20.556", "comp": "soft"},
-        {"num": "23", "name": "ALB", "team": "Williams", "teamColor": "64C4FF", "pos": "10", "gap": "+22.100", "comp": "medium"}
+        {"num": "1", "name": p1, "team": t1, "teamColor": c1, "pos": "1", "gap": "LEADER", "int": "", "last": "1:21.001", "comp": "soft"},
+        {"num": "4", "name": p2, "team": t2, "teamColor": c2, "pos": "2", "gap": f"+{0.5 + step/10:.3f}", "int": f"+{0.5 + step/10:.3f}", "last": "1:21.150", "comp": "soft"},
+        {"num": "44", "name": "HAM", "team": "Ferrari", "teamColor": "E80020", "pos": "3", "gap": "+5.678", "int": "+5.178", "last": "1:22.010", "comp": "medium"},
+        {"num": "63", "name": "RUS", "team": "Mercedes", "teamColor": "27F4D2", "pos": "4", "gap": "+6.102", "int": "+0.424", "last": "1:21.990", "comp": "medium"},
+        {"num": "16", "name": "LEC", "team": "Ferrari", "teamColor": "E80020", "pos": "5", "gap": "+8.991", "int": "+2.889", "last": "1:22.300", "comp": "hard"},
+        {"num": "81", "name": "PIA", "team": "McLaren", "teamColor": "FF8000", "pos": "6", "gap": "+12.456", "int": "+3.465", "last": "1:21.800", "comp": "soft"},
+        {"num": "14", "name": "ALO", "team": "Aston Martin", "teamColor": "229971", "pos": "7", "gap": "+15.003", "int": "+2.547", "last": "1:23.100", "comp": "hard"},
+        {"num": "10", "name": "GAS", "team": "Alpine", "teamColor": "0093CC", "pos": "8", "gap": "+18.224", "int": "+3.221", "last": "1:22.900", "comp": "medium"},
+        {"num": "27", "name": "HUL", "team": "Haas", "teamColor": "B6BABD", "pos": "9", "gap": "+20.556", "int": "+2.332", "last": "1:23.400", "comp": "soft"},
+        {"num": "23", "name": "ALB", "team": "Williams", "teamColor": "64C4FF", "pos": "10", "gap": "+22.100", "int": "+1.544", "last": "1:23.200", "comp": "medium"},
+        {"num": "11", "name": "PER", "team": "Red Bull", "teamColor": "3671C6", "pos": "11", "gap": "+25.100", "int": "+3.000", "last": "1:23.800", "comp": "soft"},
+        {"num": "22", "name": "TSU", "team": "RB", "teamColor": "6692FF", "pos": "12", "gap": "+28.100", "int": "+3.000", "last": "1:23.900", "comp": "medium"}
     ]
     return {
         "live": True,
