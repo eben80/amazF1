@@ -12,8 +12,8 @@
 // Hardware Pins (ESP32-2432S028)
 #define TFT_BL 21
 
-// USB-C / CYD2USB / CYD-V2-V3 I2C Touch Pins
-#if defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
+// USB-C / CYD2USB I2C Touch Pins
+#ifdef CYD2USB_GT911
 #define I2C_SDA 33
 #define I2C_SCL 32
 #define GT911_INT -1
@@ -26,6 +26,17 @@
 #define TOUCH_MOSI 13
 #define TOUCH_MISO 12
 #define TOUCH_CLK 14
+#endif
+
+// Hybrid CYD (V2/V3) SPI Touch Pins
+#ifdef CYD_V2_V3_XPT2046
+#ifndef TOUCH_CS
+#define TOUCH_CS 33
+#endif
+#define TOUCH_CLK 25
+#define TOUCH_DIN 32
+#define TOUCH_DOUT 39
+#define TOUCH_IRQ 36
 #endif
 
 #endif

@@ -11,12 +11,12 @@
 // Hardware Interface
 TFT_eSPI tft = TFT_eSPI();
 
-#ifdef CYD_XPT2046
+#if defined(CYD_XPT2046) || defined(CYD_V2_V3_XPT2046)
 #include <XPT2046_Touchscreen.h>
 #include <SPI.h>
 SPIClass touchSPI = SPIClass(VSPI);
 XPT2046_Touchscreen ts(TOUCH_CS);
-#elif defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
+#elif defined(CYD2USB_GT911)
 #include <TAMC_GT911.h>
 TAMC_GT911 ts = TAMC_GT911(I2C_SDA, I2C_SCL, GT911_INT, GT911_RST, SCREEN_WIDTH, SCREEN_HEIGHT);
 #endif
@@ -40,7 +40,7 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
 // LVGL Touchpad Callback
 void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
-#ifdef CYD_XPT2046
+#if defined(CYD_XPT2046) || defined(CYD_V2_V3_XPT2046)
     if (ts.touched()) {
         TS_Point p = ts.getPoint();
         data->state = LV_INDEV_STATE_PR;
@@ -50,7 +50,7 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
-#elif defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
+#elif defined(CYD2USB_GT911)
     ts.read();
     if (ts.isTouched) {
         data->state = LV_INDEV_STATE_PR;
@@ -146,11 +146,16 @@ void setup() {
     // Register Touch Driver
     Serial.print("Initializing Touch Driver (");
 #ifdef CYD_XPT2046
-    Serial.println("XPT2046 SPI)...");
-    touchSPI.begin(6, 12, 13, TOUCH_CS);
+    Serial.println("XPT2046 SPI - Original)...");
+    touchSPI.begin(6, 12, 13, TOUCH_CS); // CLK=6, MISO=12, MOSI=13, CS=33
     ts.begin(touchSPI);
     ts.setRotation(1);
-#elif defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
+#elif defined(CYD_V2_V3_XPT2046)
+    Serial.println("XPT2046 SPI - Hybrid V2/V3)...");
+    touchSPI.begin(TOUCH_CLK, TOUCH_DOUT, TOUCH_DIN, TOUCH_CS); // CLK=25, MISO=39, MOSI=32, CS=33
+    ts.begin(touchSPI);
+    ts.setRotation(1);
+#elif defined(CYD2USB_GT911)
     Serial.println("GT911 I2C)...");
     ts.begin();
     ts.setRotation(1);

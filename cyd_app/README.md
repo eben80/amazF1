@@ -24,7 +24,7 @@ There are three main versions of this board supported by this project. Each requ
 - **Model:** ESP32-2432S028 V2/V3 Hybrid.
 - **Connectors:** 1x MicroUSB and 1x USB-C.
 - **Display:** 2.8" ILI9341 (320x240).
-- **Touch:** **GT911** (Capacitive, I2C-based).
+- **Touch:** **XPT2046** (Resistive, SPI-based on custom pins).
 - **PlatformIO Env:** `env:cyd-v2-v3`
 
 ---
@@ -44,14 +44,14 @@ The ESP32-2432S028 includes several onboard components. Below is the standard GP
 | **BL** | 21 | Backlight (PWM) |
 
 ### 🖐️ Touch Controllers
-| Signal | XPT2046 (SPI) | GT911 (I2C) |
-| :--- | :--- | :--- |
-| **CS / SDA** | 33 | 33 |
-| **CLK / SCL** | 14 | 32 |
-| **MOSI** | 13 | - |
-| **MISO** | 12 | - |
-| **INT / IRQ** | 36 | -1 |
-| **RST** | - | -1 |
+| Signal | XPT2046 (SPI - Original) | XPT2046 (SPI - Hybrid V2/V3) | GT911 (I2C) |
+| :--- | :--- | :--- | :--- |
+| **CS / SDA** | 33 | 33 | 33 |
+| **CLK / SCL** | 14 | 25 | 32 |
+| **MOSI / DIN** | 13 | 32 | - |
+| **MISO / DOUT** | 12 | 39 | - |
+| **INT / IRQ** | 36 | 36 | -1 |
+| **RST** | - | - | -1 |
 
 ### 💡 Additional Components
 | Component | GPIO | Description |
