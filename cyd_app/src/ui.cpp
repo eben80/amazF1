@@ -56,6 +56,7 @@ void ui_init() {
     lv_obj_align(idle_container, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN); // Hidden by default
     lv_obj_set_style_bg_color(idle_container, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(idle_container, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_border_width(idle_container, 0, 0);
 
     next_flag_img = lv_img_create(idle_container);
@@ -117,7 +118,7 @@ void ui_update_status(const JsonObject& data) {
         JsonArray timing = data["timing"];
         int row = 1;
         for (JsonObject entry : timing) {
-            if (row >= 10) break;
+            if (row >= 21) break; // Display full field (up to 20 drivers)
             lv_table_set_cell_value(table, row, 0, entry["pos"] | "-");
 
             const char* compound = entry["comp"] | "";

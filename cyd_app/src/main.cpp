@@ -71,7 +71,8 @@ TAMC_GT911 ts = TAMC_GT911(I2C_SDA, I2C_SCL, GT911_INT, GT911_RST, SCREEN_WIDTH,
 
 // LVGL Buffers
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[SCREEN_WIDTH * 40];
+static lv_color_t buf1[SCREEN_WIDTH * 80];
+static lv_color_t buf2[SCREEN_WIDTH * 80];
 
 // LVGL Display Callback
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
@@ -80,8 +81,8 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
     tft.startWrite();
     tft.setAddrWindow(area->x1, area->y1, w, h);
-    // Use false here because LVGL is already swapping bytes if LV_COLOR_16_SWAP is 1
-    tft.pushColors((uint16_t *)&color_p->full, w * h, false);
+    // DMA transfer for non-blocking flush
+    tft.pushImageDMA(area->x1, area->y1, w, h, (uint16_t *)&color_p->full);
     tft.endWrite();
 
     lv_disp_flush_ready(disp);
@@ -200,8 +201,9 @@ void setup() {
     Serial.println("Initializing LVGL...");
     lv_init();
     tft.begin();
+    tft.initDMA(); // Initialize DMA
     tft.setRotation(1);
-    lv_disp_draw_buf_init(&draw_buf, buf, NULL, SCREEN_WIDTH * 40);
+    lv_disp_draw_buf_init(&draw_buf, buf1, buf2, SCREEN_WIDTH * 80);
 
     // Register Display Driver
     Serial.println("Configuring Display Driver...");
