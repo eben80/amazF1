@@ -18,14 +18,10 @@ static void * fs_open(lv_fs_drv_t * drv, const char * path, lv_fs_mode_t mode) {
         strncpy(full_path, path, sizeof(full_path));
     }
 
-    Serial.print("LVFS: Opening ");
-    Serial.println(full_path);
-
     File * f = new File();
     const char * flags = (mode == LV_FS_MODE_WR) ? "w" : "r";
     *f = LittleFS.open(full_path, flags);
     if (!*f || f->isDirectory()) {
-        Serial.println("LVFS: Open failed.");
         delete f;
         return NULL;
     }
@@ -75,7 +71,7 @@ TAMC_GT911 ts = TAMC_GT911(I2C_SDA, I2C_SCL, GT911_INT, GT911_RST, SCREEN_WIDTH,
 
 // LVGL Buffers
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[SCREEN_WIDTH * 10];
+static lv_color_t buf[SCREEN_WIDTH * 40];
 
 // LVGL Display Callback
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
@@ -84,7 +80,8 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
     tft.startWrite();
     tft.setAddrWindow(area->x1, area->y1, w, h);
-    tft.pushColors((uint16_t *)&color_p->full, w * h, true);
+    // Use false here because LVGL is already swapping bytes if LV_COLOR_16_SWAP is 1
+    tft.pushColors((uint16_t *)&color_p->full, w * h, false);
     tft.endWrite();
 
     lv_disp_flush_ready(disp);
@@ -204,7 +201,7 @@ void setup() {
     lv_init();
     tft.begin();
     tft.setRotation(1);
-    lv_disp_draw_buf_init(&draw_buf, buf, NULL, SCREEN_WIDTH * 10);
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, SCREEN_WIDTH * 40);
 
     // Register Display Driver
     Serial.println("Configuring Display Driver...");

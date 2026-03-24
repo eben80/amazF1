@@ -55,6 +55,8 @@ void ui_init() {
     lv_obj_set_size(idle_container, 300, 170);
     lv_obj_align(idle_container, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN); // Hidden by default
+    lv_obj_set_style_bg_color(idle_container, lv_color_hex(0x000000), LV_PART_MAIN);
+    lv_obj_set_style_border_width(idle_container, 0, 0);
 
     next_flag_img = lv_img_create(idle_container);
     lv_obj_align(next_flag_img, LV_ALIGN_TOP_LEFT, 0, 5);
@@ -78,23 +80,24 @@ void ui_init() {
     lv_obj_align(winner_flag_img, LV_ALIGN_TOP_LEFT, 0, 125);
 
     // Color Calibration Bars (at the bottom for testing)
-    lv_obj_t * red_bar = lv_obj_create(screen);
-    lv_obj_set_size(red_bar, 40, 15);
-    lv_obj_set_style_bg_color(red_bar, lv_color_hex(0xFF0000), LV_PART_MAIN);
-    lv_obj_set_style_border_width(red_bar, 0, 0);
-    lv_obj_align(red_bar, LV_ALIGN_BOTTOM_LEFT, 10, -5);
+    const char* bar_names[] = {"R", "G", "B", "W", "K"};
+    uint32_t bar_colors[] = {0xFF0000, 0x00FF00, 0x0000FF, 0xFFFFFF, 0x000000};
+    uint32_t text_colors[] = {0xFFFFFF, 0x000000, 0xFFFFFF, 0x000000, 0xFFFFFF};
 
-    lv_obj_t * green_bar = lv_obj_create(screen);
-    lv_obj_set_size(green_bar, 40, 15);
-    lv_obj_set_style_bg_color(green_bar, lv_color_hex(0x00FF00), LV_PART_MAIN);
-    lv_obj_set_style_border_width(green_bar, 0, 0);
-    lv_obj_align(green_bar, LV_ALIGN_BOTTOM_LEFT, 55, -5);
+    for (int i = 0; i < 5; i++) {
+        lv_obj_t * bar = lv_obj_create(screen);
+        lv_obj_set_size(bar, 30, 20);
+        lv_obj_set_style_bg_color(bar, lv_color_hex(bar_colors[i]), LV_PART_MAIN);
+        lv_obj_set_style_border_width(bar, 1, 0);
+        lv_obj_set_style_border_color(bar, lv_color_hex(0x888888), 0);
+        lv_obj_align(bar, LV_ALIGN_BOTTOM_LEFT, 10 + (i * 35), -5);
+        lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t * blue_bar = lv_obj_create(screen);
-    lv_obj_set_size(blue_bar, 40, 15);
-    lv_obj_set_style_bg_color(blue_bar, lv_color_hex(0x0000FF), LV_PART_MAIN);
-    lv_obj_set_style_border_width(blue_bar, 0, 0);
-    lv_obj_align(blue_bar, LV_ALIGN_BOTTOM_LEFT, 100, -5);
+        lv_obj_t * label = lv_label_create(bar);
+        lv_label_set_text(label, bar_names[i]);
+        lv_obj_set_style_text_color(label, lv_color_hex(text_colors[i]), 0);
+        lv_obj_center(label);
+    }
 }
 
 void ui_update_status(const JsonObject& data) {
@@ -156,8 +159,6 @@ void ui_update_status(const JsonObject& data) {
             const char* code = upcoming["flagCode"] | "un";
             char path[64];
             snprintf(path, sizeof(path), "S:/%s.png", code);
-            Serial.print("UI: Setting next flag to ");
-            Serial.println(path);
             lv_img_set_src(next_flag_img, path);
         }
 
@@ -175,15 +176,11 @@ void ui_update_status(const JsonObject& data) {
             const char* raceCode = previous["flagCode"] | "un";
             char racePath[64];
             snprintf(racePath, sizeof(racePath), "S:/%s.png", raceCode);
-            Serial.print("UI: Setting last flag to ");
-            Serial.println(racePath);
             lv_img_set_src(last_flag_img, racePath);
 
             const char* winCode = previous["winnerFlagCode"] | "un";
             char winPath[64];
             snprintf(winPath, sizeof(winPath), "S:/%s.png", winCode);
-            Serial.print("UI: Setting winner flag to ");
-            Serial.println(winPath);
             lv_img_set_src(winner_flag_img, winPath);
         }
     }
