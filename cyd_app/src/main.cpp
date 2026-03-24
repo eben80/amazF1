@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <lvgl.h>
@@ -90,11 +91,14 @@ void fetch_data() {
 void setup() {
     Serial.begin(115200);
 
-    // WiFi Setup
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
+    // WiFi Setup via WiFiManager
+    WiFiManager wm;
+    // Uncomment to reset settings for testing
+    // wm.resetSettings();
+
+    if (!wm.autoConnect("F1-Timing-Display")) {
+        Serial.println("Failed to connect and hit timeout");
+        ESP.restart();
     }
     Serial.println("\nWiFi connected.");
 

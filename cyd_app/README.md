@@ -71,20 +71,20 @@ The ESP32-2432S028 includes several onboard components. Below is the standard GP
     Download and install the PlatformIO extension for Visual Studio Code.
 2.  **Open Project:**
     Open the `cyd_app` folder in VS Code.
-3.  **Configure WiFi & Bridge:**
-    Open `include/config.h` and update your WiFi credentials and bridge URL:
+3.  **Configure Bridge:**
+    Open `include/config.h` and update your bridge URL:
     ```cpp
-    #define WIFI_SSID "YOUR_SSID"
-    #define WIFI_PASSWORD "YOUR_PASSWORD"
     #define BRIDGE_URL "https://your-f1-bridge-domain.com/status"
     ```
 4.  **TFT_eSPI Configuration:**
     The `platformio.ini` file is pre-configured with the correct build flags for all CYD hardware variants. You do **not** need to modify the library's `User_Setup.h` file manually.
 5.  **Build & Flash:**
     Connect your board and select the appropriate environment in the PlatformIO project task menu based on the identification guide above. Click the **Build & Upload** button (Arrow icon) in the status bar.
+6.  **Connect to WiFi:**
+    On first boot, the device will create a WiFi access point named **`F1-Timing-Display`**. Connect to it with your phone or computer and follow the on-screen portal to select your local 2.4GHz WiFi network and enter its password.
 
 ## ❓ Troubleshooting
 
 - **Touch Screen Not Working:** Ensure you have selected the correct environment for your hardware. MicroUSB-only models (XPT2046) use `cyd`, while USB-C or Hybrid models (GT911) typically require `cyd2usb` or `cyd-v2-v3`.
-- **WiFi Connection Fails:** Check that your network is 2.4GHz. SSIDs and passwords are case sensitive in `config.h`.
+- **WiFi Configuration:** If the portal doesn't open automatically, navigate to `192.168.4.1` in your browser while connected to the `F1-Timing-Display` AP.
 - **No Data Displayed:** Confirm that the Python bridge middleware is running and that your CYD has internet access to reach the configured `BRIDGE_URL`.

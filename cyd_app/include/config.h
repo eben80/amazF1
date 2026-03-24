@@ -1,10 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// WiFi Settings
-#define WIFI_SSID "YOUR_SSID"
-#define WIFI_PASSWORD "YOUR_PASSWORD"
-
 // Middleware Settings
 #define BRIDGE_URL "https://your-f1-bridge-domain.com/status"
 #define POLL_INTERVAL 10000 // 10 seconds
