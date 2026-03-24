@@ -2,109 +2,179 @@
 #include <ArduinoJson.h>
 
 static lv_obj_t * screen;
-static lv_obj_t * table;
+static lv_obj_t * header;
 static lv_obj_t * info_label;
 static lv_obj_t * track_label;
 static lv_obj_t * weather_label;
 
-// Idle Dashboard Objects
+// View Containers
+static lv_obj_t * view_containers[7];
+static View current_view = VIEW_MAIN;
+
+// Main View Objects
+static lv_obj_t * timing_table;
 static lv_obj_t * idle_container;
-static lv_obj_t * next_race_label;
-static lv_obj_t * last_race_label;
+static lv_obj_t * next_race_summary_label;
+static lv_obj_t * last_race_summary_label;
 static lv_obj_t * next_flag_img;
 static lv_obj_t * last_flag_img;
 static lv_obj_t * winner_flag_img;
+
+// Other View Objects
+static lv_obj_t * results_table;
+static lv_obj_t * standings_table;
+static lv_obj_t * constructors_table;
+static lv_obj_t * calendar_table;
+static lv_obj_t * next_race_details_label;
+static lv_obj_t * event_detail_label;
 
 void ui_init() {
     screen = lv_scr_act();
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x000000), LV_PART_MAIN);
 
-    // Header Area
-    info_label = lv_label_create(screen);
+    // Header Area (Global)
+    header = lv_obj_create(screen);
+    lv_obj_set_size(header, 320, 50);
+    lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_bg_color(header, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_border_width(header, 0, 0);
+
+    info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
-    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 10, 10);
+    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 0, 0);
 
-    track_label = lv_label_create(screen);
-    lv_label_set_text(track_label, "TRACK: -");
-    lv_obj_align(track_label, LV_ALIGN_TOP_RIGHT, -10, 10);
+    track_label = lv_label_create(header);
+    lv_label_set_text(track_label, "-");
+    lv_obj_align(track_label, LV_ALIGN_TOP_RIGHT, 0, 0);
 
-    weather_label = lv_label_create(screen);
+    weather_label = lv_label_create(header);
     lv_label_set_text(weather_label, "AIR: - / TRACK: -");
-    lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 10, 30);
+    lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 0, 20);
 
-    // Timing Table
-    table = lv_table_create(screen);
-    lv_obj_set_size(table, 300, 170);
-    lv_obj_align(table, LV_ALIGN_BOTTOM_MID, 0, -10);
+    // Initialize View Containers
+    for (int i = 0; i < 7; i++) {
+        view_containers[i] = lv_obj_create(screen);
+        lv_obj_set_size(view_containers[i], 320, 190);
+        lv_obj_align(view_containers[i], LV_ALIGN_BOTTOM_MID, 0, 0);
+        lv_obj_set_style_bg_color(view_containers[i], lv_color_hex(0x000000), 0);
+        lv_obj_set_style_border_width(view_containers[i], 0, 0);
+        lv_obj_set_style_pad_all(view_containers[i], 0, 0);
+        lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
+    }
 
-    // Configure Columns
-    lv_table_set_col_cnt(table, 4);
-    lv_table_set_col_width(table, 0, 30);  // P
-    lv_table_set_col_width(table, 1, 60);  // Driver
-    lv_table_set_col_width(table, 2, 110); // Gap/Int
-    lv_table_set_col_width(table, 3, 100); // Last Lap
+    // --- VIEW_MAIN setup ---
+    lv_obj_t * main_cont = view_containers[VIEW_MAIN];
+    lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_HIDDEN);
 
-    // Header Row
-    lv_table_set_cell_value(table, 0, 0, "P");
-    lv_table_set_cell_value(table, 0, 1, "DRV");
-    lv_table_set_cell_value(table, 0, 2, "GAP / INT");
-    lv_table_set_cell_value(table, 0, 3, "LAST");
+    timing_table = lv_table_create(main_cont);
+    lv_obj_set_size(timing_table, 320, 190);
+    lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
+    lv_table_set_col_cnt(timing_table, 4);
+    lv_table_set_col_width(timing_table, 0, 30);  // P
+    lv_table_set_col_width(timing_table, 1, 60);  // Driver
+    lv_table_set_col_width(timing_table, 2, 110); // Gap/Int
+    lv_table_set_col_width(timing_table, 3, 100); // Last Lap
+    lv_table_set_cell_value(timing_table, 0, 0, "P");
+    lv_table_set_cell_value(timing_table, 0, 1, "DRV");
+    lv_table_set_cell_value(timing_table, 0, 2, "GAP / INT");
+    lv_table_set_cell_value(timing_table, 0, 3, "LAST");
 
-    // Idle Dashboard Container
-    idle_container = lv_obj_create(screen);
-    lv_obj_set_size(idle_container, 300, 170);
-    lv_obj_align(idle_container, LV_ALIGN_BOTTOM_MID, 0, -10);
-    lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN); // Hidden by default
-    lv_obj_set_style_bg_color(idle_container, lv_color_hex(0x000000), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(idle_container, LV_OPA_COVER, LV_PART_MAIN);
+    idle_container = lv_obj_create(main_cont);
+    lv_obj_set_size(idle_container, 320, 190);
+    lv_obj_align(idle_container, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_bg_color(idle_container, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(idle_container, 0, 0);
 
     next_flag_img = lv_img_create(idle_container);
-    lv_obj_align(next_flag_img, LV_ALIGN_TOP_LEFT, 0, 5);
-
-    next_race_label = lv_label_create(idle_container);
-    lv_label_set_text(next_race_label, "NEXT RACE: -");
-    lv_obj_align(next_race_label, LV_ALIGN_TOP_LEFT, 40, 0);
-    lv_label_set_long_mode(next_race_label, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(next_race_label, 240);
+    lv_obj_align(next_flag_img, LV_ALIGN_TOP_LEFT, 5, 5);
+    next_race_summary_label = lv_label_create(idle_container);
+    lv_obj_align(next_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 0);
+    lv_label_set_long_mode(next_race_summary_label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(next_race_summary_label, 270);
 
     last_flag_img = lv_img_create(idle_container);
-    lv_obj_align(last_flag_img, LV_ALIGN_TOP_LEFT, 0, 85);
-
-    last_race_label = lv_label_create(idle_container);
-    lv_label_set_text(last_race_label, "LAST RACE: -");
-    lv_obj_align(last_race_label, LV_ALIGN_TOP_LEFT, 40, 80);
-    lv_label_set_long_mode(last_race_label, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(last_race_label, 240);
-
+    lv_obj_align(last_flag_img, LV_ALIGN_TOP_LEFT, 5, 85);
+    last_race_summary_label = lv_label_create(idle_container);
+    lv_obj_align(last_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 80);
+    lv_label_set_long_mode(last_race_summary_label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(last_race_summary_label, 270);
     winner_flag_img = lv_img_create(idle_container);
-    lv_obj_align(winner_flag_img, LV_ALIGN_TOP_LEFT, 0, 125);
+    lv_obj_align(winner_flag_img, LV_ALIGN_TOP_LEFT, 5, 125);
 
-    // Color Calibration Bars (at the bottom for testing)
-    const char* bar_names[] = {"R", "G", "B", "W", "K"};
-    uint32_t bar_colors[] = {0xFF0000, 0x00FF00, 0x0000FF, 0xFFFFFF, 0x000000};
-    uint32_t text_colors[] = {0xFFFFFF, 0x000000, 0xFFFFFF, 0x000000, 0xFFFFFF};
+    // --- VIEW_RESULTS setup ---
+    results_table = lv_table_create(view_containers[VIEW_RESULTS]);
+    lv_obj_set_size(results_table, 320, 190);
+    lv_table_set_col_cnt(results_table, 3);
+    lv_table_set_col_width(results_table, 0, 40);
+    lv_table_set_col_width(results_table, 1, 180);
+    lv_table_set_col_width(results_table, 2, 100);
 
-    for (int i = 0; i < 5; i++) {
-        lv_obj_t * bar = lv_obj_create(screen);
-        lv_obj_set_size(bar, 30, 20);
-        lv_obj_set_style_bg_color(bar, lv_color_hex(bar_colors[i]), LV_PART_MAIN);
-        lv_obj_set_style_border_width(bar, 1, 0);
-        lv_obj_set_style_border_color(bar, lv_color_hex(0x888888), 0);
-        lv_obj_align(bar, LV_ALIGN_BOTTOM_LEFT, 10 + (i * 35), -5);
-        lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+    // --- VIEW_NEXT_RACE setup ---
+    next_race_details_label = lv_label_create(view_containers[VIEW_NEXT_RACE]);
+    lv_obj_align(next_race_details_label, LV_ALIGN_TOP_MID, 0, 10);
+    lv_label_set_recolor(next_race_details_label, true);
+    lv_label_set_long_mode(next_race_details_label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(next_race_details_label, 300);
 
-        lv_obj_t * label = lv_label_create(bar);
-        lv_label_set_text(label, bar_names[i]);
-        lv_obj_set_style_text_color(label, lv_color_hex(text_colors[i]), 0);
-        lv_obj_center(label);
+    // --- VIEW_STANDINGS setup ---
+    standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
+    lv_obj_set_size(standings_table, 320, 190);
+    lv_table_set_col_cnt(standings_table, 3);
+    lv_table_set_col_width(standings_table, 0, 40);
+    lv_table_set_col_width(standings_table, 1, 180);
+    lv_table_set_col_width(standings_table, 2, 100);
+
+    // --- VIEW_CONSTRUCTORS setup ---
+    constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
+    lv_obj_set_size(constructors_table, 320, 190);
+    lv_table_set_col_cnt(constructors_table, 3);
+    lv_table_set_col_width(constructors_table, 0, 40);
+    lv_table_set_col_width(constructors_table, 1, 180);
+    lv_table_set_col_width(constructors_table, 2, 100);
+
+    // --- VIEW_CALENDAR setup ---
+    calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
+    lv_obj_set_size(calendar_table, 320, 190);
+    lv_table_set_col_cnt(calendar_table, 2);
+    lv_table_set_col_width(calendar_table, 0, 200);
+    lv_table_set_col_width(calendar_table, 1, 120);
+
+    // --- VIEW_EVENT_DETAIL setup ---
+    event_detail_label = lv_label_create(view_containers[VIEW_EVENT_DETAIL]);
+    lv_obj_align(event_detail_label, LV_ALIGN_TOP_MID, 0, 10);
+    lv_label_set_recolor(event_detail_label, true);
+    lv_label_set_long_mode(event_detail_label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(event_detail_label, 300);
+}
+
+void ui_set_view(View view) {
+    for (int i = 0; i < 7; i++) {
+        lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
+    }
+    lv_obj_clear_flag(view_containers[view], LV_OBJ_FLAG_HIDDEN);
+    current_view = view;
+
+    // Reset header for non-main views if needed
+    if (view != VIEW_MAIN) {
+        lv_label_set_text(track_label, "");
+        lv_label_set_text(weather_label, "");
+        switch(view) {
+            case VIEW_RESULTS: lv_label_set_text(info_label, "LAST RESULTS"); break;
+            case VIEW_NEXT_RACE: lv_label_set_text(info_label, "NEXT RACE"); break;
+            case VIEW_STANDINGS: lv_label_set_text(info_label, "DRIVERS"); break;
+            case VIEW_CONSTRUCTORS: lv_label_set_text(info_label, "CONSTRUCTORS"); break;
+            case VIEW_CALENDAR: lv_label_set_text(info_label, "CALENDAR"); break;
+            case VIEW_EVENT_DETAIL: lv_label_set_text(info_label, "EVENT DETAIL"); break;
+            default: break;
+        }
     }
 }
 
 void ui_update_status(const JsonObject& data) {
     if (data["live"]) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(table, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
 
         lv_label_set_text(info_label, data["session"]["name"]);
         lv_label_set_text(track_label, data["track"]);
@@ -118,44 +188,42 @@ void ui_update_status(const JsonObject& data) {
         JsonArray timing = data["timing"];
         int row = 1;
         for (JsonObject entry : timing) {
-            if (row >= 10) break;
-            lv_table_set_cell_value(table, row, 0, entry["pos"] | "-");
+            if (row >= 20) break;
+            lv_table_set_cell_value(timing_table, row, 0, entry["pos"] | "-");
 
             const char* compound = entry["comp"] | "";
             char driver_name[32];
             if (strlen(compound) > 0) {
-                // We'll use a symbol or just text for now as adding icons to table cells is complex in LVGL 8.3
-                // Alternatively, we can just use the first letter of the compound
                 char c = toupper(compound[0]);
                 snprintf(driver_name, sizeof(driver_name), "(%c) %s", c, entry["name"] | "-");
             } else {
                 snprintf(driver_name, sizeof(driver_name), "%s", entry["name"] | "-");
             }
-            lv_table_set_cell_value(table, row, 1, driver_name);
+            lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
             char gap_int[32];
             snprintf(gap_int, sizeof(gap_int), "%s / %s", entry["gap"] | "-", entry["int"] | "-");
-            lv_table_set_cell_value(table, row, 2, gap_int);
-            lv_table_set_cell_value(table, row, 3, entry["last"] | "-");
+            lv_table_set_cell_value(timing_table, row, 2, gap_int);
+            lv_table_set_cell_value(timing_table, row, 3, entry["last"] | "-");
             row++;
         }
     } else {
-        lv_obj_add_flag(table, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
 
         lv_label_set_text(info_label, "OFF SESSION");
         lv_label_set_text(track_label, "-");
-        lv_label_set_text(weather_label, "CHECKING NEXT RACE...");
+        lv_label_set_text(weather_label, "NO LIVE SESSION");
 
-        // Update Next Race
+        // Update Next Race Summary
         JsonObject upcoming = data["upcoming"];
         if (!upcoming.isNull()) {
             char next_buf[256];
             snprintf(next_buf, sizeof(next_buf), "#FF1801 NEXT RACE:#\n%s\n%s\n%s",
                      upcoming["name"] | "",
                      upcoming["circuit"] | "", upcoming["date"] | "");
-            lv_label_set_text(next_race_label, next_buf);
-            lv_label_set_recolor(next_race_label, true);
+            lv_label_set_text(next_race_summary_label, next_buf);
+            lv_label_set_recolor(next_race_summary_label, true);
 
             const char* code = upcoming["flagCode"] | "un";
             char path[64];
@@ -163,7 +231,7 @@ void ui_update_status(const JsonObject& data) {
             lv_img_set_src(next_flag_img, path);
         }
 
-        // Update Last Race
+        // Update Last Race Summary
         JsonObject previous = data["previous"];
         if (!previous.isNull()) {
             char last_buf[256];
@@ -171,8 +239,8 @@ void ui_update_status(const JsonObject& data) {
                      previous["name"] | "",
                      previous["winner"] | "",
                      previous["team"] | "");
-            lv_label_set_text(last_race_label, last_buf);
-            lv_label_set_recolor(last_race_label, true);
+            lv_label_set_text(last_race_summary_label, last_buf);
+            lv_label_set_recolor(last_race_summary_label, true);
 
             const char* raceCode = previous["flagCode"] | "un";
             char racePath[64];
@@ -185,6 +253,82 @@ void ui_update_status(const JsonObject& data) {
             lv_img_set_src(winner_flag_img, winPath);
         }
     }
+}
+
+void ui_update_next_race(const JsonObject& data) {
+    JsonObject upcoming = data["upcoming"];
+    if (!upcoming.isNull()) {
+        char buf[512];
+        int pos = snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s\n\n",
+                           upcoming["name"] | "", upcoming["circuit"] | "");
+
+        JsonArray sessions = upcoming["sessions"];
+        for (JsonObject s : sessions) {
+            pos += snprintf(buf + pos, sizeof(buf) - pos, "#FFAA00 %s:# %s\n",
+                            s["name"] | "", s["time"] | "");
+        }
+        lv_label_set_text(next_race_details_label, buf);
+    }
+}
+
+void ui_update_results(const JsonObject& data) {
+    lv_label_set_text(info_label, data["raceName"] | "RESULTS");
+    JsonArray results = data["results"];
+    int row = 0;
+    for (JsonObject res : results) {
+        if (row >= 20) break;
+        lv_table_set_cell_value(results_table, row, 0, res["position"] | "-");
+        char name_buf[64];
+        snprintf(name_buf, sizeof(name_buf), "%s %s", res["firstName"] | "", res["lastName"] | "");
+        lv_table_set_cell_value(results_table, row, 1, name_buf);
+        char pts_buf[32];
+        snprintf(pts_buf, sizeof(pts_buf), "%s pts", res["points"] | "0");
+        lv_table_set_cell_value(results_table, row, 2, pts_buf);
+        row++;
+    }
+}
+
+void ui_update_standings(const JsonObject& data) {
+    JsonArray standings = data["standings"];
+    int row = 0;
+    for (JsonObject s : standings) {
+        if (row >= 20) break;
+        lv_table_set_cell_value(standings_table, row, 0, s["pos"] | "-");
+        lv_table_set_cell_value(standings_table, row, 1, s["name"] | "-");
+        char pts_buf[32];
+        snprintf(pts_buf, sizeof(pts_buf), "%s pts", s["points"] | "0");
+        lv_table_set_cell_value(standings_table, row, 2, pts_buf);
+        row++;
+    }
+}
+
+void ui_update_constructors(const JsonObject& data) {
+    JsonArray standings = data["standings"];
+    int row = 0;
+    for (JsonObject s : standings) {
+        if (row >= 10) break;
+        lv_table_set_cell_value(constructors_table, row, 0, s["pos"] | "-");
+        lv_table_set_cell_value(constructors_table, row, 1, s["name"] | "-");
+        char pts_buf[32];
+        snprintf(pts_buf, sizeof(pts_buf), "%s pts", s["points"] | "0");
+        lv_table_set_cell_value(constructors_table, row, 2, pts_buf);
+        row++;
+    }
+}
+
+void ui_update_calendar(const JsonObject& data) {
+    JsonArray calendar = data["calendar"];
+    int row = 0;
+    for (JsonObject race : calendar) {
+        if (row >= 24) break;
+        lv_table_set_cell_value(calendar_table, row, 0, race["name"] | "-");
+        lv_table_set_cell_value(calendar_table, row, 1, race["date"] | "-");
+        row++;
+    }
+}
+
+void ui_update_event_detail(const JsonObject& data) {
+    // This would be triggered by clicking a calendar item, but keeping it simple for now
 }
 
 void ui_show_message(const char* msg) {

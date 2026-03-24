@@ -2,7 +2,14 @@
 #define CONFIG_H
 
 // Middleware Settings
-#define BRIDGE_URL "http://ebski.co:8000/status"
+#define BASE_URL "http://ebski.co:8000"
+#define STATUS_URL BASE_URL "/status"
+#define MOCK_URL BASE_URL "/mock_status"
+#define RESULTS_URL BASE_URL "/previous_results"
+#define STANDINGS_URL BASE_URL "/standings"
+#define CONSTRUCTORS_URL BASE_URL "/constructor_standings"
+#define CALENDAR_URL BASE_URL "/calendar"
+
 #define POLL_INTERVAL 10000 // 10 seconds
 
 // Display Settings

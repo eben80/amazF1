@@ -73,6 +73,9 @@ TAMC_GT911 ts = TAMC_GT911(I2C_SDA, I2C_SCL, GT911_INT, GT911_RST, SCREEN_WIDTH,
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[SCREEN_WIDTH * 40];
 
+// Global State
+static View current_view = VIEW_MAIN;
+
 // LVGL Display Callback
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
     uint32_t w = (area->x2 - area->x1 + 1);
@@ -80,7 +83,6 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
     tft.startWrite();
     tft.setAddrWindow(area->x1, area->y1, w, h);
-    // Use false here because LVGL is already swapping bytes if LV_COLOR_16_SWAP is 1
     tft.pushColors((uint16_t *)&color_p->full, w * h, false);
     tft.endWrite();
 
@@ -93,7 +95,6 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
     if (ts.touched()) {
         TS_Point p = ts.getPoint();
         data->state = LV_INDEV_STATE_PR;
-        // Simple calibration for XPT2046 (values vary by model)
         data->point.x = map(p.x, 200, 3700, 0, SCREEN_WIDTH);
         data->point.y = map(p.y, 240, 3800, 0, SCREEN_HEIGHT);
     } else {
@@ -113,98 +114,91 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 
 // Data Fetching
 void fetch_data() {
+    const char* url;
+    switch(current_view) {
+        case VIEW_RESULTS: url = RESULTS_URL; break;
+        case VIEW_STANDINGS: url = STANDINGS_URL; break;
+        case VIEW_CONSTRUCTORS: url = CONSTRUCTORS_URL; break;
+        case VIEW_CALENDAR: url = CALENDAR_URL; break;
+        case VIEW_NEXT_RACE:
+        case VIEW_MAIN:
+        default: url = STATUS_URL; break;
+    }
+
     Serial.print("Fetching data from: ");
-    Serial.println(BRIDGE_URL);
+    Serial.println(url);
 
     if (WiFi.status() == WL_CONNECTED) {
         HTTPClient http;
-        http.begin(BRIDGE_URL);
+        http.begin(url);
         int httpCode = http.GET();
-
-        Serial.print("HTTP Response code: ");
-        Serial.println(httpCode);
 
         if (httpCode > 0) {
             String payload = http.getString();
-            Serial.print("Payload length: ");
-            Serial.println(payload.length());
-
-            DynamicJsonDocument doc(8192);
+            DynamicJsonDocument doc(12288); // Increased for larger responses
             DeserializationError error = deserializeJson(doc, payload);
 
             if (!error) {
-                Serial.println("JSON parsed successfully.");
-                ui_update_status(doc.as<JsonObject>());
+                switch(current_view) {
+                    case VIEW_RESULTS: ui_update_results(doc.as<JsonObject>()); break;
+                    case VIEW_STANDINGS: ui_update_standings(doc.as<JsonObject>()); break;
+                    case VIEW_CONSTRUCTORS: ui_update_constructors(doc.as<JsonObject>()); break;
+                    case VIEW_CALENDAR: ui_update_calendar(doc.as<JsonObject>()); break;
+                    case VIEW_NEXT_RACE: ui_update_next_race(doc.as<JsonObject>()); break;
+                    case VIEW_MAIN:
+                    default: ui_update_status(doc.as<JsonObject>()); break;
+                }
             } else {
-                Serial.print("JSON deserialization failed: ");
-                Serial.println(error.c_str());
                 ui_show_message("JSON ERROR");
             }
         } else {
-            Serial.print("Error on HTTP request: ");
-            Serial.println(http.errorToString(httpCode).c_str());
             ui_show_message("HTTP ERROR");
         }
         http.end();
     } else {
-        Serial.println("WiFi Disconnected.");
         ui_show_message("WIFI ERROR");
     }
 }
 
-void list_files() {
-    Serial.println("LittleFS Files:");
-    File root = LittleFS.open("/");
-    File file = root.openNextFile();
-    while (file) {
-        Serial.print("  FILE: ");
-        Serial.print(file.name());
-        Serial.print("  SIZE: ");
-        Serial.println(file.size());
-        file = root.openNextFile();
+// Gesture Handling
+static void event_cb(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_GESTURE) {
+        lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
+        if (dir == LV_DIR_LEFT) {
+            if (current_view == VIEW_MAIN) current_view = VIEW_RESULTS;
+            else if (current_view == VIEW_RESULTS) current_view = VIEW_NEXT_RACE;
+            else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_STANDINGS;
+            else if (current_view == VIEW_STANDINGS) current_view = VIEW_CONSTRUCTORS;
+            else if (current_view == VIEW_CONSTRUCTORS) current_view = VIEW_CALENDAR;
+            ui_set_view(current_view);
+            fetch_data();
+        } else if (dir == LV_DIR_RIGHT) {
+            if (current_view == VIEW_CALENDAR) current_view = VIEW_CONSTRUCTORS;
+            else if (current_view == VIEW_CONSTRUCTORS) current_view = VIEW_STANDINGS;
+            else if (current_view == VIEW_STANDINGS) current_view = VIEW_NEXT_RACE;
+            else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_RESULTS;
+            else if (current_view == VIEW_RESULTS) current_view = VIEW_MAIN;
+            ui_set_view(current_view);
+            fetch_data();
+        }
     }
 }
 
 void setup() {
     Serial.begin(115200);
-    delay(1000); // Wait for serial to stabilize
-    Serial.println("\n--- F1 Timing Display ---");
-
-    // Initialize Filesystem
-    if (!LittleFS.begin(true)) {
-        Serial.println("LittleFS Mount Failed");
-    } else {
-        Serial.println("LittleFS Mounted.");
-        list_files();
-    }
-
-    // Turn on Backlight
+    LittleFS.begin(true);
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);
-    Serial.println("TFT Backlight enabled.");
 
-    // WiFi Setup via WiFiManager
-    Serial.println("Initializing WiFiManager...");
     WiFiManager wm;
-    // wm.resetSettings(); // Clear stored credentials for testing
+    if (!wm.autoConnect("F1-Timing-Display")) ESP.restart();
 
-    if (!wm.autoConnect("F1-Timing-Display")) {
-        Serial.println("CRITICAL: Failed to connect to WiFi. Restarting...");
-        delay(3000);
-        ESP.restart();
-    }
-    Serial.print("WiFi Connected. IP: ");
-    Serial.println(WiFi.localIP());
-
-    // LVGL Setup
-    Serial.println("Initializing LVGL...");
     lv_init();
     tft.begin();
     tft.setRotation(1);
     lv_disp_draw_buf_init(&draw_buf, buf, NULL, SCREEN_WIDTH * 40);
 
-    // Register Display Driver
-    Serial.println("Configuring Display Driver...");
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = SCREEN_WIDTH;
@@ -213,24 +207,17 @@ void setup() {
     disp_drv.draw_buf = &draw_buf;
     lv_disp_drv_register(&disp_drv);
 
-    // Register Touch Driver
-    Serial.print("Initializing Touch Driver (");
 #ifdef CYD_XPT2046
-    Serial.println("XPT2046 SPI - Original)...");
-    touchSPI.begin(6, 12, 13, TOUCH_CS); // CLK=6, MISO=12, MOSI=13, CS=33
+    touchSPI.begin(6, 12, 13, TOUCH_CS);
     ts.begin(touchSPI);
     ts.setRotation(1);
 #elif defined(CYD_V2_V3_XPT2046)
-    Serial.println("XPT2046 SPI - Hybrid V2/V3)...");
-    touchSPI.begin(TOUCH_CLK, TOUCH_DOUT, TOUCH_DIN, TOUCH_CS); // CLK=25, MISO=39, MOSI=32, CS=33
+    touchSPI.begin(TOUCH_CLK, TOUCH_DOUT, TOUCH_DIN, TOUCH_CS);
     ts.begin(touchSPI);
     ts.setRotation(1);
 #elif defined(CYD2USB_GT911)
-    Serial.println("GT911 I2C)...");
     ts.begin();
     ts.setRotation(1);
-#else
-    Serial.println("UNKNOWN)...");
 #endif
 
     static lv_indev_drv_t indev_drv;
@@ -239,7 +226,6 @@ void setup() {
     indev_drv.read_cb = my_touchpad_read;
     lv_indev_drv_register(&indev_drv);
 
-    // Register LittleFS Driver for LVGL
     static lv_fs_drv_t fs_drv;
     lv_fs_drv_init(&fs_drv);
     fs_drv.letter = 'S';
@@ -250,29 +236,22 @@ void setup() {
     fs_drv.tell_cb = fs_tell;
     lv_fs_drv_register(&fs_drv);
 
-    // Initialize PNG decoder
     lv_png_init();
-
-    // Initialize UI
-    Serial.println("Building UI components...");
     ui_init();
 
-    // Initial Fetch
-    Serial.println("Triggering initial data fetch...");
-    fetch_data();
+    // Setup Gesture Event
+    lv_obj_add_event_cb(lv_scr_act(), event_cb, LV_EVENT_GESTURE, NULL);
 
-    Serial.println("Setup complete. Entering main loop.");
+    fetch_data();
 }
 
 unsigned long last_poll = 0;
 
 void loop() {
     lv_timer_handler();
-
-    if (millis() - last_poll > POLL_INTERVAL) {
+    if (current_view == VIEW_MAIN && (millis() - last_poll > POLL_INTERVAL)) {
         fetch_data();
         last_poll = millis();
     }
-
     delay(5);
 }
