@@ -24,6 +24,40 @@ logger.add(sys.stderr, level=LOG_LEVEL)
 SIGNALR_URL = "https://livetiming.formula1.com/signalr"
 JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
+# --- Mappings ---
+TRACK_STATUS_MAP = {
+    "1": "Normal/Clear",
+    "2": "Yellow Flag",
+    "4": "Safety Car",
+    "5": "Red Flag",
+    "6": "VSC",
+    "7": "VSC Ending"
+}
+FLAG_MAPPING = {
+    "British": "🇬🇧", "German": "🇩🇪", "Italian": "🇮🇹", "Monegasque": "🇲🇨",
+    "French": "🇫🇷", "New Zealander": "🇳🇿", "Austrian": "🇦🇹", "Spanish": "🇪🇸",
+    "Argentine": "🇦🇷", "Finnish": "🇫🇮", "Mexican": "🇲🇽", "Dutch": "🇳🇱",
+    "Australian": "🇦🇺", "Brazilian": "🇧🇷", "Thai": "🇹🇭", "Japanese": "🇯🇵",
+    "Canadian": "🇨🇦", "American": "🇺🇸", "Danish": "🇩🇰", "Chinese": "🇨🇳",
+    "United Kingdom": "🇬🇧", "Germany": "🇩🇪", "Italy": "🇮🇹", "Monaco": "🇲🇨",
+    "France": "🇫🇷", "New Zealand": "🇳🇿", "Austria": "🇦🇹", "Spain": "🇪🇸",
+    "Argentina": "🇦🇷", "Finland": "🇫🇮", "Mexico": "🇲🇽", "Netherlands": "🇳🇱",
+    "Australia": "🇦🇺", "Brazil": "🇧🇷", "Thailand": "🇹🇭", "Japan": "🇯🇵",
+    "Canada": "🇨🇦", "USA": "🇺🇸", "Denmark": "🇩🇰", "China": "🇨🇳",
+    "UK": "🇬🇧", "United Arab Emirates": "🇦🇪", "Saudi Arabia": "🇸🇦", "Bahrain": "🇧🇭",
+    "Hungary": "🇭🇺", "Belgium": "🇧🇪", "Singapore": "🇸🇬", "Azerbaijan": "🇦🇿"
+}
+
+TEAM_COLORS = {
+    "Mercedes": "27F4D2", "Ferrari": "E80020", "Red Bull": "3671C6",
+    "Red Bull Racing": "3671C6", "McLaren": "FF8000", "Aston Martin": "229971",
+    "Alpine F1 Team": "0093CC", "Alpine": "0093CC", "RB F1 Team": "6692FF",
+    "RB": "6692FF", "Haas F1 Team": "B6BABD", "Haas": "B6BABD",
+    "Williams": "64C4FF", "Audi": "52E252", "Sauber": "52E252",
+    "Cadillac F1 Team": "FFFFFF", "Cadillac": "FFFFFF",
+    "Racing Bulls": "6692FF", "Kick Sauber": "52E252"
+}
+
 # --- State ---
 class F1State:
     def __init__(self):
@@ -60,6 +94,50 @@ def update_live_status():
     else:
         state.is_live = False
 
+def get_team_color(name):
+    if not name:
+        return "FFFFFF"
+
+    # Try exact match first
+    if name in TEAM_COLORS:
+        return TEAM_COLORS[name]
+
+    # Try partial matches
+    for k, v in TEAM_COLORS.items():
+        if k.lower() in name.lower() or name.lower() in k.lower():
+            return v
+
+    return "FFFFFF"
+
+def format_sessions(race):
+    sessions = []
+    session_map = {
+        "FirstPractice": "FP1",
+        "SecondPractice": "FP2",
+        "ThirdPractice": "FP3",
+        "Qualifying": "Qualifying",
+        "Sprint": "Sprint",
+        "SprintQualifying": "Sprint Quali"
+    }
+
+    for key, label in session_map.items():
+        s = race.get(key)
+        if s:
+            sessions.append({
+                "name": label,
+                "time": f"{s.get('date')}T{s.get('time')}"
+            })
+
+    # Add main race
+    sessions.append({
+        "name": "Race",
+        "time": f"{race.get('date')}T{race.get('time')}"
+    })
+
+    # Sort sessions by time
+    sessions.sort(key=lambda x: x['time'])
+    return sessions
+
 async def fetch_race_schedule():
     """Fetch next and previous race from corrected Jolpica-F1 API (async)"""
     try:
@@ -71,11 +149,17 @@ async def fetch_race_schedule():
                     races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
                     if races:
                         race = races[0]
+                        country = race.get('Circuit', {}).get('Location', {}).get('country', '')
+
+                        sessions = format_sessions(race)
                         state.upcoming_race = {
                             "name": race.get('raceName'),
                             "circuit": race.get('Circuit', {}).get('circuitName'),
                             "date": f"{race.get('date')}T{race.get('time')}",
-                            "locality": race.get('Circuit', {}).get('Location', {}).get('locality')
+                            "locality": race.get('Circuit', {}).get('Location', {}).get('locality'),
+                            "country": country,
+                            "flag": FLAG_MAPPING.get(country, "🏁"),
+                            "sessions": sessions
                         }
             # Previous Race
             async with session.get(f"{JOLPICA_BASE}/current/last/results.json", timeout=10) as resp:
@@ -87,10 +171,18 @@ async def fetch_race_schedule():
                         results = race.get('Results', [])
                         if results:
                             winner = results[0].get('Driver', {})
+                            team = results[0].get('Constructor', {}).get('name', '')
+                            country = race.get('Circuit', {}).get('Location', {}).get('country', '')
+                            winner_nat = winner.get('nationality', '')
                             state.previous_race = {
                                 "name": race.get('raceName'),
+                                "circuit": race.get('Circuit', {}).get('circuitName'),
                                 "winner": f"{winner.get('givenName')} {winner.get('familyName')}",
-                                "team": results[0].get('Constructor', {}).get('name')
+                                "winnerFlag": FLAG_MAPPING.get(winner_nat, "🏁"),
+                                "team": team,
+                                "teamColor": int(get_team_color(team), 16),
+                                "country": country,
+                                "flag": FLAG_MAPPING.get(country, "🏁")
                             }
     except Exception as e:
         logger.error(f"Error fetching race schedule: {e}")
@@ -107,8 +199,10 @@ async def on_feed(args):
             if topic == "Heartbeat" or not topic:
                 continue
 
-            state.last_data_time = time.time()
-            state.is_live = True
+            # Check if it's actual data and not an empty update
+            if isinstance(arg, (dict, str)) and len(str(arg)) > 2:
+                state.last_data_time = time.time()
+                state.is_live = True
 
             if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
@@ -127,19 +221,33 @@ async def on_feed(args):
                         stints = line.get("Stints", [])
                         if stints:
                             last_stint = list(stints.values())[-1] if isinstance(stints, dict) else stints[-1]
-                            td["compound"] = last_stint.get("Compound")
+                            compound = last_stint.get("Compound")
+                            if compound:
+                                compound = compound.upper()
+                                if "SOFT" in compound: td["compound"] = "soft"
+                                elif "MEDIUM" in compound: td["compound"] = "medium"
+                                elif "HARD" in compound: td["compound"] = "hard"
+                                elif "INTER" in compound: td["compound"] = "intermediate"
+                                elif "WET" in compound: td["compound"] = "wet"
+                                else: td["compound"] = compound.lower()
 
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
                 elif topic == "SessionInfo":
-                    state.session_info = {"name": decoded.get("SessionName"), "type": decoded.get("Type"), "circuit": decoded.get("CircuitName")}
+                    state.session_info = {
+                        "name": decoded.get("SessionName"),
+                        "type": decoded.get("Type"),
+                        "circuit": decoded.get("CircuitName"),
+                        "status": decoded.get("Status")
+                    }
                 elif topic == "LapCount":
                     state.lap_count = {"current": decoded.get("CurrentLap"), "total": decoded.get("TotalLaps")}
                 elif topic == "DriverList":
                     for dnum, info in decoded.items():
                         state.driver_list[dnum] = {"name": info.get("FullName"), "team": info.get("TeamName"), "color": info.get("TeamColour"), "abbrev": info.get("Tla")}
                 elif topic == "TrackStatus":
-                    state.track_status = decoded.get("Status", "AllClear")
+                    status_code = decoded.get("Status", "1")
+                    state.track_status = TRACK_STATUS_MAP.get(status_code, "Normal/Clear")
     except Exception as e:
         logger.error(f"Error in on_feed: {e}")
 
@@ -169,13 +277,56 @@ async def get_status():
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
 
+    # If session is over, indicate it
+    track_display = state.track_status
+    if state.session_info.get("status") == "Finished":
+        track_display = "Chequered Flag"
+
     return {
         "live": effective_live,
         "session": state.session_info,
         "weather": state.weather_data,
-        "track": state.track_status,
+        "track": track_display,
         "laps": state.lap_count,
         "timing": sorted_timing[:10],
+        "upcoming": state.upcoming_race,
+        "previous": state.previous_race
+    }
+
+@app.get("/mock_status")
+async def get_mock_status():
+    """Return a dynamic fake live session for UI testing, loops every 30s"""
+    step = int(time.time() % 30)
+
+    # Simulate track status changes
+    status = "Normal/Clear"
+    if 10 <= step < 20: status = "Yellow Flag"
+    elif 20 <= step < 25: status = "Safety Car"
+
+    # Simulate an overtake (NOR and VER swap at step 15)
+    p1, p2 = ("VER", "NOR") if step < 15 else ("NOR", "VER")
+    c1, c2 = ("3671C6", "FF8000") if step < 15 else ("FF8000", "3671C6")
+    t1, t2 = ("Red Bull", "McLaren") if step < 15 else ("McLaren", "Red Bull")
+
+    mock_timing = [
+        {"num": "1", "name": p1, "team": t1, "teamColor": c1, "pos": "1", "gap": "LEADER", "comp": "soft"},
+        {"num": "4", "name": p2, "team": t2, "teamColor": c2, "pos": "2", "gap": f"+{0.5 + step/10:.3f}", "comp": "soft"},
+        {"num": "44", "name": "HAM", "team": "Ferrari", "teamColor": "E80020", "pos": "3", "gap": "+5.678", "comp": "medium"},
+        {"num": "63", "name": "RUS", "team": "Mercedes", "teamColor": "27F4D2", "pos": "4", "gap": "+6.102", "comp": "medium"},
+        {"num": "16", "name": "LEC", "team": "Ferrari", "teamColor": "E80020", "pos": "5", "gap": "+8.991", "comp": "hard"},
+        {"num": "81", "name": "PIA", "team": "McLaren", "teamColor": "FF8000", "pos": "6", "gap": "+12.456", "comp": "soft"},
+        {"num": "14", "name": "ALO", "team": "Aston Martin", "teamColor": "229971", "pos": "7", "gap": "+15.003", "comp": "hard"},
+        {"num": "10", "name": "GAS", "team": "Alpine", "teamColor": "0093CC", "pos": "8", "gap": "+18.224", "comp": "medium"},
+        {"num": "27", "name": "HUL", "team": "Haas", "teamColor": "B6BABD", "pos": "9", "gap": "+20.556", "comp": "soft"},
+        {"num": "23", "name": "ALB", "team": "Williams", "teamColor": "64C4FF", "pos": "10", "gap": "+22.100", "comp": "medium"}
+    ]
+    return {
+        "live": True,
+        "session": {"name": "Simulated Race", "type": "Race", "circuit": "Dynamic Test Circuit"},
+        "weather": {"air": str(20 + step % 5), "track": str(30 + step % 10), "hum": "50", "rain": step > 25},
+        "track": status,
+        "laps": {"current": 1 + step // 5, "total": 50},
+        "timing": mock_timing,
         "upcoming": state.upcoming_race,
         "previous": state.previous_race
     }
@@ -196,20 +347,123 @@ async def get_previous_results():
                         for res in results:
                             driver = res.get('Driver', {})
                             constructor = res.get('Constructor', {})
+                            status = res.get('status', '')
+
+                            points_display = res.get('points')
+                            if status == "Retired":
+                                points_display = "DNF"
+                            elif status == "Did not start":
+                                points_display = "DNS"
+
+                            nationality = driver.get('nationality', '')
+                            flag = FLAG_MAPPING.get(nationality, "🏁")
+                            team_name = constructor.get('name', '')
+                            team_color = TEAM_COLORS.get(team_name, "FFFFFF")
+
                             formatted_results.append({
                                 "firstName": driver.get('givenName'),
                                 "lastName": driver.get('familyName'),
-                                "constructor": constructor.get('name'),
+                                "constructor": team_name,
                                 "position": res.get('position'),
-                                "points": res.get('points')
+                                "points": points_display,
+                                "flag": flag,
+                                "color": int(team_color, 16)
                             })
-                        return {
+                        res_data = {
                             "raceName": race.get('raceName'),
                             "results": formatted_results
                         }
+                        logger.info(f"Returning previous results: {res_data['raceName']} ({len(res_data['results'])} drivers)")
+                        return res_data
+        logger.warning("No results found in Jolpica response")
         return {"error": "No results found"}
     except Exception as e:
         logger.error(f"Error fetching previous results: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {"error": str(e)}
+
+@app.get("/standings")
+async def get_standings():
+    """Fetch driver standings for the 2026 season"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{JOLPICA_BASE}/2026/driverstandings.json", timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    standings_lists = data.get('MRData', {}).get('StandingsTable', {}).get('StandingsLists', [])
+                    if standings_lists:
+                        standings = standings_lists[0].get('DriverStandings', [])
+                        formatted_standings = []
+                        for s in standings:
+                            driver = s.get('Driver', {})
+                            nationality = driver.get('nationality', '')
+                            formatted_standings.append({
+                                "pos": s.get('position'),
+                                "name": f"{driver.get('givenName')} {driver.get('familyName')}",
+                                "flag": FLAG_MAPPING.get(nationality, "🏁"),
+                                "points": s.get('points')
+                            })
+                        return {"standings": formatted_standings}
+        return {"error": "No standings found"}
+    except Exception as e:
+        logger.error(f"Error fetching standings: {e}")
+        return {"error": str(e)}
+
+@app.get("/constructor_standings")
+async def get_constructor_standings():
+    """Fetch constructor standings for the 2026 season"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{JOLPICA_BASE}/2026/constructorstandings.json", timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    standings_lists = data.get('MRData', {}).get('StandingsTable', {}).get('StandingsLists', [])
+                    if standings_lists:
+                        standings = standings_lists[0].get('ConstructorStandings', [])
+                        formatted_standings = []
+                        for s in standings:
+                            constructor = s.get('Constructor', {})
+                            nationality = constructor.get('nationality', '')
+                            name = constructor.get('name', '')
+                            formatted_standings.append({
+                                "pos": s.get('position'),
+                                "name": name,
+                                "flag": FLAG_MAPPING.get(nationality, "🏁"),
+                                "points": s.get('points'),
+                                "color": int(get_team_color(name), 16)
+                            })
+                        return {"standings": formatted_standings}
+        return {"error": "No standings found"}
+    except Exception as e:
+        logger.error(f"Error fetching constructor standings: {e}")
+        return {"error": str(e)}
+
+@app.get("/calendar")
+async def get_calendar():
+    """Fetch the full 2026 race calendar with all session times"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{JOLPICA_BASE}/2026.json", timeout=10) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    races = data.get('MRData', {}).get('RaceTable', {}).get('Races', [])
+                    formatted_calendar = []
+
+                    for race in races:
+                        country = race.get('Circuit', {}).get('Location', {}).get('country', '')
+                        sessions = format_sessions(race)
+                        formatted_calendar.append({
+                            "name": race.get('raceName'),
+                            "circuit": race.get('Circuit', {}).get('circuitName'),
+                            "date": race.get('date'),
+                            "flag": FLAG_MAPPING.get(country, "🏁"),
+                            "sessions": sessions
+                        })
+                    return {"calendar": formatted_calendar}
+        return {"error": "No calendar found"}
+    except Exception as e:
+        logger.error(f"Error fetching calendar: {e}")
         return {"error": str(e)}
 
 # --- SignalR Background Task ---

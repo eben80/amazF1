@@ -84,4 +84,33 @@ The app uses assets located in the `assets/` directory. Replace the placeholders
 ---
 
 ## Graphics & Features
-The app automatically toggles between **Live Timing** during sessions and an **Idle Dashboard** (Previous winner + Next race) during off-periods. It uses tire compound graphics and team-specific colors to provide a professional-looking timing tower.
+
+The app automatically toggles between **Live Timing** during sessions and an **Idle Dashboard** during off-periods.
+
+### 🏁 Live Timing Mode
+*   **Real-time Tower:** Displays the top 10 drivers with their current position (P1-P10).
+*   **Team Colors:** Driver names are rendered in their official constructor colors.
+*   **Gap to Leader:** Shows the interval or gap for each driver.
+*   **Tire Compounds:** Displays visual icons for Hard, Medium, and Soft tires currently in use.
+*   **Auto-Refresh:** The data polls every 30 seconds to ensure the tower is up-to-date.
+
+### 🏎️ Idle Dashboard Mode
+*   **Next Race:** Shows the upcoming Grand Prix name, circuit, country flag, and date.
+*   **Last Race:** Displays the previous race winner with their nationality flag and team (in team colors).
+*   **Session Times:** All upcoming session times (Practice, Quali, Sprint, Race) are automatically converted to the watch's **local time**.
+
+### 📱 Navigation & UI
+*   **Gesture Driven:**
+    *   **Swipe Left:** Navigate through: Dashboard ➡️ Last Results ➡️ Next Race Details ➡️ Driver Standings ➡️ Constructor Standings ➡️ Full Calendar.
+    *   **Swipe Right:** Navigate back through the screens.
+*   **Interactive Calendar:** Click any race in the calendar view to see the full weekend schedule.
+*   **Persistence:** The app uses `setStayWake` to remain active when the screen turns off and intercepts the back button to prevent accidental exits.
+*   **Status Handling:** Correctly handles non-finishing drivers, showing **DNF** (Retired) or **DNS** (Did not start) instead of points where applicable.
+
+---
+
+## 🛠️ Data Stack
+*   **SignalR:** Real-time data stream from official F1 servers.
+*   **Jolpica/Ergast API:** Historical results, standings, and schedule data.
+*   **FastAPI Middleware:** Python bridge that simplifies and merges data for the watch.
+*   **ZML Framework:** Facilitates communication between the watch and the phone's side service.

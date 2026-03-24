@@ -10,6 +10,11 @@ async function fetchStatus(res) {
       method: 'GET'
     });
 
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
     const body = typeof response.body === 'string'
       ? JSON.parse(response.body)
       : response.body;
@@ -17,7 +22,89 @@ async function fetchStatus(res) {
     res(null, { result: body });
 
   } catch (error) {
-    res(null, { result: { error: true } });
+    console.log("FETCH_STATUS_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
+  }
+}
+
+// =========================
+// FETCH CALENDAR
+// =========================
+async function fetchCalendar(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/calendar',
+      method: 'GET'
+    });
+
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    res(null, { result: body });
+
+  } catch (error) {
+    console.log("FETCH_CALENDAR_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
+  }
+}
+
+// =========================
+// FETCH CONSTRUCTOR STANDINGS
+// =========================
+async function fetchConstructorStandings(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/constructor_standings',
+      method: 'GET'
+    });
+
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    res(null, { result: body });
+
+  } catch (error) {
+    console.log("FETCH_CONSTRUCTORS_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
+  }
+}
+
+// =========================
+// FETCH STANDINGS
+// =========================
+async function fetchStandings(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/standings',
+      method: 'GET'
+    });
+
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    res(null, { result: body });
+
+  } catch (error) {
+    console.log("FETCH_STANDINGS_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
   }
 }
 
@@ -31,6 +118,11 @@ async function fetchResults(res) {
       method: 'GET'
     });
 
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
     const body = typeof response.body === 'string'
       ? JSON.parse(response.body)
       : response.body;
@@ -38,7 +130,34 @@ async function fetchResults(res) {
     res(null, { result: body });
 
   } catch (error) {
-    res(null, { result: { error: true } });
+    console.log("FETCH_RESULTS_ERROR:", error);
+    res(null, { result: { error: "NO_INTERNET" } });
+  }
+}
+
+// =========================
+// FETCH MOCK DATA
+// =========================
+async function fetchMockStatus(res) {
+  try {
+    const response = await fetch({
+      url: 'http://ebski.co:8000/mock_status',
+      method: 'GET'
+    });
+
+    if (!response || !response.body) {
+      res(null, { result: { error: "NO_INTERNET" } });
+      return;
+    }
+
+    const body = typeof response.body === 'string'
+      ? JSON.parse(response.body)
+      : response.body;
+
+    res(null, { result: body });
+
+  } catch (error) {
+    res(null, { result: { error: "NO_INTERNET" } });
   }
 }
 
@@ -53,8 +172,24 @@ AppSideService(
         fetchStatus(res);
       }
 
+      if (req.method === "GET_MOCK_DATA") {
+        fetchMockStatus(res);
+      }
+
       if (req.method === "GET_RESULTS") {
         fetchResults(res);
+      }
+
+      if (req.method === "GET_STANDINGS") {
+        fetchStandings(res);
+      }
+
+      if (req.method === "GET_CONSTRUCTOR_STANDINGS") {
+        fetchConstructorStandings(res);
+      }
+
+      if (req.method === "GET_CALENDAR") {
+        fetchCalendar(res);
       }
     }
   })
