@@ -64,51 +64,77 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 
 // Data Fetching
 void fetch_data() {
+    Serial.print("Fetching data from: ");
+    Serial.println(BRIDGE_URL);
+
     if (WiFi.status() == WL_CONNECTED) {
         HTTPClient http;
         http.begin(BRIDGE_URL);
         int httpCode = http.GET();
 
+        Serial.print("HTTP Response code: ");
+        Serial.println(httpCode);
+
         if (httpCode > 0) {
             String payload = http.getString();
+            Serial.print("Payload length: ");
+            Serial.println(payload.length());
+
             DynamicJsonDocument doc(8192);
             DeserializationError error = deserializeJson(doc, payload);
 
             if (!error) {
+                Serial.println("JSON parsed successfully.");
                 ui_update_status(doc.as<JsonObject>());
             } else {
+                Serial.print("JSON deserialization failed: ");
+                Serial.println(error.c_str());
                 ui_show_message("JSON ERROR");
             }
         } else {
+            Serial.print("Error on HTTP request: ");
+            Serial.println(http.errorToString(httpCode).c_str());
             ui_show_message("HTTP ERROR");
         }
         http.end();
     } else {
+        Serial.println("WiFi Disconnected.");
         ui_show_message("WIFI ERROR");
     }
 }
 
 void setup() {
     Serial.begin(115200);
+    delay(1000); // Wait for serial to stabilize
+    Serial.println("\n--- F1 Timing Display ---");
+
+    // Turn on Backlight
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
+    Serial.println("TFT Backlight enabled.");
 
     // WiFi Setup via WiFiManager
+    Serial.println("Initializing WiFiManager...");
     WiFiManager wm;
-    // Uncomment to reset settings for testing
-    // wm.resetSettings();
+    // wm.resetSettings(); // Clear stored credentials for testing
 
     if (!wm.autoConnect("F1-Timing-Display")) {
-        Serial.println("Failed to connect and hit timeout");
+        Serial.println("CRITICAL: Failed to connect to WiFi. Restarting...");
+        delay(3000);
         ESP.restart();
     }
-    Serial.println("\nWiFi connected.");
+    Serial.print("WiFi Connected. IP: ");
+    Serial.println(WiFi.localIP());
 
     // LVGL Setup
+    Serial.println("Initializing LVGL...");
     lv_init();
     tft.begin();
     tft.setRotation(1);
     lv_disp_draw_buf_init(&draw_buf, buf, NULL, SCREEN_WIDTH * 10);
 
     // Register Display Driver
+    Serial.println("Configuring Display Driver...");
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.hor_res = SCREEN_WIDTH;
@@ -118,13 +144,18 @@ void setup() {
     lv_disp_drv_register(&disp_drv);
 
     // Register Touch Driver
+    Serial.print("Initializing Touch Driver (");
 #ifdef CYD_XPT2046
+    Serial.println("XPT2046 SPI)...");
     touchSPI.begin(6, 12, 13, TOUCH_CS);
     ts.begin(touchSPI);
     ts.setRotation(1);
 #elif defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
+    Serial.println("GT911 I2C)...");
     ts.begin();
     ts.setRotation(1);
+#else
+    Serial.println("UNKNOWN)...");
 #endif
 
     static lv_indev_drv_t indev_drv;
@@ -134,10 +165,14 @@ void setup() {
     lv_indev_drv_register(&indev_drv);
 
     // Initialize UI
+    Serial.println("Building UI components...");
     ui_init();
 
     // Initial Fetch
+    Serial.println("Triggering initial data fetch...");
     fetch_data();
+
+    Serial.println("Setup complete. Entering main loop.");
 }
 
 unsigned long last_poll = 0;

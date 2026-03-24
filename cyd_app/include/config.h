@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // Middleware Settings
-#define BRIDGE_URL "https://your-f1-bridge-domain.com/status"
+#define BRIDGE_URL "http://ebski.co:8000/status"
 #define POLL_INTERVAL 10000 // 10 seconds
 
 // Display Settings
