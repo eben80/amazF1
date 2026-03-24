@@ -92,9 +92,9 @@ void ui_update_status(const JsonObject& data) {
                 // We'll use a symbol or just text for now as adding icons to table cells is complex in LVGL 8.3
                 // Alternatively, we can just use the first letter of the compound
                 char c = toupper(compound[0]);
-                snprintf(driver_name, sizeof(driver_name), "(%c) %s", c, (const char*)entry["name"] | "-");
+                snprintf(driver_name, sizeof(driver_name), "(%c) %s", c, entry["name"] | "-");
             } else {
-                snprintf(driver_name, sizeof(driver_name), "%s", (const char*)entry["name"] | "-");
+                snprintf(driver_name, sizeof(driver_name), "%s", entry["name"] | "-");
             }
             lv_table_set_cell_value(table, row, 1, driver_name);
 
