@@ -3,6 +3,7 @@
 #include <WiFiManager.h>
 #include <HTTPClient.h>
 #include <LittleFS.h>
+#include <Preferences.h>
 #include <ArduinoJson.h>
 #include <lvgl.h>
 #include <TFT_eSPI.h>
@@ -75,6 +76,7 @@ static lv_color_t buf[SCREEN_WIDTH * 40];
 
 // Global State
 static View current_view = VIEW_MAIN;
+Preferences preferences;
 
 // LVGL Display Callback
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
@@ -166,7 +168,8 @@ static void event_cb(lv_event_t * e) {
     if (code == LV_EVENT_GESTURE) {
         lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
         if (dir == LV_DIR_LEFT) {
-            if (current_view == VIEW_MAIN) current_view = VIEW_RESULTS;
+            if (current_view == VIEW_SETTINGS) current_view = VIEW_MAIN;
+            else if (current_view == VIEW_MAIN) current_view = VIEW_RESULTS;
             else if (current_view == VIEW_RESULTS) current_view = VIEW_NEXT_RACE;
             else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_STANDINGS;
             else if (current_view == VIEW_STANDINGS) current_view = VIEW_CONSTRUCTORS;
@@ -179,6 +182,7 @@ static void event_cb(lv_event_t * e) {
             else if (current_view == VIEW_STANDINGS) current_view = VIEW_NEXT_RACE;
             else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_RESULTS;
             else if (current_view == VIEW_RESULTS) current_view = VIEW_MAIN;
+            else if (current_view == VIEW_MAIN) current_view = VIEW_SETTINGS;
             ui_set_view(current_view);
             fetch_data();
         }
@@ -239,8 +243,14 @@ void setup() {
     lv_png_init();
     ui_init();
 
+    // Load TZ from preferences
+    preferences.begin("f1-app", true);
+    String saved_tz = preferences.getString("tz", TZ_INFO);
+    preferences.end();
+    ui_set_timezone(saved_tz.c_str());
+
     // Time Sync
-    configTzTime(TZ_INFO, NTP_SERVER);
+    configTzTime(saved_tz.c_str(), NTP_SERVER);
     Serial.println("Time configured with NTP.");
 
     // Setup Gesture Event

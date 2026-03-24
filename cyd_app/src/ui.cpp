@@ -1,5 +1,6 @@
 #include "ui.h"
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include <time.h>
 
 static lv_obj_t * screen;
@@ -9,7 +10,7 @@ static lv_obj_t * track_label;
 static lv_obj_t * weather_label;
 
 // View Containers
-static lv_obj_t * view_containers[7];
+static lv_obj_t * view_containers[8];
 static View current_view = VIEW_MAIN;
 
 // Main View Objects
@@ -28,6 +29,23 @@ static lv_obj_t * constructors_table;
 static lv_obj_t * calendar_table;
 static lv_obj_t * next_race_details_label;
 static lv_obj_t * event_detail_label;
+
+static void tz_event_handler(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    if(code == LV_EVENT_VALUE_CHANGED) {
+        char buf[128];
+        lv_dropdown_get_selected_str(obj, buf, sizeof(buf));
+        // We expect format "Europe/London GMT0BST,M3.5.0/2,M10.5.0/3"
+        // The TZ string is after the first space
+        char * space = strchr(buf, ' ');
+        if (space) {
+            ui_set_timezone(space + 1);
+        } else {
+            ui_set_timezone(buf);
+        }
+    }
+}
 
 void ui_init() {
     screen = lv_scr_act();
@@ -53,7 +71,7 @@ void ui_init() {
     lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 0, 20);
 
     // Initialize View Containers
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 8; i++) {
         view_containers[i] = lv_obj_create(screen);
         lv_obj_set_size(view_containers[i], 320, 190);
         lv_obj_align(view_containers[i], LV_ALIGN_BOTTOM_MID, 0, 0);
@@ -62,6 +80,30 @@ void ui_init() {
         lv_obj_set_style_pad_all(view_containers[i], 0, 0);
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
     }
+
+    // --- VIEW_SETTINGS setup ---
+    lv_obj_t * settings_cont = view_containers[VIEW_SETTINGS];
+    lv_obj_t * tz_label = lv_label_create(settings_cont);
+    lv_label_set_text(tz_label, "Select Timezone:");
+    lv_obj_align(tz_label, LV_ALIGN_TOP_MID, 0, 10);
+
+    lv_obj_t * tz_dd = lv_dropdown_create(settings_cont);
+    lv_obj_set_width(tz_dd, 280);
+    lv_dropdown_set_options(tz_dd, "UTC UTC0\n"
+                                  "London GMT0BST,M3.5.0/2,M10.5.0/3\n"
+                                  "Berlin CET-1CEST,M3.5.0,M10.5.0/3\n"
+                                  "NewYork EST5EDT,M3.2.0,M11.1.0\n"
+                                  "LosAngeles PST8PDT,M3.2.0,M11.1.0\n"
+                                  "Tokyo JST-9\n"
+                                  "Sydney AEST-10AEDT,M10.1.0,M4.1.0/3\n"
+                                  "SaoPaulo <-03>3");
+    lv_obj_align(tz_dd, LV_ALIGN_TOP_MID, 0, 40);
+    lv_obj_add_event_cb(tz_dd, tz_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_t * info = lv_label_create(settings_cont);
+    lv_label_set_text(info, "Changes take effect\nimmediately on next fetch.");
+    lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(info, LV_ALIGN_BOTTOM_MID, 0, -20);
 
     // --- VIEW_MAIN setup ---
     lv_obj_t * main_cont = view_containers[VIEW_MAIN];
@@ -149,8 +191,19 @@ void ui_init() {
     lv_obj_set_width(event_detail_label, 300);
 }
 
+void ui_set_timezone(const char* tz) {
+    setenv("TZ", tz, 1);
+    tzset();
+    Preferences prefs;
+    prefs.begin("f1-app", false);
+    prefs.putString("tz", tz);
+    prefs.end();
+    Serial.print("Timezone updated and saved: ");
+    Serial.println(tz);
+}
+
 void ui_set_view(View view) {
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 8; i++) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
     }
     lv_obj_clear_flag(view_containers[view], LV_OBJ_FLAG_HIDDEN);
@@ -161,6 +214,7 @@ void ui_set_view(View view) {
         lv_label_set_text(track_label, "");
         lv_label_set_text(weather_label, "");
         switch(view) {
+            case VIEW_SETTINGS: lv_label_set_text(info_label, "SETTINGS"); break;
             case VIEW_RESULTS: lv_label_set_text(info_label, "LAST RESULTS"); break;
             case VIEW_NEXT_RACE: lv_label_set_text(info_label, "NEXT RACE"); break;
             case VIEW_STANDINGS: lv_label_set_text(info_label, "DRIVERS"); break;

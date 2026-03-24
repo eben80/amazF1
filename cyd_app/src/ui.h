@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 
 enum View {
+    VIEW_SETTINGS,
     VIEW_MAIN,
     VIEW_RESULTS,
     VIEW_NEXT_RACE,
@@ -16,6 +17,7 @@ enum View {
 
 void ui_init();
 void ui_set_view(View view);
+void ui_set_timezone(const char* tz);
 void ui_update_status(const JsonObject& data);
 void ui_update_next_race(const JsonObject& data);
 void ui_update_results(const JsonObject& data);
