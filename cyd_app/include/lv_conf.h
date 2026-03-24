@@ -120,12 +120,7 @@
 #define LV_USE_ASSERT_MEM_INTEGRITY 0
 #define LV_USE_ASSERT_OBJ           0
 
-#define LV_USE_FS_POSIX             1
-#if LV_USE_FS_POSIX
-    #define LV_FS_POSIX_LETTER 'S'     /*Letter to indicate this drive*/
-    #define LV_FS_POSIX_PATH ""         /*Path to indicate this drive*/
-    #define LV_FS_POSIX_CACHE_SIZE 0    /*>0 to cache this number of bytes in memory from every open file*/
-#endif
+#define LV_USE_FS_POSIX             0
 
 #define LV_USE_PNG 1
 

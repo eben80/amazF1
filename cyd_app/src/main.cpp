@@ -9,6 +9,53 @@
 #include "config.h"
 #include "ui.h"
 
+// LVGL Filesystem bridge for LittleFS
+static void * fs_open(lv_fs_drv_t * drv, const char * path, lv_fs_mode_t mode) {
+    char full_path[128];
+    if (path[0] != '/') {
+        snprintf(full_path, sizeof(full_path), "/%s", path);
+    } else {
+        strncpy(full_path, path, sizeof(full_path));
+    }
+
+    File * f = new File();
+    const char * flags = (mode == LV_FS_MODE_WR) ? "w" : "r";
+    *f = LittleFS.open(full_path, flags);
+    if (!*f || f->isDirectory()) {
+        delete f;
+        return NULL;
+    }
+    return (void *)f;
+}
+
+static lv_fs_res_t fs_close(lv_fs_drv_t * drv, void * file_p) {
+    File * f = (File *)file_p;
+    f->close();
+    delete f;
+    return LV_FS_RES_OK;
+}
+
+static lv_fs_res_t fs_read(lv_fs_drv_t * drv, void * file_p, void * buf, uint32_t btr, uint32_t * br) {
+    File * f = (File *)file_p;
+    *br = f->read((uint8_t *)buf, btr);
+    return LV_FS_RES_OK;
+}
+
+static lv_fs_res_t fs_seek(lv_fs_drv_t * drv, void * file_p, uint32_t pos, lv_fs_whence_t whence) {
+    File * f = (File *)file_p;
+    SeekMode mode = SeekSet;
+    if (whence == LV_FS_SEEK_CUR) mode = SeekCur;
+    else if (whence == LV_FS_SEEK_END) mode = SeekEnd;
+    f->seek(pos, mode);
+    return LV_FS_RES_OK;
+}
+
+static lv_fs_res_t fs_tell(lv_fs_drv_t * drv, void * file_p, uint32_t * pos_p) {
+    File * f = (File *)file_p;
+    *pos_p = f->position();
+    return LV_FS_RES_OK;
+}
+
 // Hardware Interface
 TFT_eSPI tft = TFT_eSPI();
 
@@ -176,6 +223,20 @@ void setup() {
     indev_drv.type = LV_INDEV_TYPE_POINTER;
     indev_drv.read_cb = my_touchpad_read;
     lv_indev_drv_register(&indev_drv);
+
+    // Register LittleFS Driver for LVGL
+    static lv_fs_drv_t fs_drv;
+    lv_fs_drv_init(&fs_drv);
+    fs_drv.letter = 'S';
+    fs_drv.open_cb = fs_open;
+    fs_drv.close_cb = fs_close;
+    fs_drv.read_cb = fs_read;
+    fs_drv.seek_cb = fs_seek;
+    fs_drv.tell_cb = fs_tell;
+    lv_fs_drv_register(&fs_drv);
+
+    // Initialize PNG decoder
+    lv_png_init();
 
     // Initialize UI
     Serial.println("Building UI components...");
