@@ -361,10 +361,14 @@ void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size) 
     tm_utc.tm_mon -= 1;
     tm_utc.tm_isdst = 0;
 
+    // mktime() converts local time to time_t (UTC).
+    // Since our input tm is already UTC, we need to compensate.
     time_t t = mktime(&tm_utc);
-    // ESP32 mktime uses local time by default, but we have UTC input.
-    // To handle UTC properly without _mkgmtime (which isn't always available):
-    t -= timezone;
+    struct tm tm_check;
+    gmtime_r(&t, &tm_check);
+    time_t t_gmt = mktime(&tm_check);
+    int32_t offset = (int32_t)(t - t_gmt);
+    t += offset;
 
     struct tm * tm_local = localtime(&t);
     strftime(out_buf, out_size, "%d/%m %H:%M", tm_local);
