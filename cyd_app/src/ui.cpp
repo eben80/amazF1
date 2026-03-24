@@ -11,6 +11,9 @@ static lv_obj_t * weather_label;
 static lv_obj_t * idle_container;
 static lv_obj_t * next_race_label;
 static lv_obj_t * last_race_label;
+static lv_obj_t * next_flag_img;
+static lv_obj_t * last_flag_img;
+static lv_obj_t * winner_flag_img;
 
 void ui_init() {
     screen = lv_scr_act();
@@ -53,17 +56,26 @@ void ui_init() {
     lv_obj_align(idle_container, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN); // Hidden by default
 
+    next_flag_img = lv_img_create(idle_container);
+    lv_obj_align(next_flag_img, LV_ALIGN_TOP_LEFT, 0, 5);
+
     next_race_label = lv_label_create(idle_container);
     lv_label_set_text(next_race_label, "NEXT RACE: -");
-    lv_obj_align(next_race_label, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_align(next_race_label, LV_ALIGN_TOP_LEFT, 40, 0);
     lv_label_set_long_mode(next_race_label, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(next_race_label, 280);
+    lv_obj_set_width(next_race_label, 240);
+
+    last_flag_img = lv_img_create(idle_container);
+    lv_obj_align(last_flag_img, LV_ALIGN_TOP_LEFT, 0, 85);
 
     last_race_label = lv_label_create(idle_container);
     lv_label_set_text(last_race_label, "LAST RACE: -");
-    lv_obj_align(last_race_label, LV_ALIGN_TOP_LEFT, 0, 80);
+    lv_obj_align(last_race_label, LV_ALIGN_TOP_LEFT, 40, 80);
     lv_label_set_long_mode(last_race_label, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(last_race_label, 280);
+    lv_obj_set_width(last_race_label, 240);
+
+    winner_flag_img = lv_img_create(idle_container);
+    lv_obj_align(winner_flag_img, LV_ALIGN_TOP_LEFT, 0, 125);
 }
 
 void ui_update_status(const JsonObject& data) {
@@ -116,23 +128,38 @@ void ui_update_status(const JsonObject& data) {
         JsonObject upcoming = data["upcoming"];
         if (!upcoming.isNull()) {
             char next_buf[256];
-            snprintf(next_buf, sizeof(next_buf), "#FF1801 NEXT RACE:#\n%s %s\n%s\n%s",
-                     upcoming["flag"] | "", upcoming["name"] | "",
+            snprintf(next_buf, sizeof(next_buf), "#FF1801 NEXT RACE:#\n%s\n%s\n%s",
+                     upcoming["name"] | "",
                      upcoming["circuit"] | "", upcoming["date"] | "");
             lv_label_set_text(next_race_label, next_buf);
             lv_label_set_recolor(next_race_label, true);
+
+            const char* code = upcoming["flagCode"] | "un";
+            char path[64];
+            snprintf(path, sizeof(path), "S:/data/%s.png", code);
+            lv_img_set_src(next_flag_img, path);
         }
 
         // Update Last Race
         JsonObject previous = data["previous"];
         if (!previous.isNull()) {
             char last_buf[256];
-            snprintf(last_buf, sizeof(last_buf), "#FFAA00 LAST RACE:#\n%s %s\nWinner: %s %s\n%s",
-                     previous["flag"] | "", previous["name"] | "",
-                     previous["winnerFlag"] | "", previous["winner"] | "",
+            snprintf(last_buf, sizeof(last_buf), "#FFAA00 LAST RACE:#\n%s\nWinner: %s\n%s",
+                     previous["name"] | "",
+                     previous["winner"] | "",
                      previous["team"] | "");
             lv_label_set_text(last_race_label, last_buf);
             lv_label_set_recolor(last_race_label, true);
+
+            const char* raceCode = previous["flagCode"] | "un";
+            char racePath[64];
+            snprintf(racePath, sizeof(racePath), "S:/data/%s.png", raceCode);
+            lv_img_set_src(last_flag_img, racePath);
+
+            const char* winCode = previous["winnerFlagCode"] | "un";
+            char winPath[64];
+            snprintf(winPath, sizeof(winPath), "S:/data/%s.png", winCode);
+            lv_img_set_src(winner_flag_img, winPath);
         }
     }
 }

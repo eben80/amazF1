@@ -48,6 +48,21 @@ FLAG_MAPPING = {
     "Hungary": "🇭🇺", "Belgium": "🇧🇪", "Singapore": "🇸🇬", "Azerbaijan": "🇦🇿"
 }
 
+ISO_MAPPING = {
+    "British": "gb", "German": "de", "Italian": "it", "Monegasque": "mc",
+    "French": "fr", "New Zealander": "nz", "Austrian": "at", "Spanish": "es",
+    "Argentine": "ar", "Finnish": "fi", "Mexican": "mx", "Dutch": "nl",
+    "Australian": "au", "Brazilian": "br", "Thai": "th", "Japanese": "jp",
+    "Canadian": "ca", "American": "us", "Danish": "dk", "Chinese": "cn",
+    "United Kingdom": "gb", "Germany": "de", "Italy": "it", "Monaco": "mc",
+    "France": "fr", "New Zealand": "nz", "Austria": "at", "Spain": "es",
+    "Argentina": "ar", "Finland": "fi", "Mexico": "mx", "Netherlands": "nl",
+    "Australia": "au", "Brazil": "br", "Thailand": "th", "Japan": "jp",
+    "Canada": "ca", "USA": "us", "Denmark": "dk", "China": "cn",
+    "UK": "gb", "United Arab Emirates": "ae", "Saudi Arabia": "sa", "Bahrain": "bh",
+    "Hungary": "hu", "Belgium": "be", "Singapore": "sg", "Azerbaijan": "az"
+}
+
 TEAM_COLORS = {
     "Mercedes": "27F4D2", "Ferrari": "E80020", "Red Bull": "3671C6",
     "Red Bull Racing": "3671C6", "McLaren": "FF8000", "Aston Martin": "229971",
@@ -159,6 +174,7 @@ async def fetch_race_schedule():
                             "locality": race.get('Circuit', {}).get('Location', {}).get('locality'),
                             "country": country,
                             "flag": FLAG_MAPPING.get(country, "🏁"),
+                            "flagCode": ISO_MAPPING.get(country, "un"),
                             "sessions": sessions
                         }
             # Previous Race
@@ -179,10 +195,12 @@ async def fetch_race_schedule():
                                 "circuit": race.get('Circuit', {}).get('circuitName'),
                                 "winner": f"{winner.get('givenName')} {winner.get('familyName')}",
                                 "winnerFlag": FLAG_MAPPING.get(winner_nat, "🏁"),
+                                "winnerFlagCode": ISO_MAPPING.get(winner_nat, "un"),
                                 "team": team,
                                 "teamColor": int(get_team_color(team), 16),
                                 "country": country,
-                                "flag": FLAG_MAPPING.get(country, "🏁")
+                                "flag": FLAG_MAPPING.get(country, "🏁"),
+                                "flagCode": ISO_MAPPING.get(country, "un")
                             }
     except Exception as e:
         logger.error(f"Error fetching race schedule: {e}")
