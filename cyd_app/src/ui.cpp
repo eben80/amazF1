@@ -136,7 +136,9 @@ void ui_update_status(const JsonObject& data) {
 
             const char* code = upcoming["flagCode"] | "un";
             char path[64];
-            snprintf(path, sizeof(path), "S:/data/%s.png", code);
+            snprintf(path, sizeof(path), "S:/%s.png", code);
+            Serial.print("UI: Setting next flag to ");
+            Serial.println(path);
             lv_img_set_src(next_flag_img, path);
         }
 
@@ -153,12 +155,16 @@ void ui_update_status(const JsonObject& data) {
 
             const char* raceCode = previous["flagCode"] | "un";
             char racePath[64];
-            snprintf(racePath, sizeof(racePath), "S:/data/%s.png", raceCode);
+            snprintf(racePath, sizeof(racePath), "S:/%s.png", raceCode);
+            Serial.print("UI: Setting last flag to ");
+            Serial.println(racePath);
             lv_img_set_src(last_flag_img, racePath);
 
             const char* winCode = previous["winnerFlagCode"] | "un";
             char winPath[64];
-            snprintf(winPath, sizeof(winPath), "S:/data/%s.png", winCode);
+            snprintf(winPath, sizeof(winPath), "S:/%s.png", winCode);
+            Serial.print("UI: Setting winner flag to ");
+            Serial.println(winPath);
             lv_img_set_src(winner_flag_img, winPath);
         }
     }

@@ -80,7 +80,9 @@ The ESP32-2432S028 includes several onboard components. Below is the standard GP
     The `platformio.ini` file is pre-configured with the correct build flags for all CYD hardware variants. You do **not** need to modify the library's `User_Setup.h` file manually.
 5.  **Build & Flash:**
     Connect your board and select the appropriate environment in the PlatformIO project task menu based on the identification guide above. Click the **Build & Upload** button (Arrow icon) in the status bar.
-6.  **Connect to WiFi:**
+6.  **Upload Filesystem:**
+    To see flags and icons, you must also upload the assets. In PlatformIO, go to the **Project Tasks** menu, find your environment (e.g., `env:cyd2usb`), and select **Platform -> Upload Filesystem Image**.
+7.  **Connect to WiFi:**
     On first boot, the device will create a WiFi access point named **`F1-Timing-Display`**. Connect to it with your phone or computer and follow the on-screen portal to select your local 2.4GHz WiFi network and enter its password.
 
 ## ❓ Troubleshooting

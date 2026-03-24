@@ -18,10 +18,14 @@ static void * fs_open(lv_fs_drv_t * drv, const char * path, lv_fs_mode_t mode) {
         strncpy(full_path, path, sizeof(full_path));
     }
 
+    Serial.print("LVFS: Opening ");
+    Serial.println(full_path);
+
     File * f = new File();
     const char * flags = (mode == LV_FS_MODE_WR) ? "w" : "r";
     *f = LittleFS.open(full_path, flags);
     if (!*f || f->isDirectory()) {
+        Serial.println("LVFS: Open failed.");
         delete f;
         return NULL;
     }
@@ -151,6 +155,19 @@ void fetch_data() {
     }
 }
 
+void list_files() {
+    Serial.println("LittleFS Files:");
+    File root = LittleFS.open("/");
+    File file = root.openNextFile();
+    while (file) {
+        Serial.print("  FILE: ");
+        Serial.print(file.name());
+        Serial.print("  SIZE: ");
+        Serial.println(file.size());
+        file = root.openNextFile();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     delay(1000); // Wait for serial to stabilize
@@ -161,6 +178,7 @@ void setup() {
         Serial.println("LittleFS Mount Failed");
     } else {
         Serial.println("LittleFS Mounted.");
+        list_files();
     }
 
     // Turn on Backlight
