@@ -118,7 +118,7 @@ void ui_update_status(const JsonObject& data) {
         JsonArray timing = data["timing"];
         int row = 1;
         for (JsonObject entry : timing) {
-            if (row >= 21) break; // Display full field (up to 20 drivers)
+            if (row >= 10) break;
             lv_table_set_cell_value(table, row, 0, entry["pos"] | "-");
 
             const char* compound = entry["comp"] | "";
