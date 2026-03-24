@@ -15,7 +15,7 @@ TFT_eSPI tft = TFT_eSPI();
 #include <SPI.h>
 SPIClass touchSPI = SPIClass(VSPI);
 XPT2046_Touchscreen ts(TOUCH_CS);
-#elif defined(CYD2USB_GT911)
+#elif defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
 #include <TAMC_GT911.h>
 TAMC_GT911 ts = TAMC_GT911(I2C_SDA, I2C_SCL, GT911_INT, GT911_RST, SCREEN_WIDTH, SCREEN_HEIGHT);
 #endif
@@ -49,7 +49,7 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
-#elif defined(CYD2USB_GT911)
+#elif defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
     ts.read();
     if (ts.isTouched) {
         data->state = LV_INDEV_STATE_PR;
@@ -118,7 +118,7 @@ void setup() {
     touchSPI.begin(6, 12, 13, TOUCH_CS);
     ts.begin(touchSPI);
     ts.setRotation(1);
-#elif defined(CYD2USB_GT911)
+#elif defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
     ts.begin();
     ts.setRotation(1);
 #endif

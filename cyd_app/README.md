@@ -41,10 +41,11 @@ This subfolder contains the firmware for the **ESP32-2432S028** (MicroUSB or USB
     Connect your CYD to your computer and select the appropriate environment in the PlatformIO project task menu:
     - **`env:cyd`**: Original MicroUSB CYD with XPT2046 SPI Touch.
     - **`env:cyd2usb`**: New USB-C / CYD2USB with GT911 I2C Touch.
+    - **`env:cyd-v2-v3`**: CYD-USB-C (V2/V3 Hybrid) with both MicroUSB and USB-C (GT911).
 6.  Click the **Build & Upload** button in the PlatformIO toolbar.
 
 ## Troubleshooting
 
-- **Touch Screen Not Working:** Ensure you selected the correct environment for your hardware. MicroUSB models typically use the `cyd` environment (XPT2046), while USB-C models usually need `cyd2usb` (GT911).
+- **Touch Screen Not Working:** Ensure you selected the correct environment for your hardware. MicroUSB models typically use the `cyd` environment (XPT2046), while USB-C models usually need `cyd2usb` or `cyd-v2-v3` (GT911).
 - **WiFi Connection Fails:** Check that your network is 2.4GHz and that the SSID/Password in `config.h` are correct.
 - **No Data Displayed:** Ensure the Python bridge middleware is running and accessible from the CYD's network.

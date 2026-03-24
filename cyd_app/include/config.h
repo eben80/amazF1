@@ -16,8 +16,8 @@
 // Hardware Pins (ESP32-2432S028)
 #define TFT_BL 21
 
-// USB-C / CYD2USB I2C Touch Pins
-#ifdef CYD2USB_GT911
+// USB-C / CYD2USB / CYD-V2-V3 I2C Touch Pins
+#if defined(CYD2USB_GT911) || defined(CYD_V2_V3_GT911)
 #define I2C_SDA 33
 #define I2C_SCL 32
 #define GT911_INT -1
