@@ -12,6 +12,10 @@
 
 #define POLL_INTERVAL 10000 // 10 seconds
 
+// Time Settings
+#define NTP_SERVER "pool.ntp.org"
+#define TZ_INFO "UTC0" // Default to UTC, can be changed (e.g., "EST5EDT,M3.2.0,M11.1.0")
+
 // Display Settings
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 240

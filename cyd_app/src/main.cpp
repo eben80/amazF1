@@ -239,6 +239,10 @@ void setup() {
     lv_png_init();
     ui_init();
 
+    // Time Sync
+    configTzTime(TZ_INFO, NTP_SERVER);
+    Serial.println("Time configured with NTP.");
+
     // Setup Gesture Event
     lv_obj_add_event_cb(lv_scr_act(), event_cb, LV_EVENT_GESTURE, NULL);
 

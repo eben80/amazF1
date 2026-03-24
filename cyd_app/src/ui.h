@@ -25,4 +25,7 @@ void ui_update_calendar(const JsonObject& data);
 void ui_update_event_detail(const JsonObject& data);
 void ui_show_message(const char* msg);
 
+// Helper for local time formatting
+void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size);
+
 #endif

@@ -1,5 +1,6 @@
 #include "ui.h"
 #include <ArduinoJson.h>
+#include <time.h>
 
 static lv_obj_t * screen;
 static lv_obj_t * header;
@@ -219,9 +220,11 @@ void ui_update_status(const JsonObject& data) {
         JsonObject upcoming = data["upcoming"];
         if (!upcoming.isNull()) {
             char next_buf[256];
+        char local_date[32];
+        ui_format_local_time(upcoming["date"] | "", local_date, sizeof(local_date));
             snprintf(next_buf, sizeof(next_buf), "#FF1801 NEXT RACE:#\n%s\n%s\n%s",
                      upcoming["name"] | "",
-                     upcoming["circuit"] | "", upcoming["date"] | "");
+                 upcoming["circuit"] | "", local_date);
             lv_label_set_text(next_race_summary_label, next_buf);
             lv_label_set_recolor(next_race_summary_label, true);
 
@@ -264,8 +267,10 @@ void ui_update_next_race(const JsonObject& data) {
 
         JsonArray sessions = upcoming["sessions"];
         for (JsonObject s : sessions) {
+            char local_time[32];
+            ui_format_local_time(s["time"] | "", local_time, sizeof(local_time));
             pos += snprintf(buf + pos, sizeof(buf) - pos, "#FFAA00 %s:# %s\n",
-                            s["name"] | "", s["time"] | "");
+                            s["name"] | "", local_time);
         }
         lv_label_set_text(next_race_details_label, buf);
     }
@@ -322,7 +327,9 @@ void ui_update_calendar(const JsonObject& data) {
     for (JsonObject race : calendar) {
         if (row >= 24) break;
         lv_table_set_cell_value(calendar_table, row, 0, race["name"] | "-");
-        lv_table_set_cell_value(calendar_table, row, 1, race["date"] | "-");
+        char local_date[32];
+        ui_format_local_time(race["date"] | "", local_date, sizeof(local_date));
+        lv_table_set_cell_value(calendar_table, row, 1, local_date);
         row++;
     }
 }
@@ -333,4 +340,32 @@ void ui_update_event_detail(const JsonObject& data) {
 
 void ui_show_message(const char* msg) {
     lv_label_set_text(info_label, msg);
+}
+
+void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size) {
+    if (!iso_time || strlen(iso_time) < 16) {
+        snprintf(out_buf, out_size, "-");
+        return;
+    }
+
+    struct tm tm_utc;
+    // Format: 2024-03-09T15:00:00Z
+    if (sscanf(iso_time, "%d-%d-%dT%d:%d:%d",
+        &tm_utc.tm_year, &tm_utc.tm_mon, &tm_utc.tm_mday,
+        &tm_utc.tm_hour, &tm_utc.tm_min, &tm_utc.tm_sec) != 6) {
+        snprintf(out_buf, out_size, "%s", iso_time);
+        return;
+    }
+
+    tm_utc.tm_year -= 1900;
+    tm_utc.tm_mon -= 1;
+    tm_utc.tm_isdst = 0;
+
+    time_t t = mktime(&tm_utc);
+    // ESP32 mktime uses local time by default, but we have UTC input.
+    // To handle UTC properly without _mkgmtime (which isn't always available):
+    t -= timezone;
+
+    struct tm * tm_local = localtime(&t);
+    strftime(out_buf, out_size, "%d/%m %H:%M", tm_local);
 }
