@@ -7,6 +7,11 @@ static lv_obj_t * info_label;
 static lv_obj_t * track_label;
 static lv_obj_t * weather_label;
 
+// Idle Dashboard Objects
+static lv_obj_t * idle_container;
+static lv_obj_t * next_race_label;
+static lv_obj_t * last_race_label;
+
 void ui_init() {
     screen = lv_scr_act();
     lv_obj_set_style_bg_color(screen, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
@@ -41,10 +46,31 @@ void ui_init() {
     lv_table_set_cell_value(table, 0, 1, "DRV");
     lv_table_set_cell_value(table, 0, 2, "GAP / INT");
     lv_table_set_cell_value(table, 0, 3, "LAST");
+
+    // Idle Dashboard Container
+    idle_container = lv_obj_create(screen);
+    lv_obj_set_size(idle_container, 300, 170);
+    lv_obj_align(idle_container, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN); // Hidden by default
+
+    next_race_label = lv_label_create(idle_container);
+    lv_label_set_text(next_race_label, "NEXT RACE: -");
+    lv_obj_align(next_race_label, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_label_set_long_mode(next_race_label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(next_race_label, 280);
+
+    last_race_label = lv_label_create(idle_container);
+    lv_label_set_text(last_race_label, "LAST RACE: -");
+    lv_obj_align(last_race_label, LV_ALIGN_TOP_LEFT, 0, 80);
+    lv_label_set_long_mode(last_race_label, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(last_race_label, 280);
 }
 
 void ui_update_status(const JsonObject& data) {
     if (data["live"]) {
+        lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(table, LV_OBJ_FLAG_HIDDEN);
+
         lv_label_set_text(info_label, data["session"]["name"]);
         lv_label_set_text(track_label, data["track"]);
 
@@ -57,9 +83,20 @@ void ui_update_status(const JsonObject& data) {
         JsonArray timing = data["timing"];
         int row = 1;
         for (JsonObject entry : timing) {
-            if (row >= 10) break; // Limit to top 10 for simplicity on small screen
+            if (row >= 10) break;
             lv_table_set_cell_value(table, row, 0, entry["pos"] | "-");
-            lv_table_set_cell_value(table, row, 1, entry["name"] | "-");
+
+            const char* compound = entry["comp"] | "";
+            char driver_name[32];
+            if (strlen(compound) > 0) {
+                // We'll use a symbol or just text for now as adding icons to table cells is complex in LVGL 8.3
+                // Alternatively, we can just use the first letter of the compound
+                char c = toupper(compound[0]);
+                snprintf(driver_name, sizeof(driver_name), "(%c) %s", c, (const char*)entry["name"] | "-");
+            } else {
+                snprintf(driver_name, sizeof(driver_name), "%s", (const char*)entry["name"] | "-");
+            }
+            lv_table_set_cell_value(table, row, 1, driver_name);
 
             char gap_int[32];
             snprintf(gap_int, sizeof(gap_int), "%s / %s", entry["gap"] | "-", entry["int"] | "-");
@@ -68,9 +105,35 @@ void ui_update_status(const JsonObject& data) {
             row++;
         }
     } else {
+        lv_obj_add_flag(table, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
+
         lv_label_set_text(info_label, "OFF SESSION");
         lv_label_set_text(track_label, "-");
         lv_label_set_text(weather_label, "CHECKING NEXT RACE...");
+
+        // Update Next Race
+        JsonObject upcoming = data["upcoming"];
+        if (!upcoming.isNull()) {
+            char next_buf[256];
+            snprintf(next_buf, sizeof(next_buf), "#FF1801 NEXT RACE:#\n%s %s\n%s\n%s",
+                     upcoming["flag"] | "", upcoming["name"] | "",
+                     upcoming["circuit"] | "", upcoming["date"] | "");
+            lv_label_set_text(next_race_label, next_buf);
+            lv_label_set_recolor(next_race_label, true);
+        }
+
+        // Update Last Race
+        JsonObject previous = data["previous"];
+        if (!previous.isNull()) {
+            char last_buf[256];
+            snprintf(last_buf, sizeof(last_buf), "#FFAA00 LAST RACE:#\n%s %s\nWinner: %s %s\n%s",
+                     previous["flag"] | "", previous["name"] | "",
+                     previous["winnerFlag"] | "", previous["winner"] | "",
+                     previous["team"] | "");
+            lv_label_set_text(last_race_label, last_buf);
+            lv_label_set_recolor(last_race_label, true);
+        }
     }
 }
 

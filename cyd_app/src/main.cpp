@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <HTTPClient.h>
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <lvgl.h>
 #include <TFT_eSPI.h>
@@ -107,6 +108,13 @@ void setup() {
     Serial.begin(115200);
     delay(1000); // Wait for serial to stabilize
     Serial.println("\n--- F1 Timing Display ---");
+
+    // Initialize Filesystem
+    if (!LittleFS.begin(true)) {
+        Serial.println("LittleFS Mount Failed");
+    } else {
+        Serial.println("LittleFS Mounted.");
+    }
 
     // Turn on Backlight
     pinMode(TFT_BL, OUTPUT);
