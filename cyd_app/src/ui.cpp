@@ -60,6 +60,7 @@ void ui_init() {
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
+    lv_obj_set_style_text_font(info_label, &lv_font_montserrat_18, 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 0, 0);
 
     track_label = lv_label_create(header);
