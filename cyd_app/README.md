@@ -19,7 +19,8 @@ This subfolder contains the firmware for the **ESP32-2432S028** (MicroUSB or USB
     - `lvgl/lvgl@^8.3.7`
     - `bodmer/TFT_eSPI@^2.5.31`
     - `bblanchon/ArduinoJson@^6.21.2`
-    - `tamctec/TAMC_GT911@^1.0.2`
+    - `tamctec/TAMC_GT911@^1.0.2` (For CYD2USB)
+    - `XPT2046_Touchscreen` (For original CYD)
 
 ## Setup & Flashing
 
@@ -37,10 +38,13 @@ This subfolder contains the firmware for the **ESP32-2432S028** (MicroUSB or USB
 4.  **TFT_eSPI Configuration:**
     The `platformio.ini` file is pre-configured with the correct build flags for the CYD hardware. You do **not** need to modify the library's `User_Setup.h` file manually.
 5.  **Build & Flash:**
-    Connect your CYD to your computer and click the **Build & Upload** button in the PlatformIO toolbar.
+    Connect your CYD to your computer and select the appropriate environment in the PlatformIO project task menu:
+    - **`env:cyd`**: Original MicroUSB CYD with XPT2046 SPI Touch.
+    - **`env:cyd2usb`**: New USB-C / CYD2USB with GT911 I2C Touch.
+6.  Click the **Build & Upload** button in the PlatformIO toolbar.
 
 ## Troubleshooting
 
-- **Touch Screen Not Working:** Ensure the touch driver is correctly configured for your specific CYD model (some use `GT911`, others use `XPT2046`). The current implementation uses `GT911`.
+- **Touch Screen Not Working:** Ensure you selected the correct environment for your hardware. MicroUSB models typically use the `cyd` environment (XPT2046), while USB-C models usually need `cyd2usb` (GT911).
 - **WiFi Connection Fails:** Check that your network is 2.4GHz and that the SSID/Password in `config.h` are correct.
 - **No Data Displayed:** Ensure the Python bridge middleware is running and accessible from the CYD's network.

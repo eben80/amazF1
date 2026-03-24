@@ -4,13 +4,21 @@
 #include <ArduinoJson.h>
 #include <lvgl.h>
 #include <TFT_eSPI.h>
-#include <TAMC_GT911.h>
 #include "config.h"
 #include "ui.h"
 
 // Hardware Interface
 TFT_eSPI tft = TFT_eSPI();
+
+#ifdef CYD_XPT2046
+#include <XPT2046_Touchscreen.h>
+#include <SPI.h>
+SPIClass touchSPI = SPIClass(VSPI);
+XPT2046_Touchscreen ts(TOUCH_CS);
+#elif defined(CYD2USB_GT911)
+#include <TAMC_GT911.h>
 TAMC_GT911 ts = TAMC_GT911(I2C_SDA, I2C_SCL, GT911_INT, GT911_RST, SCREEN_WIDTH, SCREEN_HEIGHT);
+#endif
 
 // LVGL Buffers
 static lv_disp_draw_buf_t draw_buf;
@@ -31,6 +39,17 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
 
 // LVGL Touchpad Callback
 void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
+#ifdef CYD_XPT2046
+    if (ts.touched()) {
+        TS_Point p = ts.getPoint();
+        data->state = LV_INDEV_STATE_PR;
+        // Simple calibration for XPT2046 (values vary by model)
+        data->point.x = map(p.x, 200, 3700, 0, SCREEN_WIDTH);
+        data->point.y = map(p.y, 240, 3800, 0, SCREEN_HEIGHT);
+    } else {
+        data->state = LV_INDEV_STATE_REL;
+    }
+#elif defined(CYD2USB_GT911)
     ts.read();
     if (ts.isTouched) {
         data->state = LV_INDEV_STATE_PR;
@@ -39,6 +58,7 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
+#endif
 }
 
 // Data Fetching
@@ -94,8 +114,15 @@ void setup() {
     lv_disp_drv_register(&disp_drv);
 
     // Register Touch Driver
+#ifdef CYD_XPT2046
+    touchSPI.begin(6, 12, 13, TOUCH_CS);
+    ts.begin(touchSPI);
+    ts.setRotation(1);
+#elif defined(CYD2USB_GT911)
     ts.begin();
     ts.setRotation(1);
+#endif
+
     static lv_indev_drv_t indev_drv;
     lv_indev_drv_init(&indev_drv);
     indev_drv.type = LV_INDEV_TYPE_POINTER;
