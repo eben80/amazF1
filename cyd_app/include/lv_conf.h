@@ -113,7 +113,8 @@
 #define LV_FONT_DEFAULT &lv_font_montserrat_16
 
 /*Enable UTF-8 encoding*/
-#define LV_TXT_ENC LV_TXT_ENC_UTF8
+#define LV_TXT_ENC 1
+#define LV_TXT_ENC_UTF8 1
 
 /*=================
  *  DEBUG SETTINGS

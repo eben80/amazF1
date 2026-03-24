@@ -111,6 +111,7 @@ void ui_init() {
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_HIDDEN);
 
     timing_table = lv_table_create(main_cont);
+    lv_obj_set_style_text_font(timing_table, &lv_font_montserrat_16, 0);
     lv_obj_set_size(timing_table, 320, 190);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_table_set_col_cnt(timing_table, 4);
@@ -148,6 +149,7 @@ void ui_init() {
 
     // --- VIEW_RESULTS setup ---
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
+    lv_obj_set_style_text_font(results_table, &lv_font_montserrat_16, 0);
     lv_obj_set_size(results_table, 320, 190);
     lv_table_set_col_cnt(results_table, 3);
     lv_table_set_col_width(results_table, 0, 40);
@@ -163,6 +165,7 @@ void ui_init() {
 
     // --- VIEW_STANDINGS setup ---
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
+    lv_obj_set_style_text_font(standings_table, &lv_font_montserrat_16, 0);
     lv_obj_set_size(standings_table, 320, 190);
     lv_table_set_col_cnt(standings_table, 3);
     lv_table_set_col_width(standings_table, 0, 40);
@@ -171,6 +174,7 @@ void ui_init() {
 
     // --- VIEW_CONSTRUCTORS setup ---
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
+    lv_obj_set_style_text_font(constructors_table, &lv_font_montserrat_16, 0);
     lv_obj_set_size(constructors_table, 320, 190);
     lv_table_set_col_cnt(constructors_table, 3);
     lv_table_set_col_width(constructors_table, 0, 40);
@@ -179,6 +183,7 @@ void ui_init() {
 
     // --- VIEW_CALENDAR setup ---
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
+    lv_obj_set_style_text_font(calendar_table, &lv_font_montserrat_16, 0);
     lv_obj_set_size(calendar_table, 320, 190);
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 200);
@@ -338,11 +343,13 @@ void ui_update_results(const JsonObject& data) {
     for (JsonObject res : results) {
         if (row >= 20) break;
         lv_table_set_cell_value(results_table, row, 0, res["position"] | "-");
-        char name_buf[64];
-        snprintf(name_buf, sizeof(name_buf), "%s %s", res["firstName"] | "", res["lastName"] | "");
+        char name_buf[128];
+        const char* fName = res["firstName"] | "";
+        const char* lName = res["lastName"] | "";
+        snprintf(name_buf, sizeof(name_buf), "%s %s", fName, lName);
         lv_table_set_cell_value(results_table, row, 1, name_buf);
         char pts_buf[32];
-        snprintf(pts_buf, sizeof(pts_buf), "%s pts", res["points"] | "0");
+        snprintf(pts_buf, sizeof(pts_buf), "%s pts", (const char*)(res["points"] | "0"));
         lv_table_set_cell_value(results_table, row, 2, pts_buf);
         row++;
     }
