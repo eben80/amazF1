@@ -59,7 +59,7 @@ void ui_init() {
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
-    lv_obj_set_style_text_font(info_label, &f1font_18, 0);
+    lv_obj_set_style_text_font(info_label, &f1font_14, 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 0, 0);
 
     track_label = lv_label_create(header);
@@ -112,7 +112,7 @@ void ui_init() {
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_HIDDEN);
 
     timing_table = lv_table_create(main_cont);
-    lv_obj_set_style_text_font(timing_table, &f1font_16, 0);
+    lv_obj_set_style_text_font(timing_table, &f1font_14, 0);
     lv_obj_set_size(timing_table, 320, 190);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_table_set_col_cnt(timing_table, 4);
@@ -150,7 +150,7 @@ void ui_init() {
 
     // --- VIEW_RESULTS setup ---
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
-    lv_obj_set_style_text_font(results_table, &f1font_16, 0);
+    lv_obj_set_style_text_font(results_table, &f1font_14, 0);
     lv_obj_set_size(results_table, 320, 190);
     lv_table_set_col_cnt(results_table, 3);
     lv_table_set_col_width(results_table, 0, 40);
@@ -169,7 +169,7 @@ void ui_init() {
 
     // --- VIEW_STANDINGS setup ---
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
-    lv_obj_set_style_text_font(standings_table, &f1font_16, 0);
+    lv_obj_set_style_text_font(standings_table, &f1font_14, 0);
     lv_obj_set_size(standings_table, 320, 190);
     lv_table_set_col_cnt(standings_table, 3);
     lv_table_set_col_width(standings_table, 0, 40);
@@ -181,7 +181,7 @@ void ui_init() {
 
     // --- VIEW_CONSTRUCTORS setup ---
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
-    lv_obj_set_style_text_font(constructors_table, &f1font_16, 0);
+    lv_obj_set_style_text_font(constructors_table, &f1font_14, 0);
     lv_obj_set_size(constructors_table, 320, 190);
     lv_table_set_col_cnt(constructors_table, 3);
     lv_table_set_col_width(constructors_table, 0, 40);
@@ -193,7 +193,7 @@ void ui_init() {
 
     // --- VIEW_CALENDAR setup ---
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
-    lv_obj_set_style_text_font(calendar_table, &f1font_16, 0);
+    lv_obj_set_style_text_font(calendar_table, &f1font_14, 0);
     lv_obj_set_size(calendar_table, 320, 190);
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 200);
@@ -269,7 +269,7 @@ void ui_update_status(const JsonObject& data) {
         int row = 1;
         for (JsonObject entry : timing) {
             if (row >= 20) break;
-            lv_table_set_cell_value(timing_table, row, 0, entry["pos"] | "-");
+            lv_table_set_cell_value(timing_table, row, 0, (const char*)(entry["pos"] | "-"));
 
             const char* compound = entry["comp"] | "";
             char driver_name[64];
@@ -282,9 +282,9 @@ void ui_update_status(const JsonObject& data) {
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
             char gap_int[32];
-            snprintf(gap_int, sizeof(gap_int), "%s / %s", entry["gap"] | "-", entry["int"] | "-");
+            snprintf(gap_int, sizeof(gap_int), "%s / %s", (const char*)(entry["gap"] | "-"), (const char*)(entry["int"] | "-"));
             lv_table_set_cell_value(timing_table, row, 2, gap_int);
-            lv_table_set_cell_value(timing_table, row, 3, entry["last"] | "-");
+            lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["last"] | "-"));
             row++;
         }
     } else {
@@ -351,7 +351,7 @@ void ui_update_next_race(const JsonObject& data) {
             char local_time[32];
             ui_format_local_time(s["time"] | "", local_time, sizeof(local_time));
             pos += snprintf(buf + pos, sizeof(buf) - pos, "#FFAA00 %s:# %s\n",
-                            s["name"] | "", local_time);
+                            (const char*)(s["name"] | ""), local_time);
         }
         lv_label_set_text(next_race_details_label, buf);
     }
