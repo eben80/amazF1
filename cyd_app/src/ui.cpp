@@ -229,12 +229,14 @@ void ui_init() {
     timing_table = lv_table_create(main_cont);
     lv_obj_set_style_text_font(timing_table, &f1font_8, 0);
     lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_pad_left(timing_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_right(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_col_cnt(timing_table, 4);
-    lv_table_set_col_width(timing_table, 0, 30); // P
-    lv_table_set_col_width(timing_table, 1, 130); // Driver
+    lv_table_set_col_width(timing_table, 0, 35); // P
+    lv_table_set_col_width(timing_table, 1, 125); // Driver
     lv_table_set_col_width(timing_table, 2, 80); // Gap
     lv_table_set_col_width(timing_table, 3, 80); // Int
     lv_table_set_cell_value(timing_table, 0, 0, "P");
