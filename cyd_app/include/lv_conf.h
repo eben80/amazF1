@@ -107,14 +107,15 @@
  *==================*/
 
 /* Enable built-in fonts if you want them as fallbacks */
-#define LV_FONT_MONTSERRAT_14 1
-#define LV_FONT_MONTSERRAT_16 1
-#define LV_FONT_MONTSERRAT_18 1
-#define LV_FONT_MONTSERRAT_20 1
+// #define LV_FONT_MONTSERRAT_14 1
+// #define LV_FONT_MONTSERRAT_16 1
+// #define LV_FONT_MONTSERRAT_18 1
+// #define LV_FONT_MONTSERRAT_20 1
 
 /* --- CUSTOM FONT DECLARATION --- */
 /* The backslashes (\) are MANDATORY for multi-line macros */
 #define LV_FONT_CUSTOM_DECLARE \
+    LV_FONT_DECLARE(f1font_12) \
     LV_FONT_DECLARE(f1font_14) \
     LV_FONT_DECLARE(f1font_16) \
     LV_FONT_DECLARE(f1font_18) \
