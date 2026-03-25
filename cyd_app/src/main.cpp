@@ -255,9 +255,11 @@ void setup() {
     preferences.begin("f1-app", true);
     String saved_tz = preferences.getString("tz", TZ_INFO);
     bool saved_sim = preferences.getBool("sim", false);
+    uint8_t saved_bright = preferences.getUChar("bright", 255);
     preferences.end();
     ui_set_timezone(saved_tz.c_str());
     ui_set_sim_mode(saved_sim);
+    ui_set_brightness(saved_bright);
 
     // Time Sync
     configTzTime(saved_tz.c_str(), NTP_SERVER);

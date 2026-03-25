@@ -12,6 +12,7 @@ static lv_obj_t * weather_label;
 
 static View active_view = VIEW_MAIN;
 static bool sim_mode = false;
+static uint8_t brightness = 255;
 
 struct DriverPos {
     char name[4];
@@ -90,6 +91,14 @@ static void sim_event_handler(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
     if(code == LV_EVENT_VALUE_CHANGED) {
         ui_set_sim_mode(lv_obj_has_state(obj, LV_STATE_CHECKED));
+    }
+}
+
+static void brightness_event_handler(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    if(code == LV_EVENT_VALUE_CHANGED) {
+        ui_set_brightness((uint8_t)lv_slider_get_value(obj));
     }
 }
 
@@ -228,6 +237,18 @@ void ui_init() {
     lv_obj_set_style_text_color(sim_cb, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(sim_cb, LV_ALIGN_TOP_MID, 0, 85);
     lv_obj_add_event_cb(sim_cb, sim_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_t * bright_label = lv_label_create(settings_cont);
+    lv_label_set_text(bright_label, "Brightness:");
+    lv_obj_set_style_text_color(bright_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(bright_label, LV_ALIGN_TOP_MID, 0, 115);
+
+    lv_obj_t * bright_slider = lv_slider_create(settings_cont);
+    lv_obj_set_width(bright_slider, 200);
+    lv_slider_set_range(bright_slider, 10, 255);
+    lv_slider_set_value(bright_slider, brightness, LV_ANIM_OFF);
+    lv_obj_align(bright_slider, LV_ALIGN_TOP_MID, 0, 135);
+    lv_obj_add_event_cb(bright_slider, brightness_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_t * info = lv_label_create(settings_cont);
     lv_label_set_text(info, "Changes take effect\nimmediately on next fetch.");
@@ -387,6 +408,23 @@ void ui_set_sim_mode(bool enabled) {
 
 bool ui_get_sim_mode() {
     return sim_mode;
+}
+
+void ui_set_brightness(uint8_t val) {
+    brightness = val;
+    // On ESP32 we use ledcWrite, but main.cpp handles the actual hardware call
+    // or we can use analogWrite if it's initialized correctly.
+    // For consistency we'll use Preferences here and let main handle PWM.
+    analogWrite(21, val); // Pin 21 is TFT_BL
+
+    Preferences prefs;
+    prefs.begin("f1-app", false);
+    prefs.putUChar("bright", val);
+    prefs.end();
+}
+
+uint8_t ui_get_brightness() {
+    return brightness;
 }
 
 void ui_set_timezone(const char* tz) {
