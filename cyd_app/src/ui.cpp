@@ -13,6 +13,13 @@ static lv_obj_t * weather_label;
 static View active_view = VIEW_MAIN;
 static bool sim_mode = false;
 
+struct DriverPos {
+    char name[4];
+    int pos;
+};
+static DriverPos prev_positions[22];
+static int prev_driver_count = 0;
+
 struct TZMapping {
     const char * name;
     const char * tz;
@@ -209,14 +216,14 @@ void ui_init() {
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_table_set_col_cnt(timing_table, 4);
-    lv_table_set_col_width(timing_table, 0, 45);  // P
-    lv_table_set_col_width(timing_table, 1, 65);  // Driver
-    lv_table_set_col_width(timing_table, 2, 110); // Gap/Int
-    lv_table_set_col_width(timing_table, 3, 100); // Last Lap
+    lv_table_set_col_width(timing_table, 0, 35); // P
+    lv_table_set_col_width(timing_table, 1, 115); // Driver
+    lv_table_set_col_width(timing_table, 2, 85); // Gap
+    lv_table_set_col_width(timing_table, 3, 85); // Int
     lv_table_set_cell_value(timing_table, 0, 0, "P");
     lv_table_set_cell_value(timing_table, 0, 1, "DRV");
-    lv_table_set_cell_value(timing_table, 0, 2, "GAP / INT");
-    lv_table_set_cell_value(timing_table, 0, 3, "LAST");
+    lv_table_set_cell_value(timing_table, 0, 2, "GAP");
+    lv_table_set_cell_value(timing_table, 0, 3, "INT");
 
     idle_container = lv_obj_create(main_cont);
     lv_obj_set_size(idle_container, 320, 190);
@@ -422,24 +429,55 @@ void ui_update_status(const JsonObject& data) {
 
         int row = 1;
         for (JsonObject entry : timing) {
+            const char* name = (const char*)(entry["name"] | "");
+            if (!name) name = "";
+            int pos = atoi((const char*)(entry["pos"] | "99"));
             lv_table_set_cell_value(timing_table, row, 0, (const char*)(entry["pos"] | "-"));
+
+            // Find previous position
+            int p_pos = -1;
+            for(int i=0; i<prev_driver_count; i++) {
+                if(name[0] != '\0' && strcmp(prev_positions[i].name, name) == 0) {
+                    p_pos = prev_positions[i].pos;
+                    break;
+                }
+            }
 
             const char* compound = (const char*)(entry["comp"] | "");
             char driver_name[64];
+            int n_pos = 0;
             if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
-                snprintf(driver_name, sizeof(driver_name), "(%c) %s", c, (const char*)(entry["name"] | "-"));
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s (%c)", name, c);
             } else {
-                snprintf(driver_name, sizeof(driver_name), "%s", (const char*)(entry["name"] | "-"));
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s", name);
+            }
+
+            if (p_pos != -1 && n_pos < sizeof(driver_name) - 10) {
+                if (pos < p_pos) snprintf(driver_name + n_pos, sizeof(driver_name) - n_pos, " #00FF00 ^#");
+                else if (pos > p_pos) snprintf(driver_name + n_pos, sizeof(driver_name) - n_pos, " #FF0000 v#");
             }
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
+            lv_table_set_cell_ctrl(timing_table, row, 1, LV_TABLE_CELL_CTRL_TEXT_RECOLOR);
 
-            char gap_int[32];
-            snprintf(gap_int, sizeof(gap_int), "%s / %s", (const char*)(entry["gap"] | "-"), (const char*)(entry["int"] | "-"));
-            lv_table_set_cell_value(timing_table, row, 2, gap_int);
-            lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["last"] | "-"));
+            lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
+            lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
             row++;
         }
+
+        // Store current positions for next cycle
+        prev_driver_count = 0;
+        for (JsonObject entry : timing) {
+            if (prev_driver_count >= 22) break;
+            const char* dname = (const char*)(entry["name"] | "");
+            if (dname) {
+                strncpy(prev_positions[prev_driver_count].name, dname, 3);
+                prev_positions[prev_driver_count].name[3] = '\0';
+                prev_positions[prev_driver_count].pos = atoi((const char*)(entry["pos"] | "99"));
+                prev_driver_count++;
+            }
+        }
+
         lv_obj_invalidate(timing_table);
     } else {
         lv_obj_add_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
