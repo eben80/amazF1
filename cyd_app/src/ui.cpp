@@ -65,7 +65,6 @@ static lv_obj_t * calendar_table;
 static lv_obj_t * next_race_details_label;
 static lv_obj_t * event_detail_header_label;
 static lv_obj_t * event_detail_table;
-static lv_obj_t * event_detail_flag_img;
 
 static void tz_event_handler(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
@@ -133,14 +132,17 @@ void ui_init() {
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
     lv_obj_set_style_text_font(info_label, &f1font_14, 0);
+    lv_obj_set_style_text_color(info_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 60, 0);
 
     track_label = lv_label_create(header);
     lv_label_set_text(track_label, "-");
+    lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(track_label, LV_ALIGN_TOP_RIGHT, 0, 0);
 
     weather_label = lv_label_create(header);
     lv_label_set_text(weather_label, "AIR: - / TRACK: -");
+    lv_obj_set_style_text_color(weather_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 60, 20);
 
     // Initialize View Containers
@@ -162,6 +164,7 @@ void ui_init() {
     lv_obj_t * settings_cont = view_containers[VIEW_SETTINGS];
     lv_obj_t * tz_label = lv_label_create(settings_cont);
     lv_label_set_text(tz_label, "Select Timezone:");
+    lv_obj_set_style_text_color(tz_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(tz_label, LV_ALIGN_TOP_MID, 0, 10);
 
     lv_obj_t * tz_dd = lv_dropdown_create(settings_cont);
@@ -175,6 +178,7 @@ void ui_init() {
 
     lv_obj_t * info = lv_label_create(settings_cont);
     lv_label_set_text(info, "Changes take effect\nimmediately on next fetch.");
+    lv_obj_set_style_text_color(info, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(info, LV_ALIGN_BOTTOM_MID, 0, -20);
 
@@ -184,6 +188,7 @@ void ui_init() {
 
     timing_table = lv_table_create(main_cont);
     lv_obj_set_style_text_font(timing_table, &f1font_12, 0);
+    lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_table_set_col_cnt(timing_table, 4);
@@ -224,6 +229,7 @@ void ui_init() {
     // --- VIEW_RESULTS setup ---
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
     lv_obj_set_style_text_font(results_table, &f1font_12, 0);
+    lv_obj_set_style_text_color(results_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(results_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(results_table, 3);
     lv_table_set_col_width(results_table, 0, 45);
@@ -244,6 +250,7 @@ void ui_init() {
     // --- VIEW_STANDINGS setup ---
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
     lv_obj_set_style_text_font(standings_table, &f1font_12, 0);
+    lv_obj_set_style_text_color(standings_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(standings_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(standings_table, 3);
     lv_table_set_col_width(standings_table, 0, 45);
@@ -257,6 +264,7 @@ void ui_init() {
     // --- VIEW_CONSTRUCTORS setup ---
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
     lv_obj_set_style_text_font(constructors_table, &f1font_12, 0);
+    lv_obj_set_style_text_color(constructors_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(constructors_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(constructors_table, 3);
     lv_table_set_col_width(constructors_table, 0, 45);
@@ -270,6 +278,7 @@ void ui_init() {
     // --- VIEW_CALENDAR setup ---
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
     lv_obj_set_style_text_font(calendar_table, &f1font_12, 0);
+    lv_obj_set_style_text_color(calendar_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(calendar_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 210);
@@ -279,21 +288,20 @@ void ui_init() {
     lv_table_set_cell_value(calendar_table, 0, 1, "DATE");
 
     // --- VIEW_EVENT_DETAIL setup ---
-    event_detail_flag_img = lv_img_create(view_containers[VIEW_EVENT_DETAIL]);
-    lv_obj_align(event_detail_flag_img, LV_ALIGN_TOP_LEFT, 5, 5);
-
     event_detail_header_label = lv_label_create(view_containers[VIEW_EVENT_DETAIL]);
-    lv_obj_align(event_detail_header_label, LV_ALIGN_TOP_LEFT, 45, 0);
+    lv_obj_align(event_detail_header_label, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_text_color(event_detail_header_label, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_recolor(event_detail_header_label, true);
     lv_label_set_long_mode(event_detail_header_label, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(event_detail_header_label, 270);
+    lv_obj_set_width(event_detail_header_label, 300);
     lv_obj_add_flag(event_detail_header_label, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(event_detail_header_label, back_to_calendar_event_handler, LV_EVENT_CLICKED, NULL);
 
     event_detail_table = lv_table_create(view_containers[VIEW_EVENT_DETAIL]);
     lv_obj_set_style_text_font(event_detail_table, &f1font_12, 0);
+    lv_obj_set_style_text_color(event_detail_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(event_detail_table, 320, LV_SIZE_CONTENT);
-    lv_obj_align(event_detail_table, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_align(event_detail_table, LV_ALIGN_TOP_MID, 0, 40);
     lv_table_set_col_cnt(event_detail_table, 2);
     lv_table_set_col_width(event_detail_table, 0, 160);
     lv_table_set_col_width(event_detail_table, 1, 160);
@@ -575,12 +583,6 @@ void ui_update_event_detail(const JsonObject& data) {
         lv_table_set_cell_value(event_detail_table, row, 1, local_time);
         row++;
     }
-
-    const char* code = (const char*)(data["flagCode"] | "un");
-    if (!code || strlen(code) == 0) code = "un";
-    static char detail_path[64];
-    snprintf(detail_path, sizeof(detail_path), "S:/%s.png", code);
-    lv_img_set_src(event_detail_flag_img, detail_path);
 
     ui_set_view(VIEW_EVENT_DETAIL);
 }
