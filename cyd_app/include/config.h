@@ -2,8 +2,19 @@
 #define CONFIG_H
 
 // Middleware Settings
-#define BRIDGE_URL "http://ebski.co:8000/status"
+#define BASE_URL "http://ebski.co:8000"
+#define STATUS_URL BASE_URL "/status"
+#define MOCK_URL BASE_URL "/mock_status"
+#define RESULTS_URL BASE_URL "/previous_results"
+#define STANDINGS_URL BASE_URL "/standings"
+#define CONSTRUCTORS_URL BASE_URL "/constructor_standings"
+#define CALENDAR_URL BASE_URL "/calendar"
+
 #define POLL_INTERVAL 10000 // 10 seconds
+
+// Time Settings
+#define NTP_SERVER "pool.ntp.org"
+#define TZ_INFO "UTC0" // Default to UTC, can be changed (e.g., "EST5EDT,M3.2.0,M11.1.0")
 
 // Display Settings
 #define SCREEN_WIDTH 320

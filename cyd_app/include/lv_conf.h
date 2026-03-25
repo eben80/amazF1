@@ -106,9 +106,26 @@
  * FONT USAGE
  *==================*/
 
+/* Enable built-in fonts if you want them as fallbacks */
 #define LV_FONT_MONTSERRAT_14 1
 #define LV_FONT_MONTSERRAT_16 1
-#define LV_FONT_DEFAULT &lv_font_montserrat_14
+#define LV_FONT_MONTSERRAT_18 1
+#define LV_FONT_MONTSERRAT_20 1
+
+/* --- CUSTOM FONT DECLARATION --- */
+/* The backslashes (\) are MANDATORY for multi-line macros */
+#define LV_FONT_CUSTOM_DECLARE \
+    LV_FONT_DECLARE(f1font_14) \
+    LV_FONT_DECLARE(f1font_16) \
+    LV_FONT_DECLARE(f1font_18) \
+    LV_FONT_DECLARE(f1font_20)
+
+/* Set your custom font as the global default */
+#define LV_FONT_DEFAULT &f1font_16
+
+/*Enable UTF-8 encoding*/
+#define LV_TXT_ENC 1
+#define LV_TXT_ENC_UTF8 1
 
 /*=================
  *  DEBUG SETTINGS
