@@ -479,43 +479,70 @@ void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size) 
 void ui_sanitize_string(char* str) {
     if (!str) return;
 
-    // A simple, iterative replacement for common UTF-8 multi-byte characters
-    // since we're limited by LVGL's default ASCII font range.
-    // This isn't a full UTF-8 decoder but covers most common F1 driver surnames.
-
-    char* src = str;
-    char* dst = str;
+    unsigned char* src = (unsigned char*)str;
+    unsigned char* dst = (unsigned char*)str;
 
     while (*src) {
-        if ((unsigned char)*src == 0xC3) { // Start of multi-byte sequence
-            unsigned char next = (unsigned char)*(src + 1);
-            if (next == 0xBC) { *dst = 'u'; src++; } // ü
-            else if (next == 0xA4) { *dst = 'a'; src++; } // ä
-            else if (next == 0xB6) { *dst = 'o'; src++; } // ö
-            else if (next == 0x9C) { *dst = 'U'; src++; } // Ü
-            else if (next == 0x84) { *dst = 'A'; src++; } // Ä
-            else if (next == 0x96) { *dst = 'O'; src++; } // Ö
-            else if (next == 0xA9) { *dst = 'e'; src++; } // é
-            else if (next == 0xA1) { *dst = 'a'; src++; } // á
-            else if (next == 0xAD) { *dst = 'i'; src++; } // í
-            else if (next == 0xB3) { *dst = 'o'; src++; } // ó
-            else if (next == 0xBA) { *dst = 'u'; src++; } // ú
-            else if (next == 0xA7) { *dst = 'c'; src++; } // ç
-            else { *dst = '?'; src++; } // Fallback
-        } else if ((unsigned char)*src == 0xC5) {
-            unsigned char next = (unsigned char)*(src + 1);
-            if (next == 0xA1) { *dst = 's'; src++; } // š
-            else if (next == 0xA0) { *dst = 'S'; src++; } // Š
-            else if (next == 0xBE) { *dst = 'z'; src++; } // ž
-            else if (next == 0xBD) { *dst = 'Z'; src++; } // Ž
-            else if (next == 0x87) { *dst = 'c'; src++; } // ć
-            else if (next == 0x88) { *dst = 'c'; src++; } // č
-            else { *dst = '?'; src++; }
+        if (*src < 128) {
+            *dst++ = *src++;
+        } else if (*src == 0xC2 && *(src + 1) == 0xB0) { // Degree symbol (U+00B0) - Built-in Montserrat supports this
+            *dst++ = *src++;
+            *dst++ = *src++;
+        } else if (*src == 0xC3 || *src == 0xC4 || *src == 0xC5) {
+            unsigned char c1 = *src;
+            unsigned char c2 = *(src + 1);
+            if (c2 == 0) { src++; continue; }
+
+            unsigned char rep = '?';
+            if (c1 == 0xC3) {
+                switch(c2) {
+                    case 0x81: rep = 'A'; break; // Á
+                    case 0x84: rep = 'A'; break; // Ä
+                    case 0x89: rep = 'E'; break; // É
+                    case 0x8D: rep = 'I'; break; // Í
+                    case 0x91: rep = 'N'; break; // Ñ
+                    case 0x93: rep = 'O'; break; // Ó
+                    case 0x96: rep = 'O'; break; // Ö
+                    case 0x9A: rep = 'U'; break; // Ú
+                    case 0x9C: rep = 'U'; break; // Ü
+                    case 0xA1: rep = 'a'; break; // á
+                    case 0xA3: rep = 'a'; break; // ã
+                    case 0xA4: rep = 'a'; break; // ä
+                    case 0xA7: rep = 'c'; break; // ç
+                    case 0xA9: rep = 'e'; break; // é
+                    case 0xAD: rep = 'i'; break; // í
+                    case 0xB1: rep = 'n'; break; // ñ
+                    case 0xB3: rep = 'o'; break; // ó
+                    case 0xB5: rep = 'o'; break; // õ
+                    case 0xB6: rep = 'o'; break; // ö
+                    case 0xBA: rep = 'u'; break; // ú
+                    case 0xBC: rep = 'u'; break; // ü
+                }
+            } else if (c1 == 0xC4) {
+                switch(c2) {
+                    case 0x87: rep = 'c'; break; // ć
+                    case 0x8D: rep = 'c'; break; // č
+                    case 0x91: rep = 'd'; break; // đ
+                }
+            } else if (c1 == 0xC5) {
+                switch(c2) {
+                    case 0x82: rep = 'l'; break; // ł
+                    case 0xA0: rep = 'S'; break; // Š
+                    case 0xA1: rep = 's'; break; // š
+                    case 0xBD: rep = 'Z'; break; // Ž
+                    case 0xBE: rep = 'z'; break; // ž
+                }
+            }
+            *dst++ = rep;
+            src += 2;
         } else {
-            *dst = *src;
+            // Strip any other multi-byte or non-ASCII characters that LVGL built-in font can't render
+            if ((*src & 0xE0) == 0xC0) src += 2;
+            else if ((*src & 0xF0) == 0xE0) src += 3;
+            else if ((*src & 0xF8) == 0xF0) src += 4;
+            else src++;
+            // Don't increment dst, effectively stripping the character to avoid black boxes
         }
-        src++;
-        dst++;
     }
     *dst = '\0';
 }
