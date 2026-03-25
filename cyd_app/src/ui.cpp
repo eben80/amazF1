@@ -417,9 +417,9 @@ void ui_update_status(const JsonObject& data) {
 
             const char* code = upcoming["flagCode"] | "un";
             if (strlen(code) == 0) code = "un";
-            char path[64];
-            snprintf(path, sizeof(path), "S:/%s.png", code);
-            lv_img_set_src(next_flag_img, path);
+            static char next_path[64];
+            snprintf(next_path, sizeof(next_path), "S:/%s.png", code);
+            lv_img_set_src(next_flag_img, next_path);
         }
 
         // Update Last Race Summary
@@ -435,15 +435,15 @@ void ui_update_status(const JsonObject& data) {
 
             const char* raceCode = previous["flagCode"] | "un";
             if (strlen(raceCode) == 0) raceCode = "un";
-            char racePath[64];
-            snprintf(racePath, sizeof(racePath), "S:/%s.png", raceCode);
-            lv_img_set_src(last_flag_img, racePath);
+            static char last_path[64];
+            snprintf(last_path, sizeof(last_path), "S:/%s.png", raceCode);
+            lv_img_set_src(last_flag_img, last_path);
 
             const char* winCode = previous["winnerFlagCode"] | "un";
             if (strlen(winCode) == 0) winCode = "un";
-            char winPath[64];
-            snprintf(winPath, sizeof(winPath), "S:/%s.png", winCode);
-            lv_img_set_src(winner_flag_img, winPath);
+            static char win_path[64];
+            snprintf(win_path, sizeof(win_path), "S:/%s.png", winCode);
+            lv_img_set_src(winner_flag_img, win_path);
         }
     }
 }
@@ -577,9 +577,9 @@ void ui_update_event_detail(const JsonObject& data) {
 
     const char* code = data["flagCode"] | "un";
     if (strlen(code) == 0) code = "un";
-    char path[64];
-    snprintf(path, sizeof(path), "S:/%s.png", code);
-    lv_img_set_src(event_detail_flag_img, path);
+    static char detail_path[64];
+    snprintf(detail_path, sizeof(detail_path), "S:/%s.png", code);
+    lv_img_set_src(event_detail_flag_img, detail_path);
 
     ui_set_view(VIEW_EVENT_DETAIL);
 }

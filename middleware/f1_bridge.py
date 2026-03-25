@@ -480,6 +480,7 @@ async def get_calendar():
                             "circuit": race.get('Circuit', {}).get('circuitName'),
                             "date": race.get('date'),
                             "flag": FLAG_MAPPING.get(country, "🏁"),
+                            "flagCode": ISO_MAPPING.get(country, "un"),
                             "sessions": sessions
                         })
                     return {"calendar": formatted_calendar}
