@@ -1871,7 +1871,6 @@ static lv_font_fmt_txt_dsc_t font_dsc = {
 
 };
 
-extern const lv_font_t lv_font_montserrat_16;
 
 
 /*-----------------
@@ -1895,9 +1894,9 @@ lv_font_t f1font_16 = {
     .underline_position = 0,
     .underline_thickness = 0,
 #endif
-    .static_bitmap = 0,
+    // .static_bitmap = 0,
     .dsc = &font_dsc,          /*The custom font data. Will be accessed by `get_glyph_bitmap/dsc` */
-#if 0
+#if LV_VERSION_CHECK(8, 2, 0) || LVGL_VERSION_MAJOR >= 9
     .fallback = NULL,
 #endif
     .user_data = NULL,
