@@ -107,12 +107,20 @@
  *==================*/
 
 #define LV_FONT_MONTSERRAT_14 1
+#define LV_FONT_MONTSERRAT_14_LATIN_1 1
 #define LV_FONT_MONTSERRAT_16 1
 #define LV_FONT_MONTSERRAT_16_LATIN_1 1
 #define LV_FONT_MONTSERRAT_18 1
 #define LV_FONT_MONTSERRAT_18_LATIN_1 1
 #define LV_FONT_MONTSERRAT_20 1
-#define LV_FONT_DEFAULT &lv_font_montserrat_16_latin_1
+#define LV_FONT_MONTSERRAT_20_LATIN_1 1
+
+LV_FONT_DECLARE(f1font_14)
+LV_FONT_DECLARE(f1font_16)
+LV_FONT_DECLARE(f1font_18)
+LV_FONT_DECLARE(f1font_20)
+
+#define LV_FONT_DEFAULT &f1font_16
 
 /*Enable UTF-8 encoding*/
 #define LV_TXT_ENC 1

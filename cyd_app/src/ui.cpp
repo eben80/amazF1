@@ -11,7 +11,6 @@ static lv_obj_t * weather_label;
 
 // View Containers
 static lv_obj_t * view_containers[8];
-static View current_view = VIEW_MAIN;
 
 // Main View Objects
 static lv_obj_t * timing_table;
@@ -60,7 +59,7 @@ void ui_init() {
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
-    lv_obj_set_style_text_font(info_label, &lv_font_montserrat_18_latin_1, 0);
+    lv_obj_set_style_text_font(info_label, &f1font_18, 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 0, 0);
 
     track_label = lv_label_create(header);
@@ -80,6 +79,8 @@ void ui_init() {
         lv_obj_set_style_border_width(view_containers[i], 0, 0);
         lv_obj_set_style_pad_all(view_containers[i], 0, 0);
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
+        // Ensure gestures bubble up to the screen
+        lv_obj_clear_flag(view_containers[i], LV_OBJ_FLAG_CLICKABLE);
     }
 
     // --- VIEW_SETTINGS setup ---
@@ -111,7 +112,7 @@ void ui_init() {
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_HIDDEN);
 
     timing_table = lv_table_create(main_cont);
-    lv_obj_set_style_text_font(timing_table, &lv_font_montserrat_16_latin_1, 0);
+    lv_obj_set_style_text_font(timing_table, &f1font_16, 0);
     lv_obj_set_size(timing_table, 320, 190);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_table_set_col_cnt(timing_table, 4);
@@ -149,12 +150,15 @@ void ui_init() {
 
     // --- VIEW_RESULTS setup ---
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
-    lv_obj_set_style_text_font(results_table, &lv_font_montserrat_16_latin_1, 0);
+    lv_obj_set_style_text_font(results_table, &f1font_16, 0);
     lv_obj_set_size(results_table, 320, 190);
     lv_table_set_col_cnt(results_table, 3);
     lv_table_set_col_width(results_table, 0, 40);
     lv_table_set_col_width(results_table, 1, 180);
     lv_table_set_col_width(results_table, 2, 100);
+    lv_table_set_cell_value(results_table, 0, 0, "P");
+    lv_table_set_cell_value(results_table, 0, 1, "DRIVER");
+    lv_table_set_cell_value(results_table, 0, 2, "PTS");
 
     // --- VIEW_NEXT_RACE setup ---
     next_race_details_label = lv_label_create(view_containers[VIEW_NEXT_RACE]);
@@ -165,29 +169,37 @@ void ui_init() {
 
     // --- VIEW_STANDINGS setup ---
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
-    lv_obj_set_style_text_font(standings_table, &lv_font_montserrat_16_latin_1, 0);
+    lv_obj_set_style_text_font(standings_table, &f1font_16, 0);
     lv_obj_set_size(standings_table, 320, 190);
     lv_table_set_col_cnt(standings_table, 3);
     lv_table_set_col_width(standings_table, 0, 40);
     lv_table_set_col_width(standings_table, 1, 180);
     lv_table_set_col_width(standings_table, 2, 100);
+    lv_table_set_cell_value(standings_table, 0, 0, "P");
+    lv_table_set_cell_value(standings_table, 0, 1, "DRIVER");
+    lv_table_set_cell_value(standings_table, 0, 2, "PTS");
 
     // --- VIEW_CONSTRUCTORS setup ---
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
-    lv_obj_set_style_text_font(constructors_table, &lv_font_montserrat_16_latin_1, 0);
+    lv_obj_set_style_text_font(constructors_table, &f1font_16, 0);
     lv_obj_set_size(constructors_table, 320, 190);
     lv_table_set_col_cnt(constructors_table, 3);
     lv_table_set_col_width(constructors_table, 0, 40);
     lv_table_set_col_width(constructors_table, 1, 180);
     lv_table_set_col_width(constructors_table, 2, 100);
+    lv_table_set_cell_value(constructors_table, 0, 0, "P");
+    lv_table_set_cell_value(constructors_table, 0, 1, "TEAM");
+    lv_table_set_cell_value(constructors_table, 0, 2, "PTS");
 
     // --- VIEW_CALENDAR setup ---
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
-    lv_obj_set_style_text_font(calendar_table, &lv_font_montserrat_16_latin_1, 0);
+    lv_obj_set_style_text_font(calendar_table, &f1font_16, 0);
     lv_obj_set_size(calendar_table, 320, 190);
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 200);
     lv_table_set_col_width(calendar_table, 1, 120);
+    lv_table_set_cell_value(calendar_table, 0, 0, "RACE");
+    lv_table_set_cell_value(calendar_table, 0, 1, "DATE");
 
     // --- VIEW_EVENT_DETAIL setup ---
     event_detail_label = lv_label_create(view_containers[VIEW_EVENT_DETAIL]);
@@ -213,7 +225,6 @@ void ui_set_view(View view) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
     }
     lv_obj_clear_flag(view_containers[view], LV_OBJ_FLAG_HIDDEN);
-    current_view = view;
 
     // Reset header for non-main views if needed
     if (view != VIEW_MAIN) {
@@ -247,6 +258,14 @@ void ui_update_status(const JsonObject& data) {
         lv_label_set_text(weather_label, weather_buf);
 
         JsonArray timing = data["timing"];
+        // Clear previous entries (limit to 20 rows for CYD)
+        for (int r = 1; r < 20; r++) {
+            lv_table_set_cell_value(timing_table, r, 0, "");
+            lv_table_set_cell_value(timing_table, r, 1, "");
+            lv_table_set_cell_value(timing_table, r, 2, "");
+            lv_table_set_cell_value(timing_table, r, 3, "");
+        }
+
         int row = 1;
         for (JsonObject entry : timing) {
             if (row >= 20) break;
@@ -341,17 +360,31 @@ void ui_update_next_race(const JsonObject& data) {
 void ui_update_results(const JsonObject& data) {
     lv_label_set_text(info_label, data["raceName"] | "RESULTS");
     JsonArray results = data["results"];
-    int row = 0;
+
+    // Clear previous entries (start from 1 to keep header)
+    for (int r = 1; r < 20; r++) {
+        lv_table_set_cell_value(results_table, r, 0, "");
+        lv_table_set_cell_value(results_table, r, 1, "");
+        lv_table_set_cell_value(results_table, r, 2, "");
+    }
+
+    int row = 1;
     for (JsonObject res : results) {
         if (row >= 20) break;
-        lv_table_set_cell_value(results_table, row, 0, res["position"] | "-");
+        lv_table_set_cell_value(results_table, row, 0, (const char*)(res["position"] | "-"));
         char name_buf[128];
         const char* fName = res["firstName"] | "";
         const char* lName = res["lastName"] | "";
         snprintf(name_buf, sizeof(name_buf), "%s %s", fName, lName);
         lv_table_set_cell_value(results_table, row, 1, name_buf);
+
         char pts_buf[32];
-        snprintf(pts_buf, sizeof(pts_buf), "%s pts", (const char*)(res["points"] | "0"));
+        JsonVariant pts = res["points"];
+        if (pts.is<int>()) {
+            snprintf(pts_buf, sizeof(pts_buf), "%d pts", pts.as<int>());
+        } else {
+            snprintf(pts_buf, sizeof(pts_buf), "%s pts", pts.as<const char*>());
+        }
         lv_table_set_cell_value(results_table, row, 2, pts_buf);
         row++;
     }
@@ -359,13 +392,26 @@ void ui_update_results(const JsonObject& data) {
 
 void ui_update_standings(const JsonObject& data) {
     JsonArray standings = data["standings"];
-    int row = 0;
+
+    // Clear previous entries (start from 1 to keep header)
+    for (int r = 1; r < 20; r++) {
+        lv_table_set_cell_value(standings_table, r, 0, "");
+        lv_table_set_cell_value(standings_table, r, 1, "");
+        lv_table_set_cell_value(standings_table, r, 2, "");
+    }
+
+    int row = 1;
     for (JsonObject s : standings) {
         if (row >= 20) break;
-        lv_table_set_cell_value(standings_table, row, 0, s["pos"] | "-");
+        lv_table_set_cell_value(standings_table, row, 0, (const char*)(s["pos"] | "-"));
         lv_table_set_cell_value(standings_table, row, 1, (const char*)(s["name"] | "-"));
         char pts_buf[32];
-        snprintf(pts_buf, sizeof(pts_buf), "%s pts", s["points"] | "0");
+        JsonVariant pts = s["points"];
+        if (pts.is<int>()) {
+            snprintf(pts_buf, sizeof(pts_buf), "%d pts", pts.as<int>());
+        } else {
+            snprintf(pts_buf, sizeof(pts_buf), "%s pts", pts.as<const char*>());
+        }
         lv_table_set_cell_value(standings_table, row, 2, pts_buf);
         row++;
     }
@@ -373,13 +419,26 @@ void ui_update_standings(const JsonObject& data) {
 
 void ui_update_constructors(const JsonObject& data) {
     JsonArray standings = data["standings"];
-    int row = 0;
+
+    // Clear previous entries (start from 1 to keep header)
+    for (int r = 1; r < 10; r++) {
+        lv_table_set_cell_value(constructors_table, r, 0, "");
+        lv_table_set_cell_value(constructors_table, r, 1, "");
+        lv_table_set_cell_value(constructors_table, r, 2, "");
+    }
+
+    int row = 1;
     for (JsonObject s : standings) {
         if (row >= 10) break;
-        lv_table_set_cell_value(constructors_table, row, 0, s["pos"] | "-");
+        lv_table_set_cell_value(constructors_table, row, 0, (const char*)(s["pos"] | "-"));
         lv_table_set_cell_value(constructors_table, row, 1, (const char*)(s["name"] | "-"));
         char pts_buf[32];
-        snprintf(pts_buf, sizeof(pts_buf), "%s pts", s["points"] | "0");
+        JsonVariant pts = s["points"];
+        if (pts.is<int>()) {
+            snprintf(pts_buf, sizeof(pts_buf), "%d pts", pts.as<int>());
+        } else {
+            snprintf(pts_buf, sizeof(pts_buf), "%s pts", pts.as<const char*>());
+        }
         lv_table_set_cell_value(constructors_table, row, 2, pts_buf);
         row++;
     }
@@ -387,7 +446,14 @@ void ui_update_constructors(const JsonObject& data) {
 
 void ui_update_calendar(const JsonObject& data) {
     JsonArray calendar = data["calendar"];
-    int row = 0;
+
+    // Clear previous entries (start from 1 to keep header)
+    for (int r = 1; r < 24; r++) {
+        lv_table_set_cell_value(calendar_table, r, 0, "");
+        lv_table_set_cell_value(calendar_table, r, 1, "");
+    }
+
+    int row = 1;
     for (JsonObject race : calendar) {
         if (row >= 24) break;
         lv_table_set_cell_value(calendar_table, row, 0, (const char*)(race["name"] | "-"));

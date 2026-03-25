@@ -174,6 +174,7 @@ static void event_cb(lv_event_t * e) {
             else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_STANDINGS;
             else if (current_view == VIEW_STANDINGS) current_view = VIEW_CONSTRUCTORS;
             else if (current_view == VIEW_CONSTRUCTORS) current_view = VIEW_CALENDAR;
+            else if (current_view == VIEW_CALENDAR) current_view = VIEW_SETTINGS; // Wrap around
             ui_set_view(current_view);
             fetch_data();
         } else if (dir == LV_DIR_RIGHT) {
@@ -183,6 +184,7 @@ static void event_cb(lv_event_t * e) {
             else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_RESULTS;
             else if (current_view == VIEW_RESULTS) current_view = VIEW_MAIN;
             else if (current_view == VIEW_MAIN) current_view = VIEW_SETTINGS;
+            else if (current_view == VIEW_SETTINGS) current_view = VIEW_CALENDAR; // Wrap around
             ui_set_view(current_view);
             fetch_data();
         }
