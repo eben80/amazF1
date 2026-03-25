@@ -140,17 +140,19 @@ void ui_init() {
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
-    lv_obj_set_style_text_font(info_label, &f1font_14, 0);
+    lv_obj_set_style_text_font(info_label, &f1font_12, 0);
     lv_obj_set_style_text_color(info_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 60, 0);
 
     track_label = lv_label_create(header);
     lv_label_set_text(track_label, "-");
+    lv_obj_set_style_text_font(track_label, &f1font_12, 0);
     lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(track_label, LV_ALIGN_TOP_RIGHT, 0, 0);
 
     weather_label = lv_label_create(header);
     lv_label_set_text(weather_label, "AIR: - / TRACK: -");
+    lv_obj_set_style_text_font(weather_label, &f1font_12, 0);
     lv_obj_set_style_text_color(weather_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 60, 20);
 
@@ -409,8 +411,8 @@ void ui_update_status(const JsonObject& data) {
         }
         lv_label_set_text(track_label, (const char*)(data["track"] | "-"));
 
-        const char* air_temp = data["weather"]["air"] | "-";
-        const char* track_temp = data["weather"]["track"] | "-";
+        const char* air_temp = (const char*)(data["weather"]["air"] | "-");
+        const char* track_temp = (const char*)(data["weather"]["track"] | "-");
         char weather_buf[64];
         snprintf(weather_buf, sizeof(weather_buf), "AIR: %sC / TRACK: %sC", air_temp, track_temp);
         lv_label_set_text(weather_label, weather_buf);
@@ -420,11 +422,11 @@ void ui_update_status(const JsonObject& data) {
 
         int row = 1;
         for (JsonObject entry : timing) {
-            lv_table_set_cell_value(timing_table, row, 0, entry["pos"] | "-");
+            lv_table_set_cell_value(timing_table, row, 0, (const char*)(entry["pos"] | "-"));
 
-            const char* compound = entry["comp"] | "";
+            const char* compound = (const char*)(entry["comp"] | "");
             char driver_name[64];
-            if (strlen(compound) > 0) {
+            if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
                 snprintf(driver_name, sizeof(driver_name), "(%c) %s", c, (const char*)(entry["name"] | "-"));
             } else {
@@ -433,11 +435,12 @@ void ui_update_status(const JsonObject& data) {
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
             char gap_int[32];
-            snprintf(gap_int, sizeof(gap_int), "%s / %s", entry["gap"] | "-", entry["int"] | "-");
+            snprintf(gap_int, sizeof(gap_int), "%s / %s", (const char*)(entry["gap"] | "-"), (const char*)(entry["int"] | "-"));
             lv_table_set_cell_value(timing_table, row, 2, gap_int);
-            lv_table_set_cell_value(timing_table, row, 3, entry["last"] | "-");
+            lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["last"] | "-"));
             row++;
         }
+        lv_obj_invalidate(timing_table);
     } else {
         lv_obj_add_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
@@ -514,7 +517,7 @@ void ui_update_next_race(const JsonObject& data) {
 }
 
 void ui_update_results(const JsonObject& data) {
-    lv_label_set_text(info_label, data["raceName"] | "RESULTS");
+    lv_label_set_text(info_label, (const char*)(data["raceName"] | "RESULTS"));
     JsonArray results = data["results"];
     lv_table_set_row_cnt(results_table, results.size() + 1);
 
@@ -537,6 +540,7 @@ void ui_update_results(const JsonObject& data) {
         lv_table_set_cell_value(results_table, row, 2, pts_buf);
         row++;
     }
+    lv_obj_invalidate(results_table);
 }
 
 void ui_update_standings(const JsonObject& data) {
@@ -557,6 +561,7 @@ void ui_update_standings(const JsonObject& data) {
         lv_table_set_cell_value(standings_table, row, 2, pts_buf);
         row++;
     }
+    lv_obj_invalidate(standings_table);
 }
 
 void ui_update_constructors(const JsonObject& data) {
@@ -577,6 +582,7 @@ void ui_update_constructors(const JsonObject& data) {
         lv_table_set_cell_value(constructors_table, row, 2, pts_buf);
         row++;
     }
+    lv_obj_invalidate(constructors_table);
 }
 
 void ui_update_calendar(const JsonObject& data) {
@@ -601,6 +607,7 @@ void ui_update_calendar(const JsonObject& data) {
         lv_table_set_cell_value(calendar_table, row, 1, local_date);
         row++;
     }
+    lv_obj_invalidate(calendar_table);
 }
 
 void ui_update_event_detail(const JsonObject& data) {
