@@ -76,6 +76,13 @@ static void tz_event_handler(lv_event_t * e) {
     }
 }
 
+static void back_to_calendar_event_handler(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code == LV_EVENT_CLICKED) {
+        ui_set_view(VIEW_CALENDAR);
+    }
+}
+
 static void calendar_event_handler(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t * obj = lv_event_get_target(e);
@@ -311,6 +318,8 @@ void ui_init() {
     lv_label_set_recolor(event_detail_label, true);
     lv_label_set_long_mode(event_detail_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(event_detail_label, 300);
+    lv_obj_add_flag(event_detail_label, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(event_detail_label, back_to_calendar_event_handler, LV_EVENT_CLICKED, NULL);
 }
 
 void ui_set_timezone(const char* tz) {
@@ -335,6 +344,10 @@ void ui_set_timezone(const char* tz) {
             }
         }
     }
+}
+
+View ui_get_view() {
+    return active_view;
 }
 
 void ui_set_view(View view) {
