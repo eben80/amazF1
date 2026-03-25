@@ -155,6 +155,8 @@ void ui_init() {
     lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_color(header, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(header, 0, 0);
+    lv_obj_set_style_pad_left(header, 5, 0);
+    lv_obj_set_style_pad_right(header, 5, 0);
     lv_obj_set_scrollbar_mode(header, LV_SCROLLBAR_MODE_OFF);
 
     header_logo = lv_img_create(header);
@@ -187,6 +189,8 @@ void ui_init() {
         lv_obj_set_style_bg_color(view_containers[i], lv_color_hex(0x000000), 0);
         lv_obj_set_style_border_width(view_containers[i], 0, 0);
         lv_obj_set_style_pad_all(view_containers[i], 0, 0);
+        lv_obj_set_style_pad_left(view_containers[i], 5, 0);
+        lv_obj_set_style_pad_right(view_containers[i], 5, 0);
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
         // Ensure gestures bubble up to the screen
         lv_obj_clear_flag(view_containers[i], LV_OBJ_FLAG_CLICKABLE);
@@ -231,14 +235,14 @@ void ui_init() {
     lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_pad_left(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_style_pad_right(timing_table, 2, LV_PART_ITEMS);
-    lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
+    lv_obj_set_size(timing_table, 310, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_col_cnt(timing_table, 4);
     lv_table_set_col_width(timing_table, 0, 35); // P
-    lv_table_set_col_width(timing_table, 1, 125); // Driver
-    lv_table_set_col_width(timing_table, 2, 80); // Gap
-    lv_table_set_col_width(timing_table, 3, 80); // Int
+    lv_table_set_col_width(timing_table, 1, 100); // Driver
+    lv_table_set_col_width(timing_table, 2, 85); // Gap
+    lv_table_set_col_width(timing_table, 3, 90); // Int
     lv_table_set_cell_value(timing_table, 0, 0, "P");
     lv_table_set_cell_value(timing_table, 0, 1, "DRV");
     lv_table_set_cell_value(timing_table, 0, 2, "GAP");
@@ -273,10 +277,10 @@ void ui_init() {
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
     lv_obj_set_style_text_font(results_table, &f1font_12, 0);
     lv_obj_set_style_text_color(results_table, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_size(results_table, 320, LV_SIZE_CONTENT);
+    lv_obj_set_size(results_table, 310, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(results_table, 3);
     lv_table_set_col_width(results_table, 0, 30);
-    lv_table_set_col_width(results_table, 1, 230);
+    lv_table_set_col_width(results_table, 1, 220);
     lv_table_set_col_width(results_table, 2, 60);
     lv_obj_add_event_cb(results_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(results_table, 0, 0, "P");
@@ -294,10 +298,10 @@ void ui_init() {
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
     lv_obj_set_style_text_font(standings_table, &f1font_12, 0);
     lv_obj_set_style_text_color(standings_table, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_size(standings_table, 320, LV_SIZE_CONTENT);
+    lv_obj_set_size(standings_table, 310, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(standings_table, 3);
     lv_table_set_col_width(standings_table, 0, 30);
-    lv_table_set_col_width(standings_table, 1, 230);
+    lv_table_set_col_width(standings_table, 1, 220);
     lv_table_set_col_width(standings_table, 2, 60);
     lv_obj_add_event_cb(standings_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(standings_table, 0, 0, "P");
@@ -308,10 +312,10 @@ void ui_init() {
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
     lv_obj_set_style_text_font(constructors_table, &f1font_12, 0);
     lv_obj_set_style_text_color(constructors_table, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_size(constructors_table, 320, LV_SIZE_CONTENT);
+    lv_obj_set_size(constructors_table, 310, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(constructors_table, 3);
     lv_table_set_col_width(constructors_table, 0, 30);
-    lv_table_set_col_width(constructors_table, 1, 230);
+    lv_table_set_col_width(constructors_table, 1, 220);
     lv_table_set_col_width(constructors_table, 2, 60);
     lv_obj_add_event_cb(constructors_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(constructors_table, 0, 0, "P");
@@ -322,9 +326,9 @@ void ui_init() {
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
     lv_obj_set_style_text_font(calendar_table, &f1font_12, 0);
     lv_obj_set_style_text_color(calendar_table, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_size(calendar_table, 320, LV_SIZE_CONTENT);
+    lv_obj_set_size(calendar_table, 310, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(calendar_table, 2);
-    lv_table_set_col_width(calendar_table, 0, 225);
+    lv_table_set_col_width(calendar_table, 0, 215);
     lv_table_set_col_width(calendar_table, 1, 95);
     lv_obj_add_event_cb(calendar_table, calendar_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(calendar_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
@@ -344,10 +348,10 @@ void ui_init() {
     event_detail_table = lv_table_create(view_containers[VIEW_EVENT_DETAIL]);
     lv_obj_set_style_text_font(event_detail_table, &f1font_12, 0);
     lv_obj_set_style_text_color(event_detail_table, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_size(event_detail_table, 320, LV_SIZE_CONTENT);
+    lv_obj_set_size(event_detail_table, 310, LV_SIZE_CONTENT);
     lv_obj_align(event_detail_table, LV_ALIGN_TOP_MID, 0, 40);
     lv_table_set_col_cnt(event_detail_table, 2);
-    lv_table_set_col_width(event_detail_table, 0, 150);
+    lv_table_set_col_width(event_detail_table, 0, 140);
     lv_table_set_col_width(event_detail_table, 1, 170);
     lv_obj_add_event_cb(event_detail_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_obj_add_event_cb(event_detail_table, back_to_calendar_event_handler, LV_EVENT_CLICKED, NULL);
