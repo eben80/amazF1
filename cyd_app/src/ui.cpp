@@ -233,10 +233,10 @@ void ui_init() {
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_col_cnt(timing_table, 4);
-    lv_table_set_col_width(timing_table, 0, 35); // P
-    lv_table_set_col_width(timing_table, 1, 115); // Driver
-    lv_table_set_col_width(timing_table, 2, 85); // Gap
-    lv_table_set_col_width(timing_table, 3, 85); // Int
+    lv_table_set_col_width(timing_table, 0, 25); // P
+    lv_table_set_col_width(timing_table, 1, 135); // Driver
+    lv_table_set_col_width(timing_table, 2, 80); // Gap
+    lv_table_set_col_width(timing_table, 3, 80); // Int
     lv_table_set_cell_value(timing_table, 0, 0, "P");
     lv_table_set_cell_value(timing_table, 0, 1, "DRV");
     lv_table_set_cell_value(timing_table, 0, 2, "GAP");
@@ -273,8 +273,8 @@ void ui_init() {
     lv_obj_set_style_text_color(results_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(results_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(results_table, 3);
-    lv_table_set_col_width(results_table, 0, 45);
-    lv_table_set_col_width(results_table, 1, 215);
+    lv_table_set_col_width(results_table, 0, 30);
+    lv_table_set_col_width(results_table, 1, 230);
     lv_table_set_col_width(results_table, 2, 60);
     lv_obj_add_event_cb(results_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(results_table, 0, 0, "P");
@@ -294,8 +294,8 @@ void ui_init() {
     lv_obj_set_style_text_color(standings_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(standings_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(standings_table, 3);
-    lv_table_set_col_width(standings_table, 0, 45);
-    lv_table_set_col_width(standings_table, 1, 215);
+    lv_table_set_col_width(standings_table, 0, 30);
+    lv_table_set_col_width(standings_table, 1, 230);
     lv_table_set_col_width(standings_table, 2, 60);
     lv_obj_add_event_cb(standings_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(standings_table, 0, 0, "P");
@@ -308,8 +308,8 @@ void ui_init() {
     lv_obj_set_style_text_color(constructors_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(constructors_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(constructors_table, 3);
-    lv_table_set_col_width(constructors_table, 0, 45);
-    lv_table_set_col_width(constructors_table, 1, 215);
+    lv_table_set_col_width(constructors_table, 0, 30);
+    lv_table_set_col_width(constructors_table, 1, 230);
     lv_table_set_col_width(constructors_table, 2, 60);
     lv_obj_add_event_cb(constructors_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(constructors_table, 0, 0, "P");
@@ -322,8 +322,8 @@ void ui_init() {
     lv_obj_set_style_text_color(calendar_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(calendar_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(calendar_table, 2);
-    lv_table_set_col_width(calendar_table, 0, 210);
-    lv_table_set_col_width(calendar_table, 1, 110);
+    lv_table_set_col_width(calendar_table, 0, 225);
+    lv_table_set_col_width(calendar_table, 1, 95);
     lv_obj_add_event_cb(calendar_table, calendar_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(calendar_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(calendar_table, 0, 0, "RACE");
@@ -345,8 +345,8 @@ void ui_init() {
     lv_obj_set_size(event_detail_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(event_detail_table, LV_ALIGN_TOP_MID, 0, 40);
     lv_table_set_col_cnt(event_detail_table, 2);
-    lv_table_set_col_width(event_detail_table, 0, 160);
-    lv_table_set_col_width(event_detail_table, 1, 160);
+    lv_table_set_col_width(event_detail_table, 0, 150);
+    lv_table_set_col_width(event_detail_table, 1, 170);
     lv_obj_add_event_cb(event_detail_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_obj_add_event_cb(event_detail_table, back_to_calendar_event_handler, LV_EVENT_CLICKED, NULL);
 }
