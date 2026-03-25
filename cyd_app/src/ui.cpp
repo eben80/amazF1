@@ -265,6 +265,8 @@ void ui_init() {
     lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_pad_left(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_style_pad_right(timing_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_top(timing_table, 0, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(timing_table, 0, LV_PART_ITEMS);
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
@@ -487,7 +489,14 @@ void ui_update_status(const JsonObject& data) {
         if (active_view == VIEW_MAIN) {
             lv_label_set_text(info_label, (const char*)(data["session"]["name"] | "-"));
         }
-        lv_label_set_text(track_label, (const char*)(data["track"] | "-"));
+
+        const char* track_status = (const char*)(data["track"] | "-");
+        lv_label_set_text(track_label, track_status);
+        if (strstr(track_status, "Clear")) lv_obj_set_style_text_color(track_label, lv_color_hex(0x00FF00), 0);
+        else if (strstr(track_status, "Yellow")) lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFF00), 0);
+        else if (strstr(track_status, "Red")) lv_obj_set_style_text_color(track_label, lv_color_hex(0xFF0000), 0);
+        else if (strstr(track_status, "Safety")) lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFAA00), 0);
+        else lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
 
         const char* air_temp = (const char*)(data["weather"]["air"] | "-");
         const char* track_temp = (const char*)(data["weather"]["track"] | "-");
