@@ -9,6 +9,38 @@ static lv_obj_t * info_label;
 static lv_obj_t * track_label;
 static lv_obj_t * weather_label;
 
+static View active_view = VIEW_MAIN;
+
+struct TZMapping {
+    const char * name;
+    const char * tz;
+};
+
+static const TZMapping tz_map[] = {
+    {"UTC UTC", "UTC0"},
+    {"London GMT/BST", "GMT0BST,M3.5.0/2,M10.5.0/3"},
+    {"Berlin CET/CEST", "CET-1CEST,M3.5.0,M10.5.0/3"},
+    {"Paris CET/CEST", "CET-1CEST,M3.5.0,M10.5.0/3"},
+    {"Madrid CET/CEST", "CET-1CEST,M3.5.0,M10.5.0/3"},
+    {"Rome CET/CEST", "CET-1CEST,M3.5.0,M10.5.0/3"},
+    {"New York EST/EDT", "EST5EDT,M3.2.0,M11.1.0"},
+    {"Chicago CST/CDT", "CST6CDT,M3.2.0,M11.1.0"},
+    {"Denver MST/MDT", "MST7MDT,M3.2.0,M11.1.0"},
+    {"Los Angeles PST/PDT", "PST8PDT,M3.2.0,M11.1.0"},
+    {"Sao Paulo BRT", "<-03>3"},
+    {"Tokyo JST", "JST-9"},
+    {"Shanghai CST", "CST-8"},
+    {"Singapore SGT", "SGT-8"},
+    {"Sydney AEST/AEDT", "AEST-10AEDT,M10.1.0,M4.1.0/3"},
+    {"Melbourne AEST/AEDT", "AEST-10AEDT,M10.1.0,M4.1.0/3"},
+    {"Brisbane AEST", "AEST-10"},
+    {"Perth AWST", "AWST-8"},
+    {"Dubai GST", "GST-4"},
+    {"Riyadh AST", "AST-3"},
+    {"Istanbul TRT", "TRT-3"},
+    {"Mexico City CST/CDT", "CST6CDT,M3.2.0,M11.1.0"}
+};
+
 // View Containers
 static lv_obj_t * view_containers[8];
 
@@ -33,15 +65,20 @@ static void tz_event_handler(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t * obj = lv_event_get_target(e);
     if(code == LV_EVENT_VALUE_CHANGED) {
-        char buf[128];
-        lv_dropdown_get_selected_str(obj, buf, sizeof(buf));
-        // We expect format "Europe/London GMT0BST,M3.5.0/2,M10.5.0/3"
-        // The TZ string is after the first space
-        char * space = strchr(buf, ' ');
-        if (space) {
-            ui_set_timezone(space + 1);
-        } else {
-            ui_set_timezone(buf);
+        uint16_t id = lv_dropdown_get_selected(obj);
+        if (id < sizeof(tz_map)/sizeof(tz_map[0])) {
+            ui_set_timezone(tz_map[id].tz);
+        }
+    }
+}
+
+static void table_draw_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+    lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
+    if(dsc->part == LV_PART_ITEMS) {
+        // Column 2 is PTS in results/standings/constructors
+        if(dsc->col == 2) {
+            dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
         }
     }
 }
@@ -56,6 +93,7 @@ void ui_init() {
     lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_color(header, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(header, 0, 0);
+    lv_obj_set_scrollbar_mode(header, LV_SCROLLBAR_MODE_OFF);
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
@@ -81,6 +119,8 @@ void ui_init() {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
         // Ensure gestures bubble up to the screen
         lv_obj_clear_flag(view_containers[i], LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_scroll_dir(view_containers[i], LV_DIR_VER);
+        lv_obj_set_scrollbar_mode(view_containers[i], LV_SCROLLBAR_MODE_AUTO);
     }
 
     // --- VIEW_SETTINGS setup ---
@@ -91,14 +131,10 @@ void ui_init() {
 
     lv_obj_t * tz_dd = lv_dropdown_create(settings_cont);
     lv_obj_set_width(tz_dd, 280);
-    lv_dropdown_set_options(tz_dd, "UTC UTC0\n"
-                                  "London GMT0BST,M3.5.0/2,M10.5.0/3\n"
-                                  "Berlin CET-1CEST,M3.5.0,M10.5.0/3\n"
-                                  "NewYork EST5EDT,M3.2.0,M11.1.0\n"
-                                  "LosAngeles PST8PDT,M3.2.0,M11.1.0\n"
-                                  "Tokyo JST-9\n"
-                                  "Sydney AEST-10AEDT,M10.1.0,M4.1.0/3\n"
-                                  "SaoPaulo <-03>3");
+    lv_dropdown_clear_options(tz_dd);
+    for (int i = 0; i < sizeof(tz_map)/sizeof(tz_map[0]); i++) {
+        lv_dropdown_add_option(tz_dd, tz_map[i].name, i);
+    }
     lv_obj_align(tz_dd, LV_ALIGN_TOP_MID, 0, 40);
     lv_obj_add_event_cb(tz_dd, tz_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
@@ -113,11 +149,11 @@ void ui_init() {
 
     timing_table = lv_table_create(main_cont);
     lv_obj_set_style_text_font(timing_table, &f1font_12, 0);
-    lv_obj_set_size(timing_table, 320, 190);
+    lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_table_set_col_cnt(timing_table, 4);
-    lv_table_set_col_width(timing_table, 0, 30);  // P
-    lv_table_set_col_width(timing_table, 1, 60);  // Driver
+    lv_table_set_col_width(timing_table, 0, 45);  // P
+    lv_table_set_col_width(timing_table, 1, 65);  // Driver
     lv_table_set_col_width(timing_table, 2, 110); // Gap/Int
     lv_table_set_col_width(timing_table, 3, 100); // Last Lap
     lv_table_set_cell_value(timing_table, 0, 0, "P");
@@ -136,13 +172,15 @@ void ui_init() {
     lv_obj_align(next_flag_img, LV_ALIGN_TOP_LEFT, 5, 5);
     next_race_summary_label = lv_label_create(idle_container);
     lv_obj_align(next_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 0);
+    lv_obj_set_style_text_font(next_race_summary_label, &f1font_12, 0);
     lv_label_set_long_mode(next_race_summary_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(next_race_summary_label, 270);
 
     last_flag_img = lv_img_create(idle_container);
-    lv_obj_align(last_flag_img, LV_ALIGN_TOP_LEFT, 5, 85);
+    lv_obj_align(last_flag_img, LV_ALIGN_TOP_LEFT, 5, 75);
     last_race_summary_label = lv_label_create(idle_container);
-    lv_obj_align(last_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 80);
+    lv_obj_align(last_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 70);
+    lv_obj_set_style_text_font(last_race_summary_label, &f1font_12, 0);
     lv_label_set_long_mode(last_race_summary_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(last_race_summary_label, 270);
     winner_flag_img = lv_img_create(idle_container);
@@ -151,11 +189,12 @@ void ui_init() {
     // --- VIEW_RESULTS setup ---
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
     lv_obj_set_style_text_font(results_table, &f1font_12, 0);
-    lv_obj_set_size(results_table, 320, 190);
+    lv_obj_set_size(results_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(results_table, 3);
-    lv_table_set_col_width(results_table, 0, 40);
-    lv_table_set_col_width(results_table, 1, 180);
+    lv_table_set_col_width(results_table, 0, 45);
+    lv_table_set_col_width(results_table, 1, 175);
     lv_table_set_col_width(results_table, 2, 100);
+    lv_obj_add_event_cb(results_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(results_table, 0, 0, "P");
     lv_table_set_cell_value(results_table, 0, 1, "DRIVER");
     lv_table_set_cell_value(results_table, 0, 2, "PTS");
@@ -170,11 +209,12 @@ void ui_init() {
     // --- VIEW_STANDINGS setup ---
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
     lv_obj_set_style_text_font(standings_table, &f1font_12, 0);
-    lv_obj_set_size(standings_table, 320, 190);
+    lv_obj_set_size(standings_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(standings_table, 3);
-    lv_table_set_col_width(standings_table, 0, 40);
-    lv_table_set_col_width(standings_table, 1, 180);
+    lv_table_set_col_width(standings_table, 0, 45);
+    lv_table_set_col_width(standings_table, 1, 175);
     lv_table_set_col_width(standings_table, 2, 100);
+    lv_obj_add_event_cb(standings_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(standings_table, 0, 0, "P");
     lv_table_set_cell_value(standings_table, 0, 1, "DRIVER");
     lv_table_set_cell_value(standings_table, 0, 2, "PTS");
@@ -182,11 +222,12 @@ void ui_init() {
     // --- VIEW_CONSTRUCTORS setup ---
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
     lv_obj_set_style_text_font(constructors_table, &f1font_12, 0);
-    lv_obj_set_size(constructors_table, 320, 190);
+    lv_obj_set_size(constructors_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(constructors_table, 3);
-    lv_table_set_col_width(constructors_table, 0, 40);
-    lv_table_set_col_width(constructors_table, 1, 180);
+    lv_table_set_col_width(constructors_table, 0, 45);
+    lv_table_set_col_width(constructors_table, 1, 175);
     lv_table_set_col_width(constructors_table, 2, 100);
+    lv_obj_add_event_cb(constructors_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(constructors_table, 0, 0, "P");
     lv_table_set_cell_value(constructors_table, 0, 1, "TEAM");
     lv_table_set_cell_value(constructors_table, 0, 2, "PTS");
@@ -194,10 +235,10 @@ void ui_init() {
     // --- VIEW_CALENDAR setup ---
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
     lv_obj_set_style_text_font(calendar_table, &f1font_12, 0);
-    lv_obj_set_size(calendar_table, 320, 190);
+    lv_obj_set_size(calendar_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(calendar_table, 2);
-    lv_table_set_col_width(calendar_table, 0, 200);
-    lv_table_set_col_width(calendar_table, 1, 120);
+    lv_table_set_col_width(calendar_table, 0, 210);
+    lv_table_set_col_width(calendar_table, 1, 110);
     lv_table_set_cell_value(calendar_table, 0, 0, "RACE");
     lv_table_set_cell_value(calendar_table, 0, 1, "DATE");
 
@@ -218,9 +259,23 @@ void ui_set_timezone(const char* tz) {
     prefs.end();
     Serial.print("Timezone updated and saved: ");
     Serial.println(tz);
+
+    // Sync dropdown if it exists
+    if (view_containers[VIEW_SETTINGS]) {
+        lv_obj_t * dd = lv_obj_get_child(view_containers[VIEW_SETTINGS], 1);
+        if (dd && lv_obj_check_type(dd, &lv_dropdown_class)) {
+            for (int i = 0; i < sizeof(tz_map)/sizeof(tz_map[0]); i++) {
+                if (strcmp(tz_map[i].tz, tz) == 0) {
+                    lv_dropdown_set_selected(dd, i);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void ui_set_view(View view) {
+    active_view = view;
     for (int i = 0; i < 8; i++) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
     }
@@ -231,7 +286,7 @@ void ui_set_view(View view) {
         lv_label_set_text(track_label, "");
         lv_label_set_text(weather_label, "");
         switch(view) {
-            case VIEW_SETTINGS: lv_label_set_text(info_label, "SETTINGS"); break;
+            case VIEW_SETTINGS: lv_label_set_text(info_label, "Settings"); break;
             case VIEW_RESULTS: lv_label_set_text(info_label, "LAST RESULTS"); break;
             case VIEW_NEXT_RACE: lv_label_set_text(info_label, "NEXT RACE"); break;
             case VIEW_STANDINGS: lv_label_set_text(info_label, "DRIVERS"); break;
@@ -248,7 +303,9 @@ void ui_update_status(const JsonObject& data) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
 
-        lv_label_set_text(info_label, (const char*)(data["session"]["name"] | "-"));
+        if (active_view == VIEW_MAIN) {
+            lv_label_set_text(info_label, (const char*)(data["session"]["name"] | "-"));
+        }
         lv_label_set_text(track_label, (const char*)(data["track"] | "-"));
 
         const char* air_temp = data["weather"]["air"] | "-";
@@ -291,9 +348,11 @@ void ui_update_status(const JsonObject& data) {
         lv_obj_add_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
 
-        lv_label_set_text(info_label, "OFF SESSION");
+        if (active_view == VIEW_MAIN) {
+            lv_label_set_text(info_label, "OFF SESSION");
+        }
         lv_label_set_text(track_label, "-");
-        lv_label_set_text(weather_label, "NO LIVE SESSION");
+        lv_label_set_text(weather_label, "");
 
         // Update Next Race Summary
         JsonObject upcoming = data["upcoming"];
@@ -473,8 +532,19 @@ void ui_show_message(const char* msg) {
 }
 
 void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size) {
-    if (!iso_time || strlen(iso_time) < 16) {
+    if (!iso_time || strlen(iso_time) < 10) {
         snprintf(out_buf, out_size, "-");
+        return;
+    }
+
+    if (strlen(iso_time) < 16) {
+        // Just a date like YYYY-MM-DD
+        int y, m, d;
+        if (sscanf(iso_time, "%d-%d-%d", &y, &m, &d) == 3) {
+            snprintf(out_buf, out_size, "%02d/%02d", d, m);
+        } else {
+            snprintf(out_buf, out_size, "%s", iso_time);
+        }
         return;
     }
 
