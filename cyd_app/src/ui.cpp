@@ -43,6 +43,7 @@ static const TZMapping tz_map[] = {
 
 // View Containers
 static lv_obj_t * view_containers[8];
+static DynamicJsonDocument * calendar_doc = nullptr;
 
 // Main View Objects
 static lv_obj_t * timing_table;
@@ -72,6 +73,21 @@ static void tz_event_handler(lv_event_t * e) {
     }
 }
 
+static void calendar_event_handler(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    if(code == LV_EVENT_VALUE_CHANGED) {
+        uint16_t row, col;
+        lv_table_get_selected_cell(obj, &row, &col);
+        if (row > 0 && calendar_doc) {
+            JsonArray arr = calendar_doc->as<JsonArray>();
+            if (row <= arr.size()) {
+                ui_update_event_detail(arr[row - 1]);
+            }
+        }
+    }
+}
+
 static void table_draw_cb(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
     lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
@@ -82,6 +98,41 @@ static void table_draw_cb(lv_event_t * e) {
         // Column 2 is PTS in results/standings/constructors
         if(col == 2) {
             dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
+        }
+    }
+}
+
+static void calendar_draw_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+    lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
+    if(dsc->part == LV_PART_ITEMS) {
+        uint32_t col_cnt = lv_table_get_col_cnt(obj);
+        uint32_t row = dsc->id / col_cnt;
+        uint32_t col = dsc->id % col_cnt;
+
+        if (row > 0 && col == 0 && calendar_doc) {
+            JsonArray arr = calendar_doc->as<JsonArray>();
+            if (row <= arr.size()) {
+                const char* code = arr[row-1]["flagCode"] | "un";
+                if (strlen(code) == 0) code = "un";
+
+                // Draw a small flag icon
+                lv_draw_img_dsc_t img_dsc;
+                lv_draw_img_dsc_init(&img_dsc);
+                char path[64];
+                snprintf(path, sizeof(path), "S:/%s.png", code);
+
+                lv_area_t img_area;
+                img_area.x1 = dsc->draw_area->x1 + 2;
+                img_area.y1 = dsc->draw_area->y1 + (lv_area_get_height(dsc->draw_area) - 12) / 2;
+                img_area.x2 = img_area.x1 + 16 - 1; // 16px wide
+                img_area.y2 = img_area.y1 + 12 - 1; // 12px high
+
+                lv_draw_img(dsc->draw_ctx, &img_dsc, &img_area, path);
+
+                // Shift text to the right
+                dsc->label_dsc->ofs_x = 20;
+            }
         }
     }
 }
@@ -123,7 +174,7 @@ void ui_init() {
         // Ensure gestures bubble up to the screen
         lv_obj_clear_flag(view_containers[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_scroll_dir(view_containers[i], LV_DIR_VER);
-        lv_obj_set_scrollbar_mode(view_containers[i], LV_SCROLLBAR_MODE_AUTO);
+        lv_obj_set_scrollbar_mode(view_containers[i], LV_SCROLLBAR_MODE_OFF);
     }
 
     // --- VIEW_SETTINGS setup ---
@@ -195,8 +246,8 @@ void ui_init() {
     lv_obj_set_size(results_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(results_table, 3);
     lv_table_set_col_width(results_table, 0, 45);
-    lv_table_set_col_width(results_table, 1, 175);
-    lv_table_set_col_width(results_table, 2, 100);
+    lv_table_set_col_width(results_table, 1, 215);
+    lv_table_set_col_width(results_table, 2, 60);
     lv_obj_add_event_cb(results_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(results_table, 0, 0, "P");
     lv_table_set_cell_value(results_table, 0, 1, "DRIVER");
@@ -215,8 +266,8 @@ void ui_init() {
     lv_obj_set_size(standings_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(standings_table, 3);
     lv_table_set_col_width(standings_table, 0, 45);
-    lv_table_set_col_width(standings_table, 1, 175);
-    lv_table_set_col_width(standings_table, 2, 100);
+    lv_table_set_col_width(standings_table, 1, 215);
+    lv_table_set_col_width(standings_table, 2, 60);
     lv_obj_add_event_cb(standings_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(standings_table, 0, 0, "P");
     lv_table_set_cell_value(standings_table, 0, 1, "DRIVER");
@@ -228,8 +279,8 @@ void ui_init() {
     lv_obj_set_size(constructors_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(constructors_table, 3);
     lv_table_set_col_width(constructors_table, 0, 45);
-    lv_table_set_col_width(constructors_table, 1, 175);
-    lv_table_set_col_width(constructors_table, 2, 100);
+    lv_table_set_col_width(constructors_table, 1, 215);
+    lv_table_set_col_width(constructors_table, 2, 60);
     lv_obj_add_event_cb(constructors_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(constructors_table, 0, 0, "P");
     lv_table_set_cell_value(constructors_table, 0, 1, "TEAM");
@@ -242,6 +293,8 @@ void ui_init() {
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 210);
     lv_table_set_col_width(calendar_table, 1, 110);
+    lv_obj_add_event_cb(calendar_table, calendar_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(calendar_table, calendar_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(calendar_table, 0, 0, "RACE");
     lv_table_set_cell_value(calendar_table, 0, 1, "DATE");
 
@@ -364,6 +417,7 @@ void ui_update_status(const JsonObject& data) {
             lv_label_set_recolor(next_race_summary_label, true);
 
             const char* code = upcoming["flagCode"] | "un";
+            if (strlen(code) == 0) code = "un";
             char path[64];
             snprintf(path, sizeof(path), "S:/%s.png", code);
             lv_img_set_src(next_flag_img, path);
@@ -381,11 +435,13 @@ void ui_update_status(const JsonObject& data) {
             lv_label_set_recolor(last_race_summary_label, true);
 
             const char* raceCode = previous["flagCode"] | "un";
+            if (strlen(raceCode) == 0) raceCode = "un";
             char racePath[64];
             snprintf(racePath, sizeof(racePath), "S:/%s.png", raceCode);
             lv_img_set_src(last_flag_img, racePath);
 
             const char* winCode = previous["winnerFlagCode"] | "un";
+            if (strlen(winCode) == 0) winCode = "un";
             char winPath[64];
             snprintf(winPath, sizeof(winPath), "S:/%s.png", winCode);
             lv_img_set_src(winner_flag_img, winPath);
@@ -429,9 +485,9 @@ void ui_update_results(const JsonObject& data) {
         char pts_buf[32];
         JsonVariant pts = res["points"];
         if (pts.is<int>()) {
-            snprintf(pts_buf, sizeof(pts_buf), "%d pts", pts.as<int>());
+            snprintf(pts_buf, sizeof(pts_buf), "%d", pts.as<int>());
         } else {
-            snprintf(pts_buf, sizeof(pts_buf), "%s pts", pts.as<const char*>());
+            snprintf(pts_buf, sizeof(pts_buf), "%s", pts.as<const char*>());
         }
         lv_table_set_cell_value(results_table, row, 2, pts_buf);
         row++;
@@ -449,9 +505,9 @@ void ui_update_standings(const JsonObject& data) {
         char pts_buf[32];
         JsonVariant pts = s["points"];
         if (pts.is<int>()) {
-            snprintf(pts_buf, sizeof(pts_buf), "%d pts", pts.as<int>());
+            snprintf(pts_buf, sizeof(pts_buf), "%d", pts.as<int>());
         } else {
-            snprintf(pts_buf, sizeof(pts_buf), "%s pts", pts.as<const char*>());
+            snprintf(pts_buf, sizeof(pts_buf), "%s", pts.as<const char*>());
         }
         lv_table_set_cell_value(standings_table, row, 2, pts_buf);
         row++;
@@ -469,9 +525,9 @@ void ui_update_constructors(const JsonObject& data) {
         char pts_buf[32];
         JsonVariant pts = s["points"];
         if (pts.is<int>()) {
-            snprintf(pts_buf, sizeof(pts_buf), "%d pts", pts.as<int>());
+            snprintf(pts_buf, sizeof(pts_buf), "%d", pts.as<int>());
         } else {
-            snprintf(pts_buf, sizeof(pts_buf), "%s pts", pts.as<const char*>());
+            snprintf(pts_buf, sizeof(pts_buf), "%s", pts.as<const char*>());
         }
         lv_table_set_cell_value(constructors_table, row, 2, pts_buf);
         row++;
@@ -480,6 +536,15 @@ void ui_update_constructors(const JsonObject& data) {
 
 void ui_update_calendar(const JsonObject& data) {
     JsonArray calendar = data["calendar"];
+
+    // Store data for detail view
+    if (calendar_doc) delete calendar_doc;
+    calendar_doc = new DynamicJsonDocument(12288);
+    JsonArray arr = calendar_doc->to<JsonArray>();
+    for (JsonObject race : calendar) {
+        arr.add(race);
+    }
+
     lv_table_set_row_cnt(calendar_table, calendar.size() + 1);
 
     int row = 1;
@@ -493,7 +558,20 @@ void ui_update_calendar(const JsonObject& data) {
 }
 
 void ui_update_event_detail(const JsonObject& data) {
-    // This would be triggered by clicking a calendar item, but keeping it simple for now
+    char buf[512];
+    int pos = snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s\n\n",
+                       (const char*)(data["name"] | ""),
+                       (const char*)(data["circuit"] | ""));
+
+    JsonArray sessions = data["sessions"];
+    for (JsonObject s : sessions) {
+        char local_time[32];
+        ui_format_local_time(s["time"] | "", local_time, sizeof(local_time));
+        pos += snprintf(buf + pos, sizeof(buf) - pos, "#FFAA00 %s:# %s\n",
+                        s["name"] | "", local_time);
+    }
+    lv_label_set_text(event_detail_label, buf);
+    ui_set_view(VIEW_EVENT_DETAIL);
 }
 
 void ui_show_message(const char* msg) {
