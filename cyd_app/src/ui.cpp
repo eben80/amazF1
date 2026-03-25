@@ -318,17 +318,10 @@ void ui_update_status(const JsonObject& data) {
         lv_label_set_text(weather_label, weather_buf);
 
         JsonArray timing = data["timing"];
-        // Clear previous entries (limit to 20 rows for CYD)
-        for (int r = 1; r < 20; r++) {
-            lv_table_set_cell_value(timing_table, r, 0, "");
-            lv_table_set_cell_value(timing_table, r, 1, "");
-            lv_table_set_cell_value(timing_table, r, 2, "");
-            lv_table_set_cell_value(timing_table, r, 3, "");
-        }
+        lv_table_set_row_cnt(timing_table, timing.size() + 1);
 
         int row = 1;
         for (JsonObject entry : timing) {
-            if (row >= 20) break;
             lv_table_set_cell_value(timing_table, row, 0, entry["pos"] | "-");
 
             const char* compound = entry["comp"] | "";
@@ -422,17 +415,10 @@ void ui_update_next_race(const JsonObject& data) {
 void ui_update_results(const JsonObject& data) {
     lv_label_set_text(info_label, data["raceName"] | "RESULTS");
     JsonArray results = data["results"];
-
-    // Clear previous entries (start from 1 to keep header)
-    for (int r = 1; r < 20; r++) {
-        lv_table_set_cell_value(results_table, r, 0, "");
-        lv_table_set_cell_value(results_table, r, 1, "");
-        lv_table_set_cell_value(results_table, r, 2, "");
-    }
+    lv_table_set_row_cnt(results_table, results.size() + 1);
 
     int row = 1;
     for (JsonObject res : results) {
-        if (row >= 20) break;
         lv_table_set_cell_value(results_table, row, 0, (const char*)(res["position"] | "-"));
         char name_buf[128];
         const char* fName = res["firstName"] | "";
@@ -454,17 +440,10 @@ void ui_update_results(const JsonObject& data) {
 
 void ui_update_standings(const JsonObject& data) {
     JsonArray standings = data["standings"];
-
-    // Clear previous entries (start from 1 to keep header)
-    for (int r = 1; r < 20; r++) {
-        lv_table_set_cell_value(standings_table, r, 0, "");
-        lv_table_set_cell_value(standings_table, r, 1, "");
-        lv_table_set_cell_value(standings_table, r, 2, "");
-    }
+    lv_table_set_row_cnt(standings_table, standings.size() + 1);
 
     int row = 1;
     for (JsonObject s : standings) {
-        if (row >= 20) break;
         lv_table_set_cell_value(standings_table, row, 0, (const char*)(s["pos"] | "-"));
         lv_table_set_cell_value(standings_table, row, 1, (const char*)(s["name"] | "-"));
         char pts_buf[32];
@@ -481,17 +460,10 @@ void ui_update_standings(const JsonObject& data) {
 
 void ui_update_constructors(const JsonObject& data) {
     JsonArray standings = data["standings"];
-
-    // Clear previous entries (start from 1 to keep header)
-    for (int r = 1; r < 10; r++) {
-        lv_table_set_cell_value(constructors_table, r, 0, "");
-        lv_table_set_cell_value(constructors_table, r, 1, "");
-        lv_table_set_cell_value(constructors_table, r, 2, "");
-    }
+    lv_table_set_row_cnt(constructors_table, standings.size() + 1);
 
     int row = 1;
     for (JsonObject s : standings) {
-        if (row >= 10) break;
         lv_table_set_cell_value(constructors_table, row, 0, (const char*)(s["pos"] | "-"));
         lv_table_set_cell_value(constructors_table, row, 1, (const char*)(s["name"] | "-"));
         char pts_buf[32];
@@ -508,16 +480,10 @@ void ui_update_constructors(const JsonObject& data) {
 
 void ui_update_calendar(const JsonObject& data) {
     JsonArray calendar = data["calendar"];
-
-    // Clear previous entries (start from 1 to keep header)
-    for (int r = 1; r < 24; r++) {
-        lv_table_set_cell_value(calendar_table, r, 0, "");
-        lv_table_set_cell_value(calendar_table, r, 1, "");
-    }
+    lv_table_set_row_cnt(calendar_table, calendar.size() + 1);
 
     int row = 1;
     for (JsonObject race : calendar) {
-        if (row >= 24) break;
         lv_table_set_cell_value(calendar_table, row, 0, (const char*)(race["name"] | "-"));
         char local_date[32];
         ui_format_local_time(race["date"] | "", local_date, sizeof(local_date));
