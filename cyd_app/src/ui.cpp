@@ -60,7 +60,7 @@ void ui_init() {
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
-    lv_obj_set_style_text_font(info_label, &lv_font_montserrat_18, 0);
+    lv_obj_set_style_text_font(info_label, &lv_font_montserrat_18_latin_1, 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 0, 0);
 
     track_label = lv_label_create(header);
@@ -111,7 +111,7 @@ void ui_init() {
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_HIDDEN);
 
     timing_table = lv_table_create(main_cont);
-    lv_obj_set_style_text_font(timing_table, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(timing_table, &lv_font_montserrat_16_latin_1, 0);
     lv_obj_set_size(timing_table, 320, 190);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_table_set_col_cnt(timing_table, 4);
@@ -149,7 +149,7 @@ void ui_init() {
 
     // --- VIEW_RESULTS setup ---
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
-    lv_obj_set_style_text_font(results_table, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(results_table, &lv_font_montserrat_16_latin_1, 0);
     lv_obj_set_size(results_table, 320, 190);
     lv_table_set_col_cnt(results_table, 3);
     lv_table_set_col_width(results_table, 0, 40);
@@ -165,7 +165,7 @@ void ui_init() {
 
     // --- VIEW_STANDINGS setup ---
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
-    lv_obj_set_style_text_font(standings_table, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(standings_table, &lv_font_montserrat_16_latin_1, 0);
     lv_obj_set_size(standings_table, 320, 190);
     lv_table_set_col_cnt(standings_table, 3);
     lv_table_set_col_width(standings_table, 0, 40);
@@ -174,7 +174,7 @@ void ui_init() {
 
     // --- VIEW_CONSTRUCTORS setup ---
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
-    lv_obj_set_style_text_font(constructors_table, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(constructors_table, &lv_font_montserrat_16_latin_1, 0);
     lv_obj_set_size(constructors_table, 320, 190);
     lv_table_set_col_cnt(constructors_table, 3);
     lv_table_set_col_width(constructors_table, 0, 40);
@@ -183,7 +183,7 @@ void ui_init() {
 
     // --- VIEW_CALENDAR setup ---
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
-    lv_obj_set_style_text_font(calendar_table, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(calendar_table, &lv_font_montserrat_16_latin_1, 0);
     lv_obj_set_size(calendar_table, 320, 190);
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 200);
@@ -237,15 +237,8 @@ void ui_update_status(const JsonObject& data) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
 
-        char session_name[64];
-        snprintf(session_name, sizeof(session_name), "%s", (const char*)(data["session"]["name"] | "-"));
-        ui_sanitize_string(session_name);
-        lv_label_set_text(info_label, session_name);
-
-        char track_name[64];
-        snprintf(track_name, sizeof(track_name), "%s", (const char*)(data["track"] | "-"));
-        ui_sanitize_string(track_name);
-        lv_label_set_text(track_label, track_name);
+        lv_label_set_text(info_label, (const char*)(data["session"]["name"] | "-"));
+        lv_label_set_text(track_label, (const char*)(data["track"] | "-"));
 
         const char* air_temp = data["weather"]["air"] | "-";
         const char* track_temp = data["weather"]["track"] | "-";
@@ -267,7 +260,6 @@ void ui_update_status(const JsonObject& data) {
             } else {
                 snprintf(driver_name, sizeof(driver_name), "%s", (const char*)(entry["name"] | "-"));
             }
-            ui_sanitize_string(driver_name);
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
             char gap_int[32];
@@ -291,15 +283,9 @@ void ui_update_status(const JsonObject& data) {
             char local_date[32];
             ui_format_local_time(upcoming["date"] | "", local_date, sizeof(local_date));
 
-            char race_name[64];
-            snprintf(race_name, sizeof(race_name), "%s", (const char*)(upcoming["name"] | ""));
-            ui_sanitize_string(race_name);
-            char circuit_name[64];
-            snprintf(circuit_name, sizeof(circuit_name), "%s", (const char*)(upcoming["circuit"] | ""));
-            ui_sanitize_string(circuit_name);
-
             snprintf(next_buf, sizeof(next_buf), "#FF1801 NEXT RACE:#\n%s\n%s\n%s",
-                     race_name, circuit_name, local_date);
+                 (const char*)(upcoming["name"] | ""),
+                 (const char*)(upcoming["circuit"] | ""), local_date);
             lv_label_set_text(next_race_summary_label, next_buf);
             lv_label_set_recolor(next_race_summary_label, true);
 
@@ -313,18 +299,10 @@ void ui_update_status(const JsonObject& data) {
         JsonObject previous = data["previous"];
         if (!previous.isNull()) {
             char last_buf[256];
-            char race_name[64];
-            snprintf(race_name, sizeof(race_name), "%s", (const char*)(previous["name"] | ""));
-            ui_sanitize_string(race_name);
-            char winner_name[64];
-            snprintf(winner_name, sizeof(winner_name), "%s", (const char*)(previous["winner"] | ""));
-            ui_sanitize_string(winner_name);
-            char team_name[64];
-            snprintf(team_name, sizeof(team_name), "%s", (const char*)(previous["team"] | ""));
-            ui_sanitize_string(team_name);
-
             snprintf(last_buf, sizeof(last_buf), "#FFAA00 LAST RACE:#\n%s\nWinner: %s\n%s",
-                     race_name, winner_name, team_name);
+                 (const char*)(previous["name"] | ""),
+                 (const char*)(previous["winner"] | ""),
+                 (const char*)(previous["team"] | ""));
             lv_label_set_text(last_race_summary_label, last_buf);
             lv_label_set_recolor(last_race_summary_label, true);
 
@@ -345,15 +323,9 @@ void ui_update_next_race(const JsonObject& data) {
     JsonObject upcoming = data["upcoming"];
     if (!upcoming.isNull()) {
         char buf[512];
-        char race_name[128];
-        snprintf(race_name, sizeof(race_name), "%s", (const char*)(upcoming["name"] | ""));
-        ui_sanitize_string(race_name);
-        char circuit_name[128];
-        snprintf(circuit_name, sizeof(circuit_name), "%s", (const char*)(upcoming["circuit"] | ""));
-        ui_sanitize_string(circuit_name);
-
         int pos = snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s\n\n",
-                           race_name, circuit_name);
+                           (const char*)(upcoming["name"] | ""),
+                           (const char*)(upcoming["circuit"] | ""));
 
         JsonArray sessions = upcoming["sessions"];
         for (JsonObject s : sessions) {
@@ -377,7 +349,6 @@ void ui_update_results(const JsonObject& data) {
         const char* fName = res["firstName"] | "";
         const char* lName = res["lastName"] | "";
         snprintf(name_buf, sizeof(name_buf), "%s %s", fName, lName);
-        ui_sanitize_string(name_buf);
         lv_table_set_cell_value(results_table, row, 1, name_buf);
         char pts_buf[32];
         snprintf(pts_buf, sizeof(pts_buf), "%s pts", (const char*)(res["points"] | "0"));
@@ -392,10 +363,7 @@ void ui_update_standings(const JsonObject& data) {
     for (JsonObject s : standings) {
         if (row >= 20) break;
         lv_table_set_cell_value(standings_table, row, 0, s["pos"] | "-");
-        char name_buf[64];
-        snprintf(name_buf, sizeof(name_buf), "%s", (const char*)(s["name"] | "-"));
-        ui_sanitize_string(name_buf);
-        lv_table_set_cell_value(standings_table, row, 1, name_buf);
+        lv_table_set_cell_value(standings_table, row, 1, (const char*)(s["name"] | "-"));
         char pts_buf[32];
         snprintf(pts_buf, sizeof(pts_buf), "%s pts", s["points"] | "0");
         lv_table_set_cell_value(standings_table, row, 2, pts_buf);
@@ -409,10 +377,7 @@ void ui_update_constructors(const JsonObject& data) {
     for (JsonObject s : standings) {
         if (row >= 10) break;
         lv_table_set_cell_value(constructors_table, row, 0, s["pos"] | "-");
-        char name_buf[64];
-        snprintf(name_buf, sizeof(name_buf), "%s", (const char*)(s["name"] | "-"));
-        ui_sanitize_string(name_buf);
-        lv_table_set_cell_value(constructors_table, row, 1, name_buf);
+        lv_table_set_cell_value(constructors_table, row, 1, (const char*)(s["name"] | "-"));
         char pts_buf[32];
         snprintf(pts_buf, sizeof(pts_buf), "%s pts", s["points"] | "0");
         lv_table_set_cell_value(constructors_table, row, 2, pts_buf);
@@ -425,10 +390,7 @@ void ui_update_calendar(const JsonObject& data) {
     int row = 0;
     for (JsonObject race : calendar) {
         if (row >= 24) break;
-        char name_buf[128];
-        snprintf(name_buf, sizeof(name_buf), "%s", (const char*)(race["name"] | "-"));
-        ui_sanitize_string(name_buf);
-        lv_table_set_cell_value(calendar_table, row, 0, name_buf);
+        lv_table_set_cell_value(calendar_table, row, 0, (const char*)(race["name"] | "-"));
         char local_date[32];
         ui_format_local_time(race["date"] | "", local_date, sizeof(local_date));
         lv_table_set_cell_value(calendar_table, row, 1, local_date);
@@ -474,75 +436,4 @@ void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size) 
 
     struct tm * tm_local = localtime(&t);
     strftime(out_buf, out_size, "%d/%m %H:%M", tm_local);
-}
-
-void ui_sanitize_string(char* str) {
-    if (!str) return;
-
-    unsigned char* src = (unsigned char*)str;
-    unsigned char* dst = (unsigned char*)str;
-
-    while (*src) {
-        if (*src < 128) {
-            *dst++ = *src++;
-        } else if (*src == 0xC2 && *(src + 1) == 0xB0) { // Degree symbol (U+00B0) - Built-in Montserrat supports this
-            *dst++ = *src++;
-            *dst++ = *src++;
-        } else if (*src == 0xC3 || *src == 0xC4 || *src == 0xC5) {
-            unsigned char c1 = *src;
-            unsigned char c2 = *(src + 1);
-            if (c2 == 0) { src++; continue; }
-
-            unsigned char rep = '?';
-            if (c1 == 0xC3) {
-                switch(c2) {
-                    case 0x81: rep = 'A'; break; // Á
-                    case 0x84: rep = 'A'; break; // Ä
-                    case 0x89: rep = 'E'; break; // É
-                    case 0x8D: rep = 'I'; break; // Í
-                    case 0x91: rep = 'N'; break; // Ñ
-                    case 0x93: rep = 'O'; break; // Ó
-                    case 0x96: rep = 'O'; break; // Ö
-                    case 0x9A: rep = 'U'; break; // Ú
-                    case 0x9C: rep = 'U'; break; // Ü
-                    case 0xA1: rep = 'a'; break; // á
-                    case 0xA3: rep = 'a'; break; // ã
-                    case 0xA4: rep = 'a'; break; // ä
-                    case 0xA7: rep = 'c'; break; // ç
-                    case 0xA9: rep = 'e'; break; // é
-                    case 0xAD: rep = 'i'; break; // í
-                    case 0xB1: rep = 'n'; break; // ñ
-                    case 0xB3: rep = 'o'; break; // ó
-                    case 0xB5: rep = 'o'; break; // õ
-                    case 0xB6: rep = 'o'; break; // ö
-                    case 0xBA: rep = 'u'; break; // ú
-                    case 0xBC: rep = 'u'; break; // ü
-                }
-            } else if (c1 == 0xC4) {
-                switch(c2) {
-                    case 0x87: rep = 'c'; break; // ć
-                    case 0x8D: rep = 'c'; break; // č
-                    case 0x91: rep = 'd'; break; // đ
-                }
-            } else if (c1 == 0xC5) {
-                switch(c2) {
-                    case 0x82: rep = 'l'; break; // ł
-                    case 0xA0: rep = 'S'; break; // Š
-                    case 0xA1: rep = 's'; break; // š
-                    case 0xBD: rep = 'Z'; break; // Ž
-                    case 0xBE: rep = 'z'; break; // ž
-                }
-            }
-            *dst++ = rep;
-            src += 2;
-        } else {
-            // Strip any other multi-byte or non-ASCII characters that LVGL built-in font can't render
-            if ((*src & 0xE0) == 0xC0) src += 2;
-            else if ((*src & 0xF0) == 0xE0) src += 3;
-            else if ((*src & 0xF8) == 0xF0) src += 4;
-            else src++;
-            // Don't increment dst, effectively stripping the character to avoid black boxes
-        }
-    }
-    *dst = '\0';
 }
