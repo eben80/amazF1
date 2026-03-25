@@ -5,6 +5,7 @@
 
 static lv_obj_t * screen;
 static lv_obj_t * header;
+static lv_obj_t * header_logo;
 static lv_obj_t * info_label;
 static lv_obj_t * track_label;
 static lv_obj_t * weather_label;
@@ -15,6 +16,8 @@ struct TZMapping {
     const char * name;
     const char * tz;
 };
+
+LV_IMG_DECLARE(f1_logo_small);
 
 static const TZMapping tz_map[] = {
     {"UTC UTC", "UTC0"},
@@ -149,10 +152,14 @@ void ui_init() {
     lv_obj_set_style_border_width(header, 0, 0);
     lv_obj_set_scrollbar_mode(header, LV_SCROLLBAR_MODE_OFF);
 
+    header_logo = lv_img_create(header);
+    lv_img_set_src(header_logo, &f1_logo_small);
+    lv_obj_align(header_logo, LV_ALIGN_TOP_LEFT, 0, 0);
+
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
     lv_obj_set_style_text_font(info_label, &f1font_14, 0);
-    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 60, 0);
 
     track_label = lv_label_create(header);
     lv_label_set_text(track_label, "-");
@@ -160,7 +167,7 @@ void ui_init() {
 
     weather_label = lv_label_create(header);
     lv_label_set_text(weather_label, "AIR: - / TRACK: -");
-    lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 0, 20);
+    lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 60, 20);
 
     // Initialize View Containers
     for (int i = 0; i < 8; i++) {
