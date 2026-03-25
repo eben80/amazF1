@@ -124,7 +124,7 @@ void fetch_data() {
         case VIEW_CALENDAR: url = CALENDAR_URL; break;
         case VIEW_NEXT_RACE:
         case VIEW_MAIN:
-        default: url = STATUS_URL; break;
+        default: url = ui_get_sim_mode() ? MOCK_URL : STATUS_URL; break;
     }
 
     Serial.print("Fetching data from: ");
@@ -251,11 +251,13 @@ void setup() {
     lv_png_init();
     ui_init();
 
-    // Load TZ from preferences
+    // Load settings from preferences
     preferences.begin("f1-app", true);
     String saved_tz = preferences.getString("tz", TZ_INFO);
+    bool saved_sim = preferences.getBool("sim", false);
     preferences.end();
     ui_set_timezone(saved_tz.c_str());
+    ui_set_sim_mode(saved_sim);
 
     // Time Sync
     configTzTime(saved_tz.c_str(), NTP_SERVER);

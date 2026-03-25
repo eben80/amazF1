@@ -11,6 +11,7 @@ static lv_obj_t * track_label;
 static lv_obj_t * weather_label;
 
 static View active_view = VIEW_MAIN;
+static bool sim_mode = false;
 
 struct TZMapping {
     const char * name;
@@ -74,6 +75,14 @@ static void tz_event_handler(lv_event_t * e) {
         if (id < sizeof(tz_map)/sizeof(tz_map[0])) {
             ui_set_timezone(tz_map[id].tz);
         }
+    }
+}
+
+static void sim_event_handler(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    if(code == LV_EVENT_VALUE_CHANGED) {
+        ui_set_sim_mode(lv_obj_has_state(obj, LV_STATE_CHECKED));
     }
 }
 
@@ -175,6 +184,12 @@ void ui_init() {
     }
     lv_obj_align(tz_dd, LV_ALIGN_TOP_MID, 0, 40);
     lv_obj_add_event_cb(tz_dd, tz_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
+    lv_obj_t * sim_cb = lv_checkbox_create(settings_cont);
+    lv_checkbox_set_text(sim_cb, "Simulation Mode");
+    lv_obj_set_style_text_color(sim_cb, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(sim_cb, LV_ALIGN_TOP_MID, 0, 85);
+    lv_obj_add_event_cb(sim_cb, sim_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_t * info = lv_label_create(settings_cont);
     lv_label_set_text(info, "Changes take effect\nimmediately on next fetch.");
@@ -307,6 +322,29 @@ void ui_init() {
     lv_table_set_col_width(event_detail_table, 1, 160);
     lv_obj_add_event_cb(event_detail_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_obj_add_event_cb(event_detail_table, back_to_calendar_event_handler, LV_EVENT_CLICKED, NULL);
+}
+
+void ui_set_sim_mode(bool enabled) {
+    sim_mode = enabled;
+    Preferences prefs;
+    prefs.begin("f1-app", false);
+    prefs.putBool("sim", enabled);
+    prefs.end();
+    Serial.print("Simulation mode: ");
+    Serial.println(enabled ? "ENABLED" : "DISABLED");
+
+    // Sync checkbox if it exists
+    if (view_containers[VIEW_SETTINGS]) {
+        lv_obj_t * cb = lv_obj_get_child(view_containers[VIEW_SETTINGS], 2);
+        if (cb && lv_obj_check_type(cb, &lv_checkbox_class)) {
+            if (enabled) lv_obj_add_state(cb, LV_STATE_CHECKED);
+            else lv_obj_clear_state(cb, LV_STATE_CHECKED);
+        }
+    }
+}
+
+bool ui_get_sim_mode() {
+    return sim_mode;
 }
 
 void ui_set_timezone(const char* tz) {

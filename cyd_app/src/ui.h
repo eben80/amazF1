@@ -19,6 +19,8 @@ void ui_init();
 void ui_set_view(View view);
 View ui_get_view();
 void ui_set_timezone(const char* tz);
+void ui_set_sim_mode(bool enabled);
+bool ui_get_sim_mode();
 void ui_update_status(const JsonObject& data);
 void ui_update_next_race(const JsonObject& data);
 void ui_update_results(const JsonObject& data);
