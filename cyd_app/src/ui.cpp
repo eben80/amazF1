@@ -538,10 +538,11 @@ void ui_update_calendar(const JsonObject& data) {
 
     // Store data for detail view
     if (calendar_doc) delete calendar_doc;
-    calendar_doc = new DynamicJsonDocument(12288);
+    // Increased size to 24KB for full calendar with session data
+    calendar_doc = new DynamicJsonDocument(24576);
     JsonArray arr = calendar_doc->to<JsonArray>();
     for (JsonObject race : calendar) {
-        arr.add(race);
+        arr.add(race); // Deep copies everything into calendar_doc
     }
 
     lv_table_set_row_cnt(calendar_table, calendar.size() + 1);
@@ -559,8 +560,8 @@ void ui_update_calendar(const JsonObject& data) {
 void ui_update_event_detail(const JsonObject& data) {
     char buf[512];
     snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s",
-                       (const char*)(data["name"] | ""),
-                       (const char*)(data["circuit"] | ""));
+                       (const char*)(data["name"] | "-"),
+                       (const char*)(data["circuit"] | "-"));
     lv_label_set_text(event_detail_header_label, buf);
 
     JsonArray sessions = data["sessions"];
@@ -575,8 +576,8 @@ void ui_update_event_detail(const JsonObject& data) {
         row++;
     }
 
-    const char* code = data["flagCode"] | "un";
-    if (strlen(code) == 0) code = "un";
+    const char* code = (const char*)(data["flagCode"] | "un");
+    if (!code || strlen(code) == 0) code = "un";
     static char detail_path[64];
     snprintf(detail_path, sizeof(detail_path), "S:/%s.png", code);
     lv_img_set_src(event_detail_flag_img, detail_path);
