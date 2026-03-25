@@ -203,6 +203,11 @@ void setup() {
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);
 
+    // Turn off onboard RGB LED (Common Anode, set HIGH to turn OFF)
+    pinMode(4, OUTPUT); digitalWrite(4, HIGH);  // Red
+    pinMode(16, OUTPUT); digitalWrite(16, HIGH); // Green
+    pinMode(17, OUTPUT); digitalWrite(17, HIGH); // Blue
+
     WiFiManager wm;
     if (!wm.autoConnect("F1-Timing-Display")) ESP.restart();
 
