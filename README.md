@@ -1,16 +1,19 @@
-# AmazF1 - Live Timing for Amazfit Bip 6
+# AmazF1 - Live Timing for Amazfit Bip 6 & ESP32 (CYD)
 
-This project consists of a Zepp OS mini-program and a Python middleware bridge to display live Formula 1 timing data on an Amazfit Bip 6 (390x450 resolution) using **Zepp OS 4.0 API**.
+This project provides a complete ecosystem to display live Formula 1 timing data. It includes a **Zepp OS mini-program** for Amazfit smartwatches (390x450 resolution) and a standalone **ESP32 firmware** for the "Cheap Yellow Display" (CYD), all powered by a centralized Python middleware bridge.
 
 ## Architecture
 
 1.  **Python Middleware (`middleware/f1_bridge.py`):**
-    *   Connects to the official F1 SignalR feed.
-    *   Fetches previous and next race information via the [Jolpica API](https://api.jolpi.ca/ergast/f1/).
-    *   Serves JSON status via an HTTPS reverse proxy (Nginx).
+    *   Connects to the official F1 SignalR feed for real-time telemetry.
+    *   Fetches previous and next race information, standings, and calendars via the [Jolpica API](https://api.jolpi.ca/ergast/f1/).
+    *   Serves unified JSON data via a secure HTTPS endpoint.
 2.  **Zepp OS App (API 4.0):**
-    *   **Side Service (`app-side/index.js`):** Polls the middleware from the phone securely via HTTPS.
-    *   **Device App (`page/index.js`):** Displays a real-time timing tower, race status, and weather.
+    *   **Side Service (`app-side/index.js`):** Secures communication between the watch and the middleware.
+    *   **Device App (`page/index.js`):** A gesture-driven UI for timing, standings, and race schedules.
+3.  **CYD ESP32 App (`cyd_app/`):**
+    *   **LVGL UI:** A high-performance dashboard with persistent settings and localized time conversion.
+    *   **Hardware Agnostic:** Supports multiple CYD variants (MicroUSB, USB-C, capacitive/resistive touch).
 
 ---
 
@@ -88,24 +91,25 @@ The app uses assets located in the `assets/` directory. Replace the placeholders
 The app automatically toggles between **Live Timing** during sessions and an **Idle Dashboard** during off-periods.
 
 ### 🏁 Live Timing Mode
-*   **Real-time Tower:** Displays the top 10 drivers with their current position (P1-P10).
-*   **Team Colors:** Driver names are rendered in their official constructor colors.
-*   **Gap to Leader:** Shows the interval or gap for each driver.
-*   **Tire Compounds:** Displays visual icons for Hard, Medium, and Soft tires currently in use.
-*   **Auto-Refresh:** The data polls every 30 seconds to ensure the tower is up-to-date.
+*   **Full Timing Tower:** Real-time positions for the entire field (up to 20 drivers on CYD).
+*   **Team Colors:** Driver names and team titles rendered in their official HEX colors.
+*   **Gap to Leader:** Live intervals and gaps updated every 5-30 seconds.
+*   **Tire Compounds:** Visual status of tire compounds (Soft, Medium, Hard, Inter, Wet).
+*   **Auto-Refresh:** Smart polling ensures the data is always fresh during live sessions.
 
 ### 🏎️ Idle Dashboard Mode
-*   **Next Race:** Shows the upcoming Grand Prix name, circuit, country flag, and date.
-*   **Last Race:** Displays the previous race winner with their nationality flag and team (in team colors).
-*   **Session Times:** All upcoming session times (Practice, Quali, Sprint, Race) are automatically converted to the watch's **local time**.
+*   **Next Race:** Comprehensive summary of the upcoming GP, including circuit details and country flags.
+*   **Last Race:** Snapshot of the previous podium winner and winning team.
+*   **Weekend Schedule:** Full weekend breakdown (FP1, FP2, FP3, Quali, Sprint, Race) with **automatic local time conversion**.
+*   **Interactive Calendar:** Drill down into any season event to see specific session timings.
 
 ### 📱 Navigation & UI
 *   **Gesture Driven:**
-    *   **Swipe Left:** Navigate through: Dashboard ➡️ Last Results ➡️ Next Race Details ➡️ Driver Standings ➡️ Constructor Standings ➡️ Full Calendar.
-    *   **Swipe Right:** Navigate back through the screens.
-*   **Interactive Calendar:** Click any race in the calendar view to see the full weekend schedule.
-*   **Persistence:** The app uses `setStayWake` to remain active when the screen turns off and intercepts the back button to prevent accidental exits.
-*   **Status Handling:** Correctly handles non-finishing drivers, showing **DNF** (Retired) or **DNS** (Did not start) instead of points where applicable.
+    *   **Swipe Left/Right:** Seamlessly cycle through Dashboard, Results, Standings, and Calendar.
+    *   **Wrap-around logic:** Navigate instantly from the first to the last screen in the cycle.
+*   **User Preferences (CYD Only):** Built-in city-based timezone selection that persists across reboots.
+*   **Dynamic UI:** Tables automatically resize to fit the available data, and unnecessary scrollbars are hidden for a clean, minimalist look.
+*   **Status Handling:** Clear indication of **OFF SESSION** periods and real-time track status (Safety Car, Yellow Flags, etc.).
 
 ---
 
