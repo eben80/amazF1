@@ -115,6 +115,8 @@
 /* --- CUSTOM FONT DECLARATION --- */
 /* The backslashes (\) are MANDATORY for multi-line macros */
 #define LV_FONT_CUSTOM_DECLARE \
+    LV_FONT_DECLARE(f1font_8) \
+    LV_FONT_DECLARE(f1font_10) \
     LV_FONT_DECLARE(f1font_12) \
     LV_FONT_DECLARE(f1font_14) \
     LV_FONT_DECLARE(f1font_16) \
