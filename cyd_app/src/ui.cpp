@@ -120,11 +120,27 @@ static void table_draw_cb(lv_event_t * e) {
     lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
     if(dsc->part == LV_PART_ITEMS) {
         uint32_t col_cnt = lv_table_get_col_cnt(obj);
+        uint32_t row = dsc->id / col_cnt;
         uint32_t col = dsc->id % col_cnt;
 
-        // Column 2 is PTS in results/standings/constructors
-        if(col == 2) {
+        // Enable recoloring for all tables
+        dsc->label_dsc->flag |= LV_TEXT_FLAG_RECOLOR;
+
+        // Ensure white text on black background
+        dsc->label_dsc->color = lv_color_hex(0xFFFFFF);
+        dsc->rect_dsc->bg_color = lv_color_hex(0x000000);
+
+        // Right alignment for specific columns
+        if (col == 2 || col == 3) {
             dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
+        }
+        if (active_view == VIEW_EVENT_DETAIL && col == 1) {
+            dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
+        }
+
+        // Header styling
+        if (row == 0) {
+            dsc->rect_dsc->bg_color = lv_color_hex(0x222222);
         }
     }
 }
@@ -215,6 +231,7 @@ void ui_init() {
     lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_col_cnt(timing_table, 4);
     lv_table_set_col_width(timing_table, 0, 35); // P
     lv_table_set_col_width(timing_table, 1, 115); // Driver
@@ -308,6 +325,7 @@ void ui_init() {
     lv_table_set_col_width(calendar_table, 0, 210);
     lv_table_set_col_width(calendar_table, 1, 110);
     lv_obj_add_event_cb(calendar_table, calendar_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(calendar_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(calendar_table, 0, 0, "RACE");
     lv_table_set_cell_value(calendar_table, 0, 1, "DATE");
 
@@ -409,7 +427,7 @@ void ui_set_view(View view) {
 }
 
 void ui_update_status(const JsonObject& data) {
-    if (data["live"]) {
+    if (data["live"].as<bool>()) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
 
@@ -458,7 +476,6 @@ void ui_update_status(const JsonObject& data) {
                 else if (pos > p_pos) snprintf(driver_name + n_pos, sizeof(driver_name) - n_pos, " #FF0000 v#");
             }
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
-            lv_table_set_cell_ctrl(timing_table, row, 1, LV_TABLE_CELL_CTRL_TEXT_RECOLOR);
 
             lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
             lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
