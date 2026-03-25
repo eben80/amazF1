@@ -76,8 +76,11 @@ static void table_draw_cb(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
     lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
     if(dsc->part == LV_PART_ITEMS) {
+        uint32_t col_cnt = lv_table_get_col_cnt(obj);
+        uint32_t col = dsc->id % col_cnt;
+
         // Column 2 is PTS in results/standings/constructors
-        if(dsc->col == 2) {
+        if(col == 2) {
             dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
         }
     }
