@@ -615,8 +615,8 @@ void ui_update_status(const JsonObject& data) {
             // Handle drop zones in Qualifying
             char pos_buf[16];
             if (is_quali) {
-                // Typical F1 Quali: Q1 (drops at 15), Q2 (drops at 10)
-                if ((part == 1 && pos > 15) || (part == 2 && pos > 10)) {
+                // 2026 F1 Quali: 22 cars, Q1 (drops 6 at P17-22), Q2 (drops 6 at P11-16)
+                if ((part == 1 && pos > 16) || (part == 2 && pos > 10)) {
                     snprintf(pos_buf, sizeof(pos_buf), "#FF0000 %d#", pos);
                 } else {
                     snprintf(pos_buf, sizeof(pos_buf), "%d", pos);

@@ -359,18 +359,19 @@ async def get_mock_status():
     elif 50 <= step < 80: status = "Safety Car"
     elif 110 <= step: status = "Red Flag"
 
-    # Define drivers and their base properties
+    # Define 2026 grid: 11 teams (including Cadillac), 22 drivers
     drivers = [
         ("VER", "Red Bull", "3671C6"), ("NOR", "McLaren", "FF8000"),
         ("HAM", "Ferrari", "E80020"), ("RUS", "Mercedes", "27F4D2"),
         ("LEC", "Ferrari", "E80020"), ("PIA", "McLaren", "FF8000"),
         ("ALO", "Aston Martin", "229971"), ("GAS", "Alpine", "0093CC"),
         ("HUL", "Haas", "B6BABD"), ("ALB", "Williams", "64C4FF"),
-        ("PER", "Red Bull", "3671C6"), ("TSU", "RB", "6692FF"),
+        ("PER", "Red Bull", "3671C6"), ("TSU", "Racing Bulls", "6692FF"),
         ("SAI", "Williams", "64C4FF"), ("STR", "Aston Martin", "229971"),
         ("BEA", "Haas", "B6BABD"), ("MAG", "Haas", "B6BABD"),
-        ("BOT", "Audi", "52E252"), ("ZHO", "Audi", "52E252"),
-        ("OCO", "Haas", "B6BABD"), ("LAW", "RB", "6692FF")
+        ("BOT", "Kick Sauber", "52E252"), ("ZHO", "Kick Sauber", "52E252"),
+        ("OCO", "Cadillac", "FFFFFF"), ("LAW", "Racing Bulls", "6692FF"),
+        ("ANT", "Mercedes", "27F4D2"), ("DAR", "Cadillac", "FFFFFF")
     ]
 
     # Deterministic "random" shuffle based on time bucket
@@ -397,6 +398,10 @@ async def get_mock_status():
         interval = "" if pos == 0 else f"+{0.05 + rng.random()/10:.3f}"
         comp = "soft" if is_quali else ["soft", "medium", "hard"][rng.randint(0, 2)]
 
+        # 2026 Quali elimination logic (6 cars in Q1 and Q2)
+        q2_time = "1:19.854" if pos < 16 else ""
+        q3_time = "1:19.234" if pos < 10 else ""
+
         mock_timing.append({
             "num": str(idx+1),
             "name": name,
@@ -408,8 +413,8 @@ async def get_mock_status():
             "last": "1:21.000",
             "best": "1:20.543" if pos < 5 else "1:21.123",
             "q1": "1:20.123",
-            "q2": "1:19.854" if pos < 15 else "",
-            "q3": "1:19.234" if pos < 10 else "",
+            "q2": q2_time,
+            "q3": q3_time,
             "comp": comp,
             "col": color
         })
