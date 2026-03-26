@@ -8,7 +8,7 @@ static lv_obj_t * header;
 static lv_obj_t * header_logo;
 static lv_obj_t * info_label;
 static lv_obj_t * track_label;
-static lv_obj_t * weather_label;
+static lv_obj_t * message_label;
 
 static View active_view = VIEW_MAIN;
 static bool sim_mode = false;
@@ -195,11 +195,13 @@ void ui_init() {
     lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(track_label, LV_ALIGN_TOP_RIGHT, 0, 0);
 
-    weather_label = lv_label_create(header);
-    lv_label_set_text(weather_label, "AIR: - / TRACK: -");
-    lv_obj_set_style_text_font(weather_label, &f1font_12, 0);
-    lv_obj_set_style_text_color(weather_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 60, 20);
+    message_label = lv_label_create(header);
+    lv_label_set_text(message_label, "");
+    lv_obj_set_style_text_font(message_label, &f1font_12, 0);
+    lv_obj_set_style_text_color(message_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(message_label, LV_ALIGN_TOP_LEFT, 60, 20);
+    lv_obj_set_width(message_label, 250);
+    lv_label_set_long_mode(message_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     // Initialize View Containers
     for (int i = 0; i < 8; i++) {
@@ -477,7 +479,7 @@ void ui_set_view(View view) {
     // Reset header for non-main views if needed
     if (view != VIEW_MAIN) {
         lv_label_set_text(track_label, "");
-        lv_label_set_text(weather_label, "");
+        lv_label_set_text(message_label, "");
         switch(view) {
             case VIEW_SETTINGS: lv_label_set_text(info_label, "Settings"); break;
             case VIEW_RESULTS: lv_label_set_text(info_label, "LAST RESULTS"); break;
@@ -508,11 +510,8 @@ void ui_update_status(const JsonObject& data) {
         else if (strstr(track_status, "Safety")) lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFAA00), 0);
         else lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
 
-        const char* air_temp = (const char*)(data["weather"]["air"] | "-");
-        const char* track_temp = (const char*)(data["weather"]["track"] | "-");
-        char weather_buf[64];
-        snprintf(weather_buf, sizeof(weather_buf), "AIR: %sC / TRACK: %sC", air_temp, track_temp);
-        lv_label_set_text(weather_label, weather_buf);
+        const char* msg = (const char*)(data["message"] | "");
+        lv_label_set_text(message_label, msg);
 
         JsonArray timing = data["timing"];
         lv_table_set_row_cnt(timing_table, timing.size() + 1);
@@ -576,7 +575,7 @@ void ui_update_status(const JsonObject& data) {
             lv_label_set_text(info_label, "OFF SESSION");
         }
         lv_label_set_text(track_label, "-");
-        lv_label_set_text(weather_label, "");
+        lv_label_set_text(message_label, "");
 
         // Update Next Race Summary
         JsonObject upcoming = data["upcoming"];

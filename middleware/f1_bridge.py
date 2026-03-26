@@ -10,7 +10,10 @@ import time
 from datetime import datetime
 from loguru import logger
 from fastapi import FastAPI
-from fastf1_livetiming.signalr.connection import Connection
+try:
+    from fastf1_livetiming.signalr.connection import Connection
+except ImportError:
+    Connection = None
 import uvicorn
 import requests
 
@@ -86,6 +89,7 @@ class F1State:
         self.is_live = False
         self.upcoming_race = {}
         self.previous_race = {}
+        self.race_control_message = ""
 
 state = F1State()
 
@@ -210,7 +214,7 @@ async def on_feed(args):
     try:
         topic = None
         for arg in args:
-            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "Heartbeat"]:
+            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
                 topic = arg
                 continue
 
@@ -266,6 +270,16 @@ async def on_feed(args):
                 elif topic == "TrackStatus":
                     status_code = decoded.get("Status", "1")
                     state.track_status = TRACK_STATUS_MAP.get(status_code, "Normal/Clear")
+                elif topic == "RaceControlMessages":
+                    messages = decoded.get("Messages", {})
+                    if messages:
+                        # Get the latest message (highest key if they are numeric strings)
+                        try:
+                            latest_idx = max(messages.keys(), key=lambda x: int(x))
+                            state.race_control_message = messages[latest_idx].get("Message", "")
+                        except Exception:
+                            # Fallback if keys are not integers
+                            state.race_control_message = list(messages.values())[-1].get("Message", "")
     except Exception as e:
         logger.error(f"Error in on_feed: {e}")
 
@@ -306,6 +320,7 @@ async def get_status():
         "live": effective_live,
         "session": state.session_info,
         "weather": state.weather_data,
+        "message": state.race_control_message,
         "track": track_display,
         "laps": state.lap_count,
         "timing": sorted_timing,
@@ -370,6 +385,7 @@ async def get_mock_status():
         "live": True,
         "session": {"name": "Simulation", "type": "Race", "circuit": "Dynamic Test Circuit"},
         "weather": {"air": str(20 + bucket % 5), "track": str(30 + bucket % 10), "hum": "50", "rain": step > 90},
+        "message": "DRS ENABLED" if step < 60 else "YELLOW FLAG IN SECTOR 2",
         "track": status,
         "laps": {"current": 1 + bucket, "total": 50},
         "timing": mock_timing,
@@ -522,7 +538,7 @@ async def signalr_worker():
             conn = Connection(SIGNALR_URL, session=session)
             hub = conn.register_hub("Streaming")
             async def on_connect():
-                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "Heartbeat"]
+                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]
                 hub.server.invoke("Subscribe", topics)
                 logger.info("Subscribed to F1 topics")
             conn.connected += on_connect
