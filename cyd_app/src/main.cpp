@@ -60,6 +60,21 @@ static lv_fs_res_t fs_tell(lv_fs_drv_t * drv, void * file_p, uint32_t * pos_p) {
 // Hardware Interface
 TFT_eSPI tft = TFT_eSPI();
 
+// RGB LED (Common Anode, set LOW to turn ON, HIGH to turn OFF)
+#define LED_R 4
+#define LED_G 16
+#define LED_B 17
+
+enum LEDStatus {
+    LED_OFF,
+    LED_SOLID_GREEN,
+    LED_FLASH_YELLOW,
+    LED_FLASH_RED,
+    LED_FLASH_ORANGE
+};
+static LEDStatus current_led_status = LED_OFF;
+static unsigned long green_start = 0;
+
 #if defined(CYD_XPT2046) || defined(CYD_V2_V3_XPT2046)
 #include <XPT2046_Touchscreen.h>
 #include <SPI.h>
@@ -142,6 +157,26 @@ void handle_rotation(bool portrait) {
     Serial.println(portrait ? "PORTRAIT" : "LANDSCAPE");
 }
 
+void set_led(bool r, bool g, bool b) {
+    digitalWrite(LED_R, !r);
+    digitalWrite(LED_G, !g);
+    digitalWrite(LED_B, !b);
+}
+
+void update_led_status(const char* status) {
+    if (strstr(status, "Red")) current_led_status = LED_FLASH_RED;
+    else if (strstr(status, "Yellow")) current_led_status = LED_FLASH_YELLOW;
+    else if (strstr(status, "Safety") || strstr(status, "VSC")) current_led_status = LED_FLASH_ORANGE;
+    else if (strstr(status, "Clear") || strstr(status, "Normal")) {
+        if (current_led_status != LED_SOLID_GREEN) {
+            current_led_status = LED_SOLID_GREEN;
+            green_start = millis();
+        }
+    } else {
+        current_led_status = LED_OFF;
+    }
+}
+
 // Data Fetching
 void fetch_data() {
     View view = ui_get_view();
@@ -170,14 +205,21 @@ void fetch_data() {
             DeserializationError error = deserializeJson(doc, payload);
 
             if (!error) {
+                JsonObject data = doc.as<JsonObject>();
+                if (data["live"].as<bool>()) {
+                    update_led_status(data["track"] | "");
+                } else {
+                    current_led_status = LED_OFF;
+                }
+
                 switch(view) {
-                    case VIEW_RESULTS: ui_update_results(doc.as<JsonObject>()); break;
-                    case VIEW_STANDINGS: ui_update_standings(doc.as<JsonObject>()); break;
-                    case VIEW_CONSTRUCTORS: ui_update_constructors(doc.as<JsonObject>()); break;
-                    case VIEW_CALENDAR: ui_update_calendar(doc.as<JsonObject>()); break;
-                    case VIEW_NEXT_RACE: ui_update_next_race(doc.as<JsonObject>()); break;
+                    case VIEW_RESULTS: ui_update_results(data); break;
+                    case VIEW_STANDINGS: ui_update_standings(data); break;
+                    case VIEW_CONSTRUCTORS: ui_update_constructors(data); break;
+                    case VIEW_CALENDAR: ui_update_calendar(data); break;
+                    case VIEW_NEXT_RACE: ui_update_next_race(data); break;
                     case VIEW_MAIN:
-                    default: ui_update_status(doc.as<JsonObject>()); break;
+                    default: ui_update_status(data); break;
                 }
             } else {
                 ui_show_message("JSON ERROR");
@@ -232,10 +274,11 @@ void setup() {
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);
 
-    // Turn off onboard RGB LED (Common Anode, set HIGH to turn OFF)
-    pinMode(4, OUTPUT); digitalWrite(4, HIGH);  // Red
-    pinMode(16, OUTPUT); digitalWrite(16, HIGH); // Green
-    pinMode(17, OUTPUT); digitalWrite(17, HIGH); // Blue
+    // Initialize RGB LED pins
+    pinMode(LED_R, OUTPUT);
+    pinMode(LED_G, OUTPUT);
+    pinMode(LED_B, OUTPUT);
+    set_led(false, false, false); // Turn off
 
     WiFiManager wm;
     if (!wm.autoConnect("F1-Timing-Display")) ESP.restart();
@@ -309,9 +352,44 @@ void setup() {
 }
 
 unsigned long last_poll = 0;
+static unsigned long last_flash = 0;
+static bool flash_state = false;
 
 void loop() {
     lv_timer_handler();
+
+    // LED Flashing Logic (Non-blocking)
+    if (millis() - last_flash > 500) {
+        flash_state = !flash_state;
+        last_flash = millis();
+
+        switch (current_led_status) {
+            case LED_FLASH_RED:
+                set_led(flash_state, false, false);
+                break;
+            case LED_FLASH_YELLOW:
+                set_led(flash_state, flash_state, false);
+                break;
+            case LED_FLASH_ORANGE:
+                // For better orange on digital pins, we try Red + intermittent Green
+                // But with discrete set_led, let's just do Red + Green (Yellow)
+                // If we want a different pulse for Orange, we could change the freq.
+                set_led(flash_state, flash_state, false);
+                break;
+            case LED_SOLID_GREEN:
+                if (millis() - green_start < 10000) {
+                    set_led(false, true, false);
+                } else {
+                    current_led_status = LED_OFF;
+                }
+                break;
+            case LED_OFF:
+            default:
+                set_led(false, false, false);
+                break;
+        }
+    }
+
     if (ui_get_view() == VIEW_MAIN && (millis() - last_poll > POLL_INTERVAL)) {
         fetch_data();
         last_poll = millis();
