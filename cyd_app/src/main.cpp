@@ -105,8 +105,9 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
             data->point.y = map(p.y, 240, 3800, 0, 240);
         } else {
             // Rotation 0 (Portrait)
+            // If top-right is being detected at the bottom, we need to invert Y mapping.
             data->point.x = map(p.y, 240, 3800, 0, 240);
-            data->point.y = map(p.x, 3700, 200, 0, 320);
+            data->point.y = map(p.x, 200, 3700, 0, 320);
         }
     } else {
         data->state = LV_INDEV_STATE_REL;
