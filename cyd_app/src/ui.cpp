@@ -178,6 +178,8 @@ void ui_init() {
     lv_obj_set_style_bg_color(header, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(header, 0, 0);
     lv_obj_set_scrollbar_mode(header, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(header, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
     header_logo = lv_img_create(header);
     lv_img_set_src(header_logo, &f1_logo_small);
