@@ -74,6 +74,7 @@ enum LEDStatus {
 };
 static LEDStatus current_led_status = LED_OFF;
 static unsigned long green_start = 0;
+static String last_known_track_status = "";
 
 #if defined(CYD_XPT2046) || defined(CYD_V2_V3_XPT2046)
 #include <XPT2046_Touchscreen.h>
@@ -157,24 +158,38 @@ void handle_rotation(bool portrait) {
     Serial.println(portrait ? "PORTRAIT" : "LANDSCAPE");
 }
 
-void set_led(bool r, bool g, bool b) {
-    digitalWrite(LED_R, !r);
-    digitalWrite(LED_G, !g);
-    digitalWrite(LED_B, !b);
+void set_led_pwm(uint8_t r, uint8_t g, uint8_t b) {
+    // Common Anode: 255 is OFF, 0 is FULL ON
+    analogWrite(LED_R, 255 - r);
+    analogWrite(LED_G, 255 - g);
+    analogWrite(LED_B, 255 - b);
 }
 
 void update_led_status(const char* status) {
-    if (strstr(status, "Red")) current_led_status = LED_FLASH_RED;
-    else if (strstr(status, "Yellow")) current_led_status = LED_FLASH_YELLOW;
-    else if (strstr(status, "Safety") || strstr(status, "VSC")) current_led_status = LED_FLASH_ORANGE;
-    else if (strstr(status, "Clear") || strstr(status, "Normal")) {
-        if (current_led_status != LED_SOLID_GREEN) {
+    String current_status = String(status);
+
+    if (current_status.indexOf("Red") >= 0) {
+        current_led_status = LED_FLASH_RED;
+    } else if (current_status.indexOf("Yellow") >= 0) {
+        current_led_status = LED_FLASH_YELLOW;
+    } else if (current_status.indexOf("Safety") >= 0 || current_status.indexOf("VSC") >= 0) {
+        current_led_status = LED_FLASH_ORANGE;
+    } else if (current_status.indexOf("Clear") >= 0 || current_status.indexOf("Normal") >= 0) {
+        // Only trigger green if we transitioned from something else
+        if (last_known_track_status.length() > 0 &&
+            last_known_track_status.indexOf("Clear") < 0 &&
+            last_known_track_status.indexOf("Normal") < 0) {
             current_led_status = LED_SOLID_GREEN;
             green_start = millis();
+            Serial.println("Track CLEAR: Green LED for 5s");
+        } else if (current_led_status != LED_SOLID_GREEN) {
+            current_led_status = LED_OFF;
         }
     } else {
         current_led_status = LED_OFF;
     }
+
+    last_known_track_status = current_status;
 }
 
 // Data Fetching
@@ -278,7 +293,7 @@ void setup() {
     pinMode(LED_R, OUTPUT);
     pinMode(LED_G, OUTPUT);
     pinMode(LED_B, OUTPUT);
-    set_led(false, false, false); // Turn off
+    set_led_pwm(0, 0, 0); // Turn off
 
     WiFiManager wm;
     if (!wm.autoConnect("F1-Timing-Display")) ESP.restart();
@@ -365,27 +380,30 @@ void loop() {
 
         switch (current_led_status) {
             case LED_FLASH_RED:
-                set_led(flash_state, false, false);
+                if (flash_state) set_led_pwm(255, 0, 0);
+                else set_led_pwm(0, 0, 0);
                 break;
             case LED_FLASH_YELLOW:
-                set_led(flash_state, flash_state, false);
+                // Reduce green to 120 to fix "green tinge"
+                if (flash_state) set_led_pwm(255, 120, 0);
+                else set_led_pwm(0, 0, 0);
                 break;
             case LED_FLASH_ORANGE:
-                // For better orange on digital pins, we try Red + intermittent Green
-                // But with discrete set_led, let's just do Red + Green (Yellow)
-                // If we want a different pulse for Orange, we could change the freq.
-                set_led(flash_state, flash_state, false);
+                // Orange is Red + low Green (40)
+                if (flash_state) set_led_pwm(255, 40, 0);
+                else set_led_pwm(0, 0, 0);
                 break;
             case LED_SOLID_GREEN:
-                if (millis() - green_start < 10000) {
-                    set_led(false, true, false);
+                if (millis() - green_start < 5000) {
+                    set_led_pwm(0, 255, 0);
                 } else {
                     current_led_status = LED_OFF;
+                    set_led_pwm(0, 0, 0);
                 }
                 break;
             case LED_OFF:
             default:
-                set_led(false, false, false);
+                set_led_pwm(0, 0, 0);
                 break;
         }
     }
