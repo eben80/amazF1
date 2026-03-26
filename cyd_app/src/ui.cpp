@@ -261,12 +261,12 @@ void ui_init() {
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_HIDDEN);
 
     timing_table = lv_table_create(main_cont);
-    lv_obj_set_style_text_font(timing_table, &lv_font_montserrat_8, 0);
+    lv_obj_set_style_text_font(timing_table, &f1font_8, 0);
     lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_pad_left(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_style_pad_right(timing_table, 2, LV_PART_ITEMS);
-    lv_obj_set_style_pad_top(timing_table, 2, LV_PART_ITEMS);
-    lv_obj_set_style_pad_bottom(timing_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_top(timing_table, 0, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(timing_table, 0, LV_PART_ITEMS);
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
