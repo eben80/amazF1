@@ -202,12 +202,16 @@ void ui_init() {
     lv_obj_set_style_text_font(info_label, &f1font_12, 0);
     lv_obj_set_style_text_color(info_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 60, 0);
+    lv_obj_set_width(info_label, 150);
+    lv_label_set_long_mode(info_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     track_label = lv_label_create(header);
     lv_label_set_text(track_label, "-");
     lv_obj_set_style_text_font(track_label, &f1font_12, 0);
     lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(track_label, LV_ALIGN_TOP_RIGHT, 0, 0);
+    lv_obj_set_width(track_label, 100);
+    lv_obj_set_style_text_align(track_label, LV_TEXT_ALIGN_RIGHT, 0);
 
     message_label = lv_label_create(header);
     lv_label_set_text(message_label, "");
@@ -522,6 +526,7 @@ void ui_set_view(View view) {
     // Update Global Header
     lv_obj_set_size(header, w, 50);
     lv_obj_set_width(message_label, w - 70);
+    lv_obj_set_width(info_label, w - 160); // logo(60) + info + track(100) = w
 
     for (int i = 0; i < 8; i++) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);

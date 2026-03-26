@@ -273,13 +273,16 @@ async def on_feed(args):
                 elif topic == "RaceControlMessages":
                     messages = decoded.get("Messages", {})
                     if messages:
-                        # Get the latest message (highest key if they are numeric strings)
-                        try:
-                            latest_idx = max(messages.keys(), key=lambda x: int(x))
-                            state.race_control_message = messages[latest_idx].get("Message", "")
-                        except Exception:
-                            # Fallback if keys are not integers
-                            state.race_control_message = list(messages.values())[-1].get("Message", "")
+                        if isinstance(messages, dict):
+                            # Get the latest message (highest key if they are numeric strings)
+                            try:
+                                latest_idx = max(messages.keys(), key=lambda x: int(x))
+                                state.race_control_message = messages[latest_idx].get("Message", "")
+                            except Exception:
+                                # Fallback if keys are not integers
+                                state.race_control_message = list(messages.values())[-1].get("Message", "")
+                        elif isinstance(messages, list):
+                            state.race_control_message = messages[-1].get("Message", "")
     except Exception as e:
         logger.error(f"Error in on_feed: {e}")
 
@@ -356,6 +359,14 @@ async def get_mock_status():
 
     # Deterministic "random" shuffle based on time bucket
     bucket = step // 10
+
+    # Simulate different session types
+    session_types = [
+        ("FP1", "Practice"), ("FP2", "Practice"), ("FP3", "Practice"),
+        ("Qualifying", "Qualifying"), ("Sprint Quali", "Qualifying"),
+        ("Sprint", "Race"), ("Race", "Race")
+    ]
+    s_name, s_type = session_types[(t // 30) % len(session_types)]
     import random
     rng = random.Random(bucket)
     indices = list(range(len(drivers)))
@@ -383,7 +394,7 @@ async def get_mock_status():
 
     return {
         "live": True,
-        "session": {"name": "Simulation", "type": "Race", "circuit": "Dynamic Test Circuit"},
+        "session": {"name": s_name, "type": s_type, "circuit": "Dynamic Test Circuit"},
         "weather": {"air": str(20 + bucket % 5), "track": str(30 + bucket % 10), "hum": "50", "rain": step > 90},
         "message": "DRS ENABLED" if step < 60 else "YELLOW FLAG IN SECTOR 2",
         "track": status,
