@@ -250,23 +250,23 @@ void ui_init() {
     lv_obj_align(bright_slider, LV_ALIGN_TOP_MID, 0, 135);
     lv_obj_add_event_cb(bright_slider, brightness_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    lv_obj_t * info = lv_label_create(settings_cont);
-    lv_label_set_text(info, "Changes take effect\nimmediately on next fetch.");
-    lv_obj_set_style_text_color(info, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(info, LV_ALIGN_BOTTOM_MID, 0, -20);
+    // lv_obj_t * info = lv_label_create(settings_cont);
+    // lv_label_set_text(info, "Changes take effect\nimmediately on next fetch.");
+    // lv_obj_set_style_text_color(info, lv_color_hex(0xFFFFFF), 0);
+    // lv_obj_set_style_text_align(info, LV_TEXT_ALIGN_CENTER, 0);
+    // lv_obj_align(info, LV_ALIGN_BOTTOM_MID, 0, -20);
 
     // --- VIEW_MAIN setup ---
     lv_obj_t * main_cont = view_containers[VIEW_MAIN];
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_HIDDEN);
 
     timing_table = lv_table_create(main_cont);
-    lv_obj_set_style_text_font(timing_table, &f1font_8, 0);
+    lv_obj_set_style_text_font(timing_table, &lv_font_montserrat_8, 0);
     lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_pad_left(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_style_pad_right(timing_table, 2, LV_PART_ITEMS);
-    lv_obj_set_style_pad_top(timing_table, 0, LV_PART_ITEMS);
-    lv_obj_set_style_pad_bottom(timing_table, 0, LV_PART_ITEMS);
+    lv_obj_set_style_pad_top(timing_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
@@ -309,10 +309,12 @@ void ui_init() {
     results_table = lv_table_create(view_containers[VIEW_RESULTS]);
     lv_obj_set_style_text_font(results_table, &f1font_12, 0);
     lv_obj_set_style_text_color(results_table, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_pad_top(results_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(results_table, 2, LV_PART_ITEMS);
     lv_obj_set_size(results_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(results_table, 3);
-    lv_table_set_col_width(results_table, 0, 40);
-    lv_table_set_col_width(results_table, 1, 220);
+    lv_table_set_col_width(results_table, 0, 45);
+    lv_table_set_col_width(results_table, 1, 215);
     lv_table_set_col_width(results_table, 2, 60);
     lv_obj_add_event_cb(results_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(results_table, 0, 0, "P");
@@ -330,10 +332,12 @@ void ui_init() {
     standings_table = lv_table_create(view_containers[VIEW_STANDINGS]);
     lv_obj_set_style_text_font(standings_table, &f1font_12, 0);
     lv_obj_set_style_text_color(standings_table, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_pad_top(standings_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(standings_table, 2, LV_PART_ITEMS);
     lv_obj_set_size(standings_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(standings_table, 3);
-    lv_table_set_col_width(standings_table, 0, 40);
-    lv_table_set_col_width(standings_table, 1, 220);
+    lv_table_set_col_width(standings_table, 0, 45);
+    lv_table_set_col_width(standings_table, 1, 215);
     lv_table_set_col_width(standings_table, 2, 60);
     lv_obj_add_event_cb(standings_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(standings_table, 0, 0, "P");
@@ -344,10 +348,12 @@ void ui_init() {
     constructors_table = lv_table_create(view_containers[VIEW_CONSTRUCTORS]);
     lv_obj_set_style_text_font(constructors_table, &f1font_12, 0);
     lv_obj_set_style_text_color(constructors_table, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_pad_top(constructors_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(constructors_table, 2, LV_PART_ITEMS);
     lv_obj_set_size(constructors_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(constructors_table, 3);
-    lv_table_set_col_width(constructors_table, 0, 40);
-    lv_table_set_col_width(constructors_table, 1, 220);
+    lv_table_set_col_width(constructors_table, 0, 45);
+    lv_table_set_col_width(constructors_table, 1, 215);
     lv_table_set_col_width(constructors_table, 2, 60);
     lv_obj_add_event_cb(constructors_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_table_set_cell_value(constructors_table, 0, 0, "P");
@@ -358,6 +364,8 @@ void ui_init() {
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
     lv_obj_set_style_text_font(calendar_table, &f1font_12, 0);
     lv_obj_set_style_text_color(calendar_table, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_pad_top(calendar_table, 5, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(calendar_table, 5, LV_PART_ITEMS);
     lv_obj_set_size(calendar_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 225);
@@ -380,6 +388,8 @@ void ui_init() {
     event_detail_table = lv_table_create(view_containers[VIEW_EVENT_DETAIL]);
     lv_obj_set_style_text_font(event_detail_table, &f1font_12, 0);
     lv_obj_set_style_text_color(event_detail_table, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_pad_top(event_detail_table, 7, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(event_detail_table, 7, LV_PART_ITEMS);
     lv_obj_set_size(event_detail_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(event_detail_table, LV_ALIGN_TOP_MID, 0, 40);
     lv_table_set_col_cnt(event_detail_table, 2);
