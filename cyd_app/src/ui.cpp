@@ -591,6 +591,18 @@ void ui_update_status(const JsonObject& data) {
         const char* msg = (const char*)(data["message"] | "");
         lv_label_set_text(message_label, msg);
 
+        const char* session_name = (const char*)(data["session"]["name"] | "");
+        bool is_quali = (strstr(session_name, "Quali") != NULL);
+        int part = data["session"]["part"] | 0;
+
+        if (is_quali) {
+            lv_table_set_cell_value(timing_table, 0, 2, "BEST");
+            lv_table_set_cell_value(timing_table, 0, 3, "GAP");
+        } else {
+            lv_table_set_cell_value(timing_table, 0, 2, "GAP");
+            lv_table_set_cell_value(timing_table, 0, 3, "INT");
+        }
+
         JsonArray timing = data["timing"];
         lv_table_set_row_cnt(timing_table, timing.size() + 1);
 
@@ -599,7 +611,20 @@ void ui_update_status(const JsonObject& data) {
             const char* name = (const char*)(entry["name"] | "");
             if (!name) name = "";
             int pos = atoi((const char*)(entry["pos"] | "99"));
-            lv_table_set_cell_value(timing_table, row, 0, (const char*)(entry["pos"] | "-"));
+
+            // Handle drop zones in Qualifying
+            char pos_buf[16];
+            if (is_quali) {
+                // Typical F1 Quali: Q1 (drops at 15), Q2 (drops at 10)
+                if ((part == 1 && pos > 15) || (part == 2 && pos > 10)) {
+                    snprintf(pos_buf, sizeof(pos_buf), "#FF0000 %d#", pos);
+                } else {
+                    snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+                }
+            } else {
+                snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+            }
+            lv_table_set_cell_value(timing_table, row, 0, pos_buf);
 
             // Find previous position
             int p_pos = -1;
@@ -626,8 +651,13 @@ void ui_update_status(const JsonObject& data) {
             }
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
-            lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
-            lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
+            if (is_quali) {
+                lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
+                lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
+            } else {
+                lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
+                lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
+            }
             row++;
         }
 

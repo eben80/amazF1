@@ -240,6 +240,17 @@ async def on_feed(args):
                         if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
                         if "IntervalToNext" in line: td["int"] = line["IntervalToNext"]
                         if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
+                        if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
+
+                        # Qualifying segments
+                        stats = line.get("Stats", [])
+                        if stats:
+                            for s in stats:
+                                if "Time" in s:
+                                    if "Q1" in str(s.get("Text", "")): td["q1"] = s["Time"]
+                                    if "Q2" in str(s.get("Text", "")): td["q2"] = s["Time"]
+                                    if "Q3" in str(s.get("Text", "")): td["q3"] = s["Time"]
+
                         stints = line.get("Stints", [])
                         if stints:
                             last_stint = list(stints.values())[-1] if isinstance(stints, dict) else stints[-1]
@@ -260,7 +271,8 @@ async def on_feed(args):
                         "name": decoded.get("SessionName"),
                         "type": decoded.get("Type"),
                         "circuit": decoded.get("CircuitName"),
-                        "status": decoded.get("Status")
+                        "status": decoded.get("Status"),
+                        "part": decoded.get("GmtOffset") # SignalR often uses this or similar for part
                     }
                 elif topic == "LapCount":
                     state.lap_count = {"current": decoded.get("CurrentLap"), "total": decoded.get("TotalLaps")}
@@ -309,6 +321,10 @@ async def get_status():
             "gap": data.get("gap", ""),
             "int": data.get("int", ""),
             "last": data.get("last", ""),
+            "best": data.get("best", ""),
+            "q1": data.get("q1", ""),
+            "q2": data.get("q2", ""),
+            "q3": data.get("q3", ""),
             "comp": data.get("compound", ""),
             "col": dinfo["color"]
         })
@@ -373,11 +389,13 @@ async def get_mock_status():
     rng.shuffle(indices)
 
     mock_timing = []
+    is_quali = "Quali" in s_name
+
     for pos, idx in enumerate(indices):
         name, team, color = drivers[idx]
-        gap = "LEADER" if pos == 0 else f"+{pos*1.2 + bucket/5:.1f}"
-        interval = "" if pos == 0 else f"+{1.2 + rng.random():.1f}"
-        comp = ["soft", "medium", "hard"][rng.randint(0, 2)]
+        gap = "LEADER" if pos == 0 else f"+{pos*0.1 + bucket/50:.3f}"
+        interval = "" if pos == 0 else f"+{0.05 + rng.random()/10:.3f}"
+        comp = "soft" if is_quali else ["soft", "medium", "hard"][rng.randint(0, 2)]
 
         mock_timing.append({
             "num": str(idx+1),
@@ -388,13 +406,17 @@ async def get_mock_status():
             "gap": gap,
             "int": interval,
             "last": "1:21.000",
+            "best": "1:20.543" if pos < 5 else "1:21.123",
+            "q1": "1:20.123",
+            "q2": "1:19.854" if pos < 15 else "",
+            "q3": "1:19.234" if pos < 10 else "",
             "comp": comp,
             "col": color
         })
 
     return {
         "live": True,
-        "session": {"name": s_name, "type": s_type, "circuit": "Dynamic Test Circuit"},
+        "session": {"name": s_name, "type": s_type, "circuit": "Dynamic Test Circuit", "part": 1 + (step // 40)},
         "weather": {"air": str(20 + bucket % 5), "track": str(30 + bucket % 10), "hum": "50", "rain": step > 90},
         "message": "DRS ENABLED" if step < 60 else "YELLOW FLAG IN SECTOR 2",
         "track": status,
