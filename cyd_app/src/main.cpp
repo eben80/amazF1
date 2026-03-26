@@ -96,8 +96,18 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
     if (ts.touched()) {
         TS_Point p = ts.getPoint();
         data->state = LV_INDEV_STATE_PR;
-        data->point.x = map(p.x, 200, 3700, 0, SCREEN_WIDTH);
-        data->point.y = map(p.y, 240, 3800, 0, SCREEN_HEIGHT);
+        // The mapping here depends on the hardware rotation.
+        // TFT_eSPI's rotation handles the screen, but touch needs to be mapped.
+        // Rotation 1 (Landscape): X=200..3700 -> 0..320, Y=240..3800 -> 0..240
+        // Rotation 0 (Portrait): Need to map according to current rotation
+        if (tft.getRotation() == 1) {
+            data->point.x = map(p.x, 200, 3700, 0, 320);
+            data->point.y = map(p.y, 240, 3800, 0, 240);
+        } else {
+            // Rotation 0 (Portrait)
+            data->point.x = map(p.y, 240, 3800, 0, 240);
+            data->point.y = map(p.x, 3700, 200, 0, 320);
+        }
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
@@ -111,6 +121,24 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
         data->state = LV_INDEV_STATE_REL;
     }
 #endif
+}
+
+void handle_rotation(bool portrait) {
+    static bool current_portrait = false;
+    if (portrait == current_portrait) return;
+    current_portrait = portrait;
+
+    tft.setRotation(portrait ? 0 : 1);
+
+    lv_disp_t * disp = lv_disp_get_default();
+    if (disp) {
+        disp->driver->hor_res = portrait ? 240 : 320;
+        disp->driver->ver_res = portrait ? 320 : 240;
+        lv_disp_drv_update(disp, disp->driver);
+    }
+
+    Serial.print("Hardware Rotation Switched: ");
+    Serial.println(portrait ? "PORTRAIT" : "LANDSCAPE");
 }
 
 // Data Fetching
@@ -255,15 +283,18 @@ void setup() {
 
     lv_png_init();
     ui_init();
+    ui_set_rotation_cb(handle_rotation);
 
     // Load settings from preferences
     preferences.begin("f1-app", true);
     String saved_tz = preferences.getString("tz", TZ_INFO);
     bool saved_sim = preferences.getBool("sim", false);
+    bool saved_port = preferences.getBool("port", false);
     uint8_t saved_bright = preferences.getUChar("bright", 255);
     preferences.end();
     ui_set_timezone(saved_tz.c_str());
     ui_set_sim_mode(saved_sim);
+    ui_set_portrait_mode(saved_port);
     ui_set_brightness(saved_bright);
 
     // Time Sync

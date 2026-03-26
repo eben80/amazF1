@@ -12,7 +12,9 @@ static lv_obj_t * message_label;
 
 static View active_view = VIEW_MAIN;
 static bool sim_mode = false;
+static bool portrait_mode = false;
 static uint8_t brightness = 255;
+static RotationCallback rotation_cb = nullptr;
 
 struct DriverPos {
     char name[4];
@@ -65,6 +67,8 @@ static lv_obj_t * last_race_summary_label;
 static lv_obj_t * next_flag_img;
 static lv_obj_t * last_flag_img;
 static lv_obj_t * winner_flag_img;
+static lv_obj_t * sim_cb;
+static lv_obj_t * port_cb;
 
 // Other View Objects
 static lv_obj_t * results_table;
@@ -91,6 +95,14 @@ static void sim_event_handler(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
     if(code == LV_EVENT_VALUE_CHANGED) {
         ui_set_sim_mode(lv_obj_has_state(obj, LV_STATE_CHECKED));
+    }
+}
+
+static void portrait_event_handler(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    if(code == LV_EVENT_VALUE_CHANGED) {
+        ui_set_portrait_mode(lv_obj_has_state(obj, LV_STATE_CHECKED));
     }
 }
 
@@ -236,11 +248,17 @@ void ui_init() {
     lv_obj_align(tz_dd, LV_ALIGN_TOP_MID, 0, 40);
     lv_obj_add_event_cb(tz_dd, tz_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    lv_obj_t * sim_cb = lv_checkbox_create(settings_cont);
+    sim_cb = lv_checkbox_create(settings_cont);
     lv_checkbox_set_text(sim_cb, "Simulation Mode");
     lv_obj_set_style_text_color(sim_cb, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(sim_cb, LV_ALIGN_TOP_MID, 0, 85);
+    lv_obj_align(sim_cb, LV_ALIGN_TOP_MID, -60, 85);
     lv_obj_add_event_cb(sim_cb, sim_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
+    port_cb = lv_checkbox_create(settings_cont);
+    lv_checkbox_set_text(port_cb, "Portrait");
+    lv_obj_set_style_text_color(port_cb, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(port_cb, LV_ALIGN_TOP_MID, 70, 85);
+    lv_obj_add_event_cb(port_cb, portrait_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_t * bright_label = lv_label_create(settings_cont);
     lv_label_set_text(bright_label, "Brightness:");
@@ -413,17 +431,39 @@ void ui_set_sim_mode(bool enabled) {
     Serial.println(enabled ? "ENABLED" : "DISABLED");
 
     // Sync checkbox if it exists
-    if (view_containers[VIEW_SETTINGS]) {
-        lv_obj_t * cb = lv_obj_get_child(view_containers[VIEW_SETTINGS], 2);
-        if (cb && lv_obj_check_type(cb, &lv_checkbox_class)) {
-            if (enabled) lv_obj_add_state(cb, LV_STATE_CHECKED);
-            else lv_obj_clear_state(cb, LV_STATE_CHECKED);
-        }
+    if (sim_cb) {
+        if (enabled) lv_obj_add_state(sim_cb, LV_STATE_CHECKED);
+        else lv_obj_clear_state(sim_cb, LV_STATE_CHECKED);
     }
 }
 
 bool ui_get_sim_mode() {
     return sim_mode;
+}
+
+void ui_set_portrait_mode(bool enabled) {
+    portrait_mode = enabled;
+    Preferences prefs;
+    prefs.begin("f1-app", false);
+    prefs.putBool("port", enabled);
+    prefs.end();
+    Serial.print("Portrait mode: ");
+    Serial.println(enabled ? "ENABLED" : "DISABLED");
+
+    // Sync checkbox if it exists
+    if (port_cb) {
+        if (enabled) lv_obj_add_state(port_cb, LV_STATE_CHECKED);
+        else lv_obj_clear_state(port_cb, LV_STATE_CHECKED);
+    }
+
+    // Force layout update if in main view
+    if (active_view == VIEW_MAIN) {
+        ui_set_view(VIEW_MAIN);
+    }
+}
+
+bool ui_get_portrait_mode() {
+    return portrait_mode;
 }
 
 void ui_set_brightness(uint8_t val) {
@@ -473,10 +513,41 @@ View ui_get_view() {
 
 void ui_set_view(View view) {
     active_view = view;
+
+    bool is_portrait = (view == VIEW_MAIN && portrait_mode);
+    if (rotation_cb) rotation_cb(is_portrait);
+    uint16_t w = is_portrait ? 240 : 320;
+    uint16_t h = is_portrait ? 320 : 240;
+
+    // Update Global Header
+    lv_obj_set_size(header, w, 50);
+    lv_obj_set_width(message_label, w - 70);
+
     for (int i = 0; i < 8; i++) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_size(view_containers[i], w, h - 50);
     }
     lv_obj_clear_flag(view_containers[view], LV_OBJ_FLAG_HIDDEN);
+
+    // Update Main View Widgets for rotation
+    if (view == VIEW_MAIN) {
+        lv_obj_set_width(timing_table, w);
+        lv_obj_set_width(idle_container, w);
+        lv_obj_set_width(next_race_summary_label, w - 50);
+        lv_obj_set_width(last_race_summary_label, w - 50);
+
+        if (is_portrait) {
+            lv_table_set_col_width(timing_table, 0, 40);
+            lv_table_set_col_width(timing_table, 1, 60);
+            lv_table_set_col_width(timing_table, 2, 70);
+            lv_table_set_col_width(timing_table, 3, 70);
+        } else {
+            lv_table_set_col_width(timing_table, 0, 45);
+            lv_table_set_col_width(timing_table, 1, 100);
+            lv_table_set_col_width(timing_table, 2, 85);
+            lv_table_set_col_width(timing_table, 3, 90);
+        }
+    }
 
     // Reset header for non-main views if needed
     if (view != VIEW_MAIN) {
@@ -762,6 +833,10 @@ void ui_update_event_detail(const JsonObject& data) {
 
 void ui_show_message(const char* msg) {
     lv_label_set_text(info_label, msg);
+}
+
+void ui_set_rotation_cb(RotationCallback cb) {
+    rotation_cb = cb;
 }
 
 void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size) {

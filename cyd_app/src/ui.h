@@ -21,6 +21,8 @@ View ui_get_view();
 void ui_set_timezone(const char* tz);
 void ui_set_sim_mode(bool enabled);
 bool ui_get_sim_mode();
+void ui_set_portrait_mode(bool enabled);
+bool ui_get_portrait_mode();
 void ui_set_brightness(uint8_t val);
 uint8_t ui_get_brightness();
 void ui_update_status(const JsonObject& data);
@@ -31,6 +33,9 @@ void ui_update_constructors(const JsonObject& data);
 void ui_update_calendar(const JsonObject& data);
 void ui_update_event_detail(const JsonObject& data);
 void ui_show_message(const char* msg);
+
+typedef void (*RotationCallback)(bool portrait);
+void ui_set_rotation_cb(RotationCallback cb);
 
 // Helper for local time formatting
 void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size);
