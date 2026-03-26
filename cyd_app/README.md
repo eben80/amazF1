@@ -2,6 +2,16 @@
 
 This subfolder contains the firmware for the **ESP32-2432S028**, popularly known as the "Cheap Yellow Display" (CYD). It integrates with the project's F1 bridge middleware to display real-time timing data via a touch-enabled LVGL interface.
 
+## 🚀 Key Features
+
+- **Live Data Visualizer:** Integrated with the official F1 SignalR feed via a Python middleware.
+- **Dynamic Tables:** Timing tower, standings, and results pages automatically resize to display all available drivers/teams.
+- **Interactive Calendar:** Drill into any season event with a single touch to view detailed session timings (FP, Quali, Race) in your local timezone.
+- **Smart Timezones:** Built-in city-based timezone selector (e.g., "London GMT/BST", "New York EST/EDT") that persists between reboots.
+- **Pro UI Layout:** Optimized column widths (45px positions, right-aligned points), official F1 logo in the header, and sentence-case headers.
+- **Zero Scrollbar Policy:** Horizontal scrolling is disabled and scrollbars are hidden for a cleaner, native-app feel.
+- **Gestural Navigation:** Swipe through views with full wrap-around support.
+
 ## 🏁 Hardware Variants
 
 There are three main versions of this board supported by this project. Each requires a specific environment in PlatformIO due to differences in touch controllers and connectors.

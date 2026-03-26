@@ -75,7 +75,6 @@ static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[SCREEN_WIDTH * 40];
 
 // Global State
-static View current_view = VIEW_MAIN;
 Preferences preferences;
 
 // LVGL Display Callback
@@ -116,15 +115,16 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
 
 // Data Fetching
 void fetch_data() {
+    View view = ui_get_view();
     const char* url;
-    switch(current_view) {
+    switch(view) {
         case VIEW_RESULTS: url = RESULTS_URL; break;
         case VIEW_STANDINGS: url = STANDINGS_URL; break;
         case VIEW_CONSTRUCTORS: url = CONSTRUCTORS_URL; break;
         case VIEW_CALENDAR: url = CALENDAR_URL; break;
         case VIEW_NEXT_RACE:
         case VIEW_MAIN:
-        default: url = STATUS_URL; break;
+        default: url = ui_get_sim_mode() ? MOCK_URL : STATUS_URL; break;
     }
 
     Serial.print("Fetching data from: ");
@@ -141,7 +141,7 @@ void fetch_data() {
             DeserializationError error = deserializeJson(doc, payload);
 
             if (!error) {
-                switch(current_view) {
+                switch(view) {
                     case VIEW_RESULTS: ui_update_results(doc.as<JsonObject>()); break;
                     case VIEW_STANDINGS: ui_update_standings(doc.as<JsonObject>()); break;
                     case VIEW_CONSTRUCTORS: ui_update_constructors(doc.as<JsonObject>()); break;
@@ -166,26 +166,32 @@ void fetch_data() {
 static void event_cb(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_GESTURE) {
+        View view = ui_get_view();
+        if (view == VIEW_EVENT_DETAIL) {
+            ui_set_view(VIEW_CALENDAR);
+            return;
+        }
+
         lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
         if (dir == LV_DIR_LEFT) {
-            if (current_view == VIEW_SETTINGS) current_view = VIEW_MAIN;
-            else if (current_view == VIEW_MAIN) current_view = VIEW_RESULTS;
-            else if (current_view == VIEW_RESULTS) current_view = VIEW_NEXT_RACE;
-            else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_STANDINGS;
-            else if (current_view == VIEW_STANDINGS) current_view = VIEW_CONSTRUCTORS;
-            else if (current_view == VIEW_CONSTRUCTORS) current_view = VIEW_CALENDAR;
-            else if (current_view == VIEW_CALENDAR) current_view = VIEW_SETTINGS; // Wrap around
-            ui_set_view(current_view);
+            if (view == VIEW_SETTINGS) view = VIEW_MAIN;
+            else if (view == VIEW_MAIN) view = VIEW_RESULTS;
+            else if (view == VIEW_RESULTS) view = VIEW_NEXT_RACE;
+            else if (view == VIEW_NEXT_RACE) view = VIEW_STANDINGS;
+            else if (view == VIEW_STANDINGS) view = VIEW_CONSTRUCTORS;
+            else if (view == VIEW_CONSTRUCTORS) view = VIEW_CALENDAR;
+            else if (view == VIEW_CALENDAR) view = VIEW_SETTINGS; // Wrap around
+            ui_set_view(view);
             fetch_data();
         } else if (dir == LV_DIR_RIGHT) {
-            if (current_view == VIEW_CALENDAR) current_view = VIEW_CONSTRUCTORS;
-            else if (current_view == VIEW_CONSTRUCTORS) current_view = VIEW_STANDINGS;
-            else if (current_view == VIEW_STANDINGS) current_view = VIEW_NEXT_RACE;
-            else if (current_view == VIEW_NEXT_RACE) current_view = VIEW_RESULTS;
-            else if (current_view == VIEW_RESULTS) current_view = VIEW_MAIN;
-            else if (current_view == VIEW_MAIN) current_view = VIEW_SETTINGS;
-            else if (current_view == VIEW_SETTINGS) current_view = VIEW_CALENDAR; // Wrap around
-            ui_set_view(current_view);
+            if (view == VIEW_CALENDAR) view = VIEW_CONSTRUCTORS;
+            else if (view == VIEW_CONSTRUCTORS) view = VIEW_STANDINGS;
+            else if (view == VIEW_STANDINGS) view = VIEW_NEXT_RACE;
+            else if (view == VIEW_NEXT_RACE) view = VIEW_RESULTS;
+            else if (view == VIEW_RESULTS) view = VIEW_MAIN;
+            else if (view == VIEW_MAIN) view = VIEW_SETTINGS;
+            else if (view == VIEW_SETTINGS) view = VIEW_CALENDAR; // Wrap around
+            ui_set_view(view);
             fetch_data();
         }
     }
@@ -196,6 +202,11 @@ void setup() {
     LittleFS.begin(true);
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);
+
+    // Turn off onboard RGB LED (Common Anode, set HIGH to turn OFF)
+    pinMode(4, OUTPUT); digitalWrite(4, HIGH);  // Red
+    pinMode(16, OUTPUT); digitalWrite(16, HIGH); // Green
+    pinMode(17, OUTPUT); digitalWrite(17, HIGH); // Blue
 
     WiFiManager wm;
     if (!wm.autoConnect("F1-Timing-Display")) ESP.restart();
@@ -245,11 +256,15 @@ void setup() {
     lv_png_init();
     ui_init();
 
-    // Load TZ from preferences
+    // Load settings from preferences
     preferences.begin("f1-app", true);
     String saved_tz = preferences.getString("tz", TZ_INFO);
+    bool saved_sim = preferences.getBool("sim", false);
+    uint8_t saved_bright = preferences.getUChar("bright", 255);
     preferences.end();
     ui_set_timezone(saved_tz.c_str());
+    ui_set_sim_mode(saved_sim);
+    ui_set_brightness(saved_bright);
 
     // Time Sync
     configTzTime(saved_tz.c_str(), NTP_SERVER);
@@ -265,7 +280,7 @@ unsigned long last_poll = 0;
 
 void loop() {
     lv_timer_handler();
-    if (current_view == VIEW_MAIN && (millis() - last_poll > POLL_INTERVAL)) {
+    if (ui_get_view() == VIEW_MAIN && (millis() - last_poll > POLL_INTERVAL)) {
         fetch_data();
         last_poll = millis();
     }

@@ -10,7 +10,7 @@
 #define CONSTRUCTORS_URL BASE_URL "/constructor_standings"
 #define CALENDAR_URL BASE_URL "/calendar"
 
-#define POLL_INTERVAL 10000 // 10 seconds
+#define POLL_INTERVAL 5000 // 5 seconds
 
 // Time Settings
 #define NTP_SERVER "pool.ntp.org"

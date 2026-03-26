@@ -26,7 +26,7 @@ JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
 # --- Mappings ---
 TRACK_STATUS_MAP = {
-    "1": "Normal/Clear",
+    "1": "Clear",
     "2": "Yellow Flag",
     "4": "Safety Car",
     "5": "Red Flag",
@@ -315,39 +315,63 @@ async def get_status():
 
 @app.get("/mock_status")
 async def get_mock_status():
-    """Return a dynamic fake live session for UI testing, loops every 30s"""
-    step = int(time.time() % 30)
+    """Return a dynamic fake live session for UI testing, loops every 120s"""
+    t = int(time.time())
+    step = t % 120
 
     # Simulate track status changes
-    status = "Normal/Clear"
-    if 10 <= step < 20: status = "Yellow Flag"
-    elif 20 <= step < 25: status = "Safety Car"
+    status = "Clear"
+    if 30 <= step < 50: status = "Yellow Flag"
+    elif 50 <= step < 80: status = "Safety Car"
+    elif 110 <= step: status = "Red Flag"
 
-    # Simulate an overtake (NOR and VER swap at step 15)
-    p1, p2 = ("VER", "NOR") if step < 15 else ("NOR", "VER")
-    c1, c2 = ("3671C6", "FF8000") if step < 15 else ("FF8000", "3671C6")
-    t1, t2 = ("Red Bull", "McLaren") if step < 15 else ("McLaren", "Red Bull")
-
-    mock_timing = [
-        {"num": "1", "name": p1, "team": t1, "teamColor": c1, "pos": "1", "gap": "LEADER", "int": "", "last": "1:21.001", "comp": "soft"},
-        {"num": "4", "name": p2, "team": t2, "teamColor": c2, "pos": "2", "gap": f"+{0.5 + step/10:.3f}", "int": f"+{0.5 + step/10:.3f}", "last": "1:21.150", "comp": "soft"},
-        {"num": "44", "name": "HAM", "team": "Ferrari", "teamColor": "E80020", "pos": "3", "gap": "+5.678", "int": "+5.178", "last": "1:22.010", "comp": "medium"},
-        {"num": "63", "name": "RUS", "team": "Mercedes", "teamColor": "27F4D2", "pos": "4", "gap": "+6.102", "int": "+0.424", "last": "1:21.990", "comp": "medium"},
-        {"num": "16", "name": "LEC", "team": "Ferrari", "teamColor": "E80020", "pos": "5", "gap": "+8.991", "int": "+2.889", "last": "1:22.300", "comp": "hard"},
-        {"num": "81", "name": "PIA", "team": "McLaren", "teamColor": "FF8000", "pos": "6", "gap": "+12.456", "int": "+3.465", "last": "1:21.800", "comp": "soft"},
-        {"num": "14", "name": "ALO", "team": "Aston Martin", "teamColor": "229971", "pos": "7", "gap": "+15.003", "int": "+2.547", "last": "1:23.100", "comp": "hard"},
-        {"num": "10", "name": "GAS", "team": "Alpine", "teamColor": "0093CC", "pos": "8", "gap": "+18.224", "int": "+3.221", "last": "1:22.900", "comp": "medium"},
-        {"num": "27", "name": "HUL", "team": "Haas", "teamColor": "B6BABD", "pos": "9", "gap": "+20.556", "int": "+2.332", "last": "1:23.400", "comp": "soft"},
-        {"num": "23", "name": "ALB", "team": "Williams", "teamColor": "64C4FF", "pos": "10", "gap": "+22.100", "int": "+1.544", "last": "1:23.200", "comp": "medium"},
-        {"num": "11", "name": "PER", "team": "Red Bull", "teamColor": "3671C6", "pos": "11", "gap": "+25.100", "int": "+3.000", "last": "1:23.800", "comp": "soft"},
-        {"num": "22", "name": "TSU", "team": "RB", "teamColor": "6692FF", "pos": "12", "gap": "+28.100", "int": "+3.000", "last": "1:23.900", "comp": "medium"}
+    # Define drivers and their base properties
+    drivers = [
+        ("VER", "Red Bull", "3671C6"), ("NOR", "McLaren", "FF8000"),
+        ("HAM", "Ferrari", "E80020"), ("RUS", "Mercedes", "27F4D2"),
+        ("LEC", "Ferrari", "E80020"), ("PIA", "McLaren", "FF8000"),
+        ("ALO", "Aston Martin", "229971"), ("GAS", "Alpine", "0093CC"),
+        ("HUL", "Haas", "B6BABD"), ("ALB", "Williams", "64C4FF"),
+        ("PER", "Red Bull", "3671C6"), ("TSU", "RB", "6692FF"),
+        ("SAI", "Williams", "64C4FF"), ("STR", "Aston Martin", "229971"),
+        ("BEA", "Haas", "B6BABD"), ("MAG", "Haas", "B6BABD"),
+        ("BOT", "Audi", "52E252"), ("ZHO", "Audi", "52E252"),
+        ("OCO", "Haas", "B6BABD"), ("LAW", "RB", "6692FF")
     ]
+
+    # Deterministic "random" shuffle based on time bucket
+    bucket = step // 10
+    import random
+    rng = random.Random(bucket)
+    indices = list(range(len(drivers)))
+    rng.shuffle(indices)
+
+    mock_timing = []
+    for pos, idx in enumerate(indices):
+        name, team, color = drivers[idx]
+        gap = "LEADER" if pos == 0 else f"+{pos*1.2 + bucket/5:.1f}"
+        interval = "" if pos == 0 else f"+{1.2 + rng.random():.1f}"
+        comp = ["soft", "medium", "hard"][rng.randint(0, 2)]
+
+        mock_timing.append({
+            "num": str(idx+1),
+            "name": name,
+            "team": team,
+            "teamColor": color,
+            "pos": str(pos + 1),
+            "gap": gap,
+            "int": interval,
+            "last": "1:21.000",
+            "comp": comp,
+            "col": color
+        })
+
     return {
         "live": True,
-        "session": {"name": "Simulated Race", "type": "Race", "circuit": "Dynamic Test Circuit"},
-        "weather": {"air": str(20 + step % 5), "track": str(30 + step % 10), "hum": "50", "rain": step > 25},
+        "session": {"name": "Simulation", "type": "Race", "circuit": "Dynamic Test Circuit"},
+        "weather": {"air": str(20 + bucket % 5), "track": str(30 + bucket % 10), "hum": "50", "rain": step > 90},
         "track": status,
-        "laps": {"current": 1 + step // 5, "total": 50},
+        "laps": {"current": 1 + bucket, "total": 50},
         "timing": mock_timing,
         "upcoming": state.upcoming_race,
         "previous": state.previous_race
@@ -480,6 +504,7 @@ async def get_calendar():
                             "circuit": race.get('Circuit', {}).get('circuitName'),
                             "date": race.get('date'),
                             "flag": FLAG_MAPPING.get(country, "🏁"),
+                            "flagCode": ISO_MAPPING.get(country, "un"),
                             "sessions": sessions
                         })
                     return {"calendar": formatted_calendar}
