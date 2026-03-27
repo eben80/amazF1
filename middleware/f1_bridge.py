@@ -303,20 +303,33 @@ async def on_feed(args):
 async def get_status():
     update_live_status()
 
-    # If we have no session info, it's not really a live session we can display
-    effective_live = state.is_live and bool(state.session_info.get("name"))
+    # Loosen live detection: if we have timing data OR session info (even if name is null), it's live
+    has_timing = len(state.timing_data) > 0
+    has_session = bool(state.session_info.get("name")) or bool(state.session_info.get("type"))
+    effective_live = state.is_live and (has_timing or has_session)
 
     if not effective_live and (not state.upcoming_race or not state.previous_race):
         await fetch_race_schedule()
 
+    # Ensure session name fallback
+    session_info = state.session_info.copy()
+    if not session_info.get("name") and session_info.get("type"):
+        session_info["name"] = session_info["type"]
+
     sorted_timing = []
     for dnum, data in state.timing_data.items():
         dinfo = state.driver_list.get(dnum, {"name": f"D{dnum}", "team": "UNK", "color": "FFFFFF", "abbrev": dnum})
+
+        # Fallback for null fields in live data
+        drv_name = dinfo.get("abbrev") or f"P{dnum}"
+        drv_team = dinfo.get("team") or "UNK"
+        drv_color = dinfo.get("color") or "FFFFFF"
+
         sorted_timing.append({
             "num": dnum,
-            "name": dinfo["abbrev"],
-            "team": dinfo["team"],
-            "teamColor": dinfo["color"],
+            "name": drv_name,
+            "team": drv_team,
+            "teamColor": drv_color,
             "pos": data.get("pos", "99"),
             "gap": data.get("gap", ""),
             "int": data.get("int", ""),
@@ -337,7 +350,7 @@ async def get_status():
 
     return {
         "live": effective_live,
-        "session": state.session_info,
+        "session": session_info,
         "weather": state.weather_data,
         "message": state.race_control_message,
         "track": track_display,
