@@ -216,6 +216,7 @@ async def on_feed(args):
         for arg in args:
             if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
                 topic = arg
+                logger.debug(f"SignalR Topic: {topic}")
                 continue
 
             if topic == "Heartbeat" or not topic:
@@ -230,6 +231,8 @@ async def on_feed(args):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
                 if not decoded: continue
                 if isinstance(decoded, str): decoded = json.loads(decoded)
+
+                logger.debug(f"Data for {topic}: {str(decoded)[:200]}...")
 
                 if topic == "TimingData":
                     lines = decoded.get("Lines", {})
@@ -321,7 +324,8 @@ async def get_status():
         dinfo = state.driver_list.get(dnum, {"name": f"D{dnum}", "team": "UNK", "color": "FFFFFF", "abbrev": dnum})
 
         # Fallback for null fields in live data
-        drv_name = dinfo.get("abbrev") or f"P{dnum}"
+        # Use abbrev if available, otherwise name, otherwise just the driver number
+        drv_name = dinfo.get("abbrev") or dinfo.get("name") or dnum
         drv_team = dinfo.get("team") or "UNK"
         drv_color = dinfo.get("color") or "FFFFFF"
 
