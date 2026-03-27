@@ -79,6 +79,35 @@ TEAM_COLORS = {
     "Racing Bulls": "6692FF", "Kick Sauber": "52E252"
 }
 
+DRIVER_MAPPING = {
+    "1": {"abbrev": "VER", "name": "Max Verstappen", "team": "Red Bull", "color": "3671C6"},
+    "4": {"abbrev": "NOR", "name": "Lando Norris", "team": "McLaren", "color": "FF8000"},
+    "44": {"abbrev": "HAM", "name": "Lewis Hamilton", "team": "Ferrari", "color": "E80020"},
+    "63": {"abbrev": "RUS", "name": "George Russell", "team": "Mercedes", "color": "27F4D2"},
+    "16": {"abbrev": "LEC", "name": "Charles Leclerc", "team": "Ferrari", "color": "E80020"},
+    "81": {"abbrev": "PIA", "name": "Oscar Piastri", "team": "McLaren", "color": "FF8000"},
+    "14": {"abbrev": "ALO", "name": "Fernando Alonso", "team": "Aston Martin", "color": "229971"},
+    "10": {"abbrev": "GAS", "name": "Pierre Gasly", "team": "Alpine", "color": "0093CC"},
+    "27": {"abbrev": "HUL", "name": "Nico Hulkenberg", "team": "Haas", "color": "B6BABD"},
+    "23": {"abbrev": "ALB", "name": "Alexander Albon", "team": "Williams", "color": "64C4FF"},
+    "11": {"abbrev": "PER", "name": "Sergio Perez", "team": "Red Bull", "color": "3671C6"},
+    "22": {"abbrev": "TSU", "name": "Yuki Tsunoda", "team": "Racing Bulls", "color": "6692FF"},
+    "55": {"abbrev": "SAI", "name": "Carlos Sainz", "team": "Williams", "color": "64C4FF"},
+    "18": {"abbrev": "STR", "name": "Lance Stroll", "team": "Aston Martin", "color": "229971"},
+    "87": {"abbrev": "BEA", "name": "Oliver Bearman", "team": "Haas", "color": "B6BABD"},
+    "20": {"abbrev": "MAG", "name": "Kevin Magnussen", "team": "Haas", "color": "B6BABD"},
+    "77": {"abbrev": "BOT", "name": "Valtteri Bottas", "team": "Kick Sauber", "color": "52E252"},
+    "24": {"abbrev": "ZHO", "name": "Guanyu Zhou", "team": "Kick Sauber", "color": "52E252"},
+    "31": {"abbrev": "OCO", "name": "Esteban Ocon", "team": "Cadillac", "color": "FFFFFF"},
+    "30": {"abbrev": "LAW", "name": "Liam Lawson", "team": "Racing Bulls", "color": "6692FF"},
+    "12": {"abbrev": "ANT", "name": "Andrea Kimi Antonelli", "team": "Mercedes", "color": "27F4D2"},
+    "5": {"abbrev": "DAR", "name": "Jehan Daruvala", "team": "Cadillac", "color": "FFFFFF"},
+    "43": {"abbrev": "COL", "name": "Franco Colapinto", "team": "Williams", "color": "64C4FF"},
+    "3": {"abbrev": "RIC", "name": "Daniel Ricciardo", "team": "Racing Bulls", "color": "6692FF"},
+    "6": {"abbrev": "HAD", "name": "Isack Hadjar", "team": "Red Bull", "color": "3671C6"},
+    "41": {"abbrev": "LIN", "name": "Jak Crawford", "team": "Aston Martin", "color": "229971"}
+}
+
 # --- State ---
 class F1State:
     def __init__(self):
@@ -245,7 +274,11 @@ async def on_feed(args):
                         td = state.timing_data[dnum]
                         if "Position" in line: td["pos"] = line["Position"]
                         if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
+                        elif "TimeDiffToFastest" in line: td["gap"] = line["TimeDiffToFastest"]
+
                         if "IntervalToNext" in line: td["int"] = line["IntervalToNext"]
+                        elif "TimeDiffToPositionAhead" in line: td["int"] = line["TimeDiffToPositionAhead"]
+
                         if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
                         if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
 
@@ -274,18 +307,35 @@ async def on_feed(args):
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
                 elif topic == "SessionInfo":
+                    # Determine part (e.g., Q1/Q2/Q3 or FP1/FP2/FP3)
+                    name = decoded.get("Name") or decoded.get("SessionName")
+                    part = decoded.get("Number") or 1
+
+                    # Fallback to name parsing if Number is missing
+                    if part == 1 and name:
+                        if "Qualifying 2" in name or "Q2" in name: part = 2
+                        elif "Qualifying 3" in name or "Q3" in name: part = 3
+
                     state.session_info = {
-                        "name": decoded.get("SessionName"),
+                        "name": name,
                         "type": decoded.get("Type"),
-                        "circuit": decoded.get("CircuitName"),
-                        "status": decoded.get("Status"),
-                        "part": decoded.get("GmtOffset") # SignalR often uses this or similar for part
+                        "circuit": decoded.get("Meeting", {}).get("Circuit", {}).get("ShortName") or decoded.get("CircuitName"),
+                        "status": decoded.get("SessionStatus") or decoded.get("Status"),
+                        "part": part
                     }
                 elif topic == "LapCount":
                     state.lap_count = {"current": decoded.get("CurrentLap"), "total": decoded.get("TotalLaps")}
                 elif topic == "DriverList":
                     for dnum, info in decoded.items():
-                        state.driver_list[dnum] = {"name": info.get("FullName"), "team": info.get("TeamName"), "color": info.get("TeamColour"), "abbrev": info.get("Tla")}
+                        if dnum not in state.driver_list:
+                            # Pre-fill with static mapping if available
+                            state.driver_list[dnum] = DRIVER_MAPPING.get(dnum, {}).copy()
+
+                        # Only update if key exists in info, otherwise keep old value
+                        if "FullName" in info: state.driver_list[dnum]["name"] = info["FullName"]
+                        if "TeamName" in info: state.driver_list[dnum]["team"] = info["TeamName"]
+                        if "TeamColour" in info: state.driver_list[dnum]["color"] = info["TeamColour"]
+                        if "Tla" in info: state.driver_list[dnum]["abbrev"] = info["Tla"]
                 elif topic == "TrackStatus":
                     status_code = decoded.get("Status", "1")
                     state.track_status = TRACK_STATUS_MAP.get(status_code, "Normal/Clear")
@@ -325,13 +375,13 @@ async def get_status():
 
     sorted_timing = []
     for dnum, data in state.timing_data.items():
-        dinfo = state.driver_list.get(dnum, {"name": f"D{dnum}", "team": "UNK", "color": "FFFFFF", "abbrev": dnum})
+        # Get info from state, fallback to static mapping, then to defaults
+        dinfo_state = state.driver_list.get(dnum, {})
+        dinfo_static = DRIVER_MAPPING.get(dnum, {})
 
-        # Fallback for null fields in live data
-        # Use abbrev if available, otherwise name, otherwise just the driver number
-        drv_name = dinfo.get("abbrev") or dinfo.get("name") or dnum
-        drv_team = dinfo.get("team") or "UNK"
-        drv_color = dinfo.get("color") or "FFFFFF"
+        drv_name = dinfo_state.get("abbrev") or dinfo_static.get("abbrev") or dinfo_state.get("name") or dinfo_static.get("name") or dnum
+        drv_team = dinfo_state.get("team") or dinfo_static.get("team") or "UNK"
+        drv_color = dinfo_state.get("color") or dinfo_static.get("color") or "FFFFFF"
 
         sorted_timing.append({
             "num": dnum,
@@ -347,7 +397,7 @@ async def get_status():
             "q2": data.get("q2", ""),
             "q3": data.get("q3", ""),
             "comp": data.get("compound", ""),
-            "col": dinfo["color"]
+            "col": drv_color
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
 
