@@ -60,6 +60,22 @@ static lv_fs_res_t fs_tell(lv_fs_drv_t * drv, void * file_p, uint32_t * pos_p) {
 // Hardware Interface
 TFT_eSPI tft = TFT_eSPI();
 
+// RGB LED (Common Anode, set LOW to turn ON, HIGH to turn OFF)
+#define LED_R 4
+#define LED_G 16
+#define LED_B 17
+
+enum LEDStatus {
+    LED_OFF,
+    LED_SOLID_GREEN,
+    LED_FLASH_YELLOW,
+    LED_FLASH_RED,
+    LED_FLASH_ORANGE
+};
+static LEDStatus current_led_status = LED_OFF;
+static unsigned long green_start = 0;
+static String last_known_track_status = "";
+
 #if defined(CYD_XPT2046) || defined(CYD_V2_V3_XPT2046)
 #include <XPT2046_Touchscreen.h>
 #include <SPI.h>
@@ -96,8 +112,19 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
     if (ts.touched()) {
         TS_Point p = ts.getPoint();
         data->state = LV_INDEV_STATE_PR;
-        data->point.x = map(p.x, 200, 3700, 0, SCREEN_WIDTH);
-        data->point.y = map(p.y, 240, 3800, 0, SCREEN_HEIGHT);
+        // The mapping here depends on the hardware rotation.
+        // TFT_eSPI's rotation handles the screen, but touch needs to be mapped.
+        // Rotation 1 (Landscape): X=200..3700 -> 0..320, Y=240..3800 -> 0..240
+        // Rotation 0 (Portrait): Need to map according to current rotation
+        if (tft.getRotation() == 1) {
+            data->point.x = map(p.x, 200, 3700, 0, 320);
+            data->point.y = map(p.y, 240, 3800, 0, 240);
+        } else {
+            // Rotation 0 (Portrait)
+            // If top-right is being detected at the bottom, we need to invert Y mapping.
+            data->point.x = map(p.y, 240, 3800, 0, 240);
+            data->point.y = map(p.x, 200, 3700, 0, 320);
+        }
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
@@ -111,6 +138,58 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data) {
         data->state = LV_INDEV_STATE_REL;
     }
 #endif
+}
+
+void handle_rotation(bool portrait) {
+    static bool current_portrait = false;
+    if (portrait == current_portrait) return;
+    current_portrait = portrait;
+
+    tft.setRotation(portrait ? 0 : 1);
+
+    lv_disp_t * disp = lv_disp_get_default();
+    if (disp) {
+        disp->driver->hor_res = portrait ? 240 : 320;
+        disp->driver->ver_res = portrait ? 320 : 240;
+        lv_disp_drv_update(disp, disp->driver);
+    }
+
+    Serial.print("Hardware Rotation Switched: ");
+    Serial.println(portrait ? "PORTRAIT" : "LANDSCAPE");
+}
+
+void set_led_pwm(uint8_t r, uint8_t g, uint8_t b) {
+    // Common Anode: 255 is OFF, 0 is FULL ON
+    analogWrite(LED_R, 255 - r);
+    analogWrite(LED_G, 255 - g);
+    analogWrite(LED_B, 255 - b);
+}
+
+void update_led_status(const char* status) {
+    String current_status = String(status);
+
+    if (current_status.indexOf("Red") >= 0) {
+        current_led_status = LED_FLASH_RED;
+    } else if (current_status.indexOf("Yellow") >= 0) {
+        current_led_status = LED_FLASH_YELLOW;
+    } else if (current_status.indexOf("Safety") >= 0 || current_status.indexOf("VSC") >= 0) {
+        current_led_status = LED_FLASH_ORANGE;
+    } else if (current_status.indexOf("Clear") >= 0 || current_status.indexOf("Normal") >= 0) {
+        // Only trigger green if we transitioned from something else
+        if (last_known_track_status.length() > 0 &&
+            last_known_track_status.indexOf("Clear") < 0 &&
+            last_known_track_status.indexOf("Normal") < 0) {
+            current_led_status = LED_SOLID_GREEN;
+            green_start = millis();
+            Serial.println("Track CLEAR: Green LED for 5s");
+        } else if (current_led_status != LED_SOLID_GREEN) {
+            current_led_status = LED_OFF;
+        }
+    } else {
+        current_led_status = LED_OFF;
+    }
+
+    last_known_track_status = current_status;
 }
 
 // Data Fetching
@@ -141,14 +220,21 @@ void fetch_data() {
             DeserializationError error = deserializeJson(doc, payload);
 
             if (!error) {
+                JsonObject data = doc.as<JsonObject>();
+                if (data["live"].as<bool>()) {
+                    update_led_status(data["track"] | "");
+                } else {
+                    current_led_status = LED_OFF;
+                }
+
                 switch(view) {
-                    case VIEW_RESULTS: ui_update_results(doc.as<JsonObject>()); break;
-                    case VIEW_STANDINGS: ui_update_standings(doc.as<JsonObject>()); break;
-                    case VIEW_CONSTRUCTORS: ui_update_constructors(doc.as<JsonObject>()); break;
-                    case VIEW_CALENDAR: ui_update_calendar(doc.as<JsonObject>()); break;
-                    case VIEW_NEXT_RACE: ui_update_next_race(doc.as<JsonObject>()); break;
+                    case VIEW_RESULTS: ui_update_results(data); break;
+                    case VIEW_STANDINGS: ui_update_standings(data); break;
+                    case VIEW_CONSTRUCTORS: ui_update_constructors(data); break;
+                    case VIEW_CALENDAR: ui_update_calendar(data); break;
+                    case VIEW_NEXT_RACE: ui_update_next_race(data); break;
                     case VIEW_MAIN:
-                    default: ui_update_status(doc.as<JsonObject>()); break;
+                    default: ui_update_status(data); break;
                 }
             } else {
                 ui_show_message("JSON ERROR");
@@ -203,10 +289,11 @@ void setup() {
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);
 
-    // Turn off onboard RGB LED (Common Anode, set HIGH to turn OFF)
-    pinMode(4, OUTPUT); digitalWrite(4, HIGH);  // Red
-    pinMode(16, OUTPUT); digitalWrite(16, HIGH); // Green
-    pinMode(17, OUTPUT); digitalWrite(17, HIGH); // Blue
+    // Initialize RGB LED pins
+    pinMode(LED_R, OUTPUT);
+    pinMode(LED_G, OUTPUT);
+    pinMode(LED_B, OUTPUT);
+    set_led_pwm(0, 0, 0); // Turn off
 
     WiFiManager wm;
     if (!wm.autoConnect("F1-Timing-Display")) ESP.restart();
@@ -255,15 +342,18 @@ void setup() {
 
     lv_png_init();
     ui_init();
+    ui_set_rotation_cb(handle_rotation);
 
     // Load settings from preferences
     preferences.begin("f1-app", true);
     String saved_tz = preferences.getString("tz", TZ_INFO);
     bool saved_sim = preferences.getBool("sim", false);
+    bool saved_port = preferences.getBool("port", false);
     uint8_t saved_bright = preferences.getUChar("bright", 255);
     preferences.end();
     ui_set_timezone(saved_tz.c_str());
     ui_set_sim_mode(saved_sim);
+    ui_set_portrait_mode(saved_port);
     ui_set_brightness(saved_bright);
 
     // Time Sync
@@ -277,9 +367,47 @@ void setup() {
 }
 
 unsigned long last_poll = 0;
+static unsigned long last_flash = 0;
+static bool flash_state = false;
 
 void loop() {
     lv_timer_handler();
+
+    // LED Flashing Logic (Non-blocking)
+    if (millis() - last_flash > 500) {
+        flash_state = !flash_state;
+        last_flash = millis();
+
+        switch (current_led_status) {
+            case LED_FLASH_RED:
+                if (flash_state) set_led_pwm(255, 0, 0);
+                else set_led_pwm(0, 0, 0);
+                break;
+            case LED_FLASH_YELLOW:
+                // Reduce green to 120 to fix "green tinge"
+                if (flash_state) set_led_pwm(255, 120, 0);
+                else set_led_pwm(0, 0, 0);
+                break;
+            case LED_FLASH_ORANGE:
+                // Orange is Red + low Green (40)
+                if (flash_state) set_led_pwm(255, 40, 0);
+                else set_led_pwm(0, 0, 0);
+                break;
+            case LED_SOLID_GREEN:
+                if (millis() - green_start < 5000) {
+                    set_led_pwm(0, 255, 0);
+                } else {
+                    current_led_status = LED_OFF;
+                    set_led_pwm(0, 0, 0);
+                }
+                break;
+            case LED_OFF:
+            default:
+                set_led_pwm(0, 0, 0);
+                break;
+        }
+    }
+
     if (ui_get_view() == VIEW_MAIN && (millis() - last_poll > POLL_INTERVAL)) {
         fetch_data();
         last_poll = millis();

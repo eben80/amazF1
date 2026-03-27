@@ -10,7 +10,10 @@ import time
 from datetime import datetime
 from loguru import logger
 from fastapi import FastAPI
-from fastf1_livetiming.signalr.connection import Connection
+try:
+    from fastf1_livetiming.signalr.connection import Connection
+except ImportError:
+    Connection = None
 import uvicorn
 import requests
 
@@ -86,6 +89,7 @@ class F1State:
         self.is_live = False
         self.upcoming_race = {}
         self.previous_race = {}
+        self.race_control_message = ""
 
 state = F1State()
 
@@ -207,11 +211,13 @@ async def fetch_race_schedule():
 
 # --- Message Handlers ---
 async def on_feed(args):
+    logger.info(f"on_feed raw args: {str(args)[:500]}...")
     try:
         topic = None
         for arg in args:
-            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "Heartbeat"]:
+            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
                 topic = arg
+                logger.info(f"SignalR Topic: {topic}")
                 continue
 
             if topic == "Heartbeat" or not topic:
@@ -221,11 +227,16 @@ async def on_feed(args):
             if isinstance(arg, (dict, str)) and len(str(arg)) > 2:
                 state.last_data_time = time.time()
                 state.is_live = True
+                logger.info(f"Live status updated, state.is_live={state.is_live}")
 
             if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
-                if not decoded: continue
+                if not decoded:
+                    logger.warning(f"Could not decode data for topic {topic}")
+                    continue
                 if isinstance(decoded, str): decoded = json.loads(decoded)
+
+                logger.info(f"Full Data for {topic}: {json.dumps(decoded)}")
 
                 if topic == "TimingData":
                     lines = decoded.get("Lines", {})
@@ -236,6 +247,17 @@ async def on_feed(args):
                         if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
                         if "IntervalToNext" in line: td["int"] = line["IntervalToNext"]
                         if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
+                        if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
+
+                        # Qualifying segments
+                        stats = line.get("Stats", [])
+                        if stats:
+                            for s in stats:
+                                if "Time" in s:
+                                    if "Q1" in str(s.get("Text", "")): td["q1"] = s["Time"]
+                                    if "Q2" in str(s.get("Text", "")): td["q2"] = s["Time"]
+                                    if "Q3" in str(s.get("Text", "")): td["q3"] = s["Time"]
+
                         stints = line.get("Stints", [])
                         if stints:
                             last_stint = list(stints.values())[-1] if isinstance(stints, dict) else stints[-1]
@@ -256,7 +278,8 @@ async def on_feed(args):
                         "name": decoded.get("SessionName"),
                         "type": decoded.get("Type"),
                         "circuit": decoded.get("CircuitName"),
-                        "status": decoded.get("Status")
+                        "status": decoded.get("Status"),
+                        "part": decoded.get("GmtOffset") # SignalR often uses this or similar for part
                     }
                 elif topic == "LapCount":
                     state.lap_count = {"current": decoded.get("CurrentLap"), "total": decoded.get("TotalLaps")}
@@ -266,6 +289,19 @@ async def on_feed(args):
                 elif topic == "TrackStatus":
                     status_code = decoded.get("Status", "1")
                     state.track_status = TRACK_STATUS_MAP.get(status_code, "Normal/Clear")
+                elif topic == "RaceControlMessages":
+                    messages = decoded.get("Messages", {})
+                    if messages:
+                        if isinstance(messages, dict):
+                            # Get the latest message (highest key if they are numeric strings)
+                            try:
+                                latest_idx = max(messages.keys(), key=lambda x: int(x))
+                                state.race_control_message = messages[latest_idx].get("Message", "")
+                            except Exception:
+                                # Fallback if keys are not integers
+                                state.race_control_message = list(messages.values())[-1].get("Message", "")
+                        elif isinstance(messages, list):
+                            state.race_control_message = messages[-1].get("Message", "")
     except Exception as e:
         logger.error(f"Error in on_feed: {e}")
 
@@ -273,25 +309,44 @@ async def on_feed(args):
 @app.get("/status")
 async def get_status():
     update_live_status()
+    logger.info(f"get_status: is_live={state.is_live}, timing_len={len(state.timing_data)}, session={state.session_info}")
 
-    # If we have no session info, it's not really a live session we can display
-    effective_live = state.is_live and bool(state.session_info.get("name"))
+    # Loosen live detection: if we have timing data OR session info (even if name is null), it's live
+    has_timing = len(state.timing_data) > 0
+    has_session = bool(state.session_info.get("name")) or bool(state.session_info.get("type"))
+    effective_live = state.is_live and (has_timing or has_session)
 
     if not effective_live and (not state.upcoming_race or not state.previous_race):
         await fetch_race_schedule()
 
+    # Ensure session name fallback
+    session_info = state.session_info.copy()
+    if not session_info.get("name") and session_info.get("type"):
+        session_info["name"] = session_info["type"]
+
     sorted_timing = []
     for dnum, data in state.timing_data.items():
         dinfo = state.driver_list.get(dnum, {"name": f"D{dnum}", "team": "UNK", "color": "FFFFFF", "abbrev": dnum})
+
+        # Fallback for null fields in live data
+        # Use abbrev if available, otherwise name, otherwise just the driver number
+        drv_name = dinfo.get("abbrev") or dinfo.get("name") or dnum
+        drv_team = dinfo.get("team") or "UNK"
+        drv_color = dinfo.get("color") or "FFFFFF"
+
         sorted_timing.append({
             "num": dnum,
-            "name": dinfo["abbrev"],
-            "team": dinfo["team"],
-            "teamColor": dinfo["color"],
+            "name": drv_name,
+            "team": drv_team,
+            "teamColor": drv_color,
             "pos": data.get("pos", "99"),
             "gap": data.get("gap", ""),
             "int": data.get("int", ""),
             "last": data.get("last", ""),
+            "best": data.get("best", ""),
+            "q1": data.get("q1", ""),
+            "q2": data.get("q2", ""),
+            "q3": data.get("q3", ""),
             "comp": data.get("compound", ""),
             "col": dinfo["color"]
         })
@@ -304,8 +359,9 @@ async def get_status():
 
     return {
         "live": effective_live,
-        "session": state.session_info,
+        "session": session_info,
         "weather": state.weather_data,
+        "message": state.race_control_message,
         "track": track_display,
         "laps": state.lap_count,
         "timing": sorted_timing,
@@ -325,33 +381,48 @@ async def get_mock_status():
     elif 50 <= step < 80: status = "Safety Car"
     elif 110 <= step: status = "Red Flag"
 
-    # Define drivers and their base properties
+    # Define 2026 grid: 11 teams (including Cadillac), 22 drivers
     drivers = [
         ("VER", "Red Bull", "3671C6"), ("NOR", "McLaren", "FF8000"),
         ("HAM", "Ferrari", "E80020"), ("RUS", "Mercedes", "27F4D2"),
         ("LEC", "Ferrari", "E80020"), ("PIA", "McLaren", "FF8000"),
         ("ALO", "Aston Martin", "229971"), ("GAS", "Alpine", "0093CC"),
         ("HUL", "Haas", "B6BABD"), ("ALB", "Williams", "64C4FF"),
-        ("PER", "Red Bull", "3671C6"), ("TSU", "RB", "6692FF"),
+        ("PER", "Red Bull", "3671C6"), ("TSU", "Racing Bulls", "6692FF"),
         ("SAI", "Williams", "64C4FF"), ("STR", "Aston Martin", "229971"),
         ("BEA", "Haas", "B6BABD"), ("MAG", "Haas", "B6BABD"),
-        ("BOT", "Audi", "52E252"), ("ZHO", "Audi", "52E252"),
-        ("OCO", "Haas", "B6BABD"), ("LAW", "RB", "6692FF")
+        ("BOT", "Kick Sauber", "52E252"), ("ZHO", "Kick Sauber", "52E252"),
+        ("OCO", "Cadillac", "FFFFFF"), ("LAW", "Racing Bulls", "6692FF"),
+        ("ANT", "Mercedes", "27F4D2"), ("DAR", "Cadillac", "FFFFFF")
     ]
 
     # Deterministic "random" shuffle based on time bucket
     bucket = step // 10
+
+    # Simulate different session types
+    session_types = [
+        ("FP1", "Practice"), ("FP2", "Practice"), ("FP3", "Practice"),
+        ("Qualifying", "Qualifying"), ("Sprint Quali", "Qualifying"),
+        ("Sprint", "Race"), ("Race", "Race")
+    ]
+    s_name, s_type = session_types[(t // 30) % len(session_types)]
     import random
     rng = random.Random(bucket)
     indices = list(range(len(drivers)))
     rng.shuffle(indices)
 
     mock_timing = []
+    is_quali = "Quali" in s_name
+
     for pos, idx in enumerate(indices):
         name, team, color = drivers[idx]
-        gap = "LEADER" if pos == 0 else f"+{pos*1.2 + bucket/5:.1f}"
-        interval = "" if pos == 0 else f"+{1.2 + rng.random():.1f}"
-        comp = ["soft", "medium", "hard"][rng.randint(0, 2)]
+        gap = "LEADER" if pos == 0 else f"+{pos*0.1 + bucket/50:.3f}"
+        interval = "" if pos == 0 else f"+{0.05 + rng.random()/10:.3f}"
+        comp = "soft" if is_quali else ["soft", "medium", "hard"][rng.randint(0, 2)]
+
+        # 2026 Quali elimination logic (6 cars in Q1 and Q2)
+        q2_time = "1:19.854" if pos < 16 else ""
+        q3_time = "1:19.234" if pos < 10 else ""
 
         mock_timing.append({
             "num": str(idx+1),
@@ -362,14 +433,19 @@ async def get_mock_status():
             "gap": gap,
             "int": interval,
             "last": "1:21.000",
+            "best": "1:20.543" if pos < 5 else "1:21.123",
+            "q1": "1:20.123",
+            "q2": q2_time,
+            "q3": q3_time,
             "comp": comp,
             "col": color
         })
 
     return {
         "live": True,
-        "session": {"name": "Simulation", "type": "Race", "circuit": "Dynamic Test Circuit"},
+        "session": {"name": s_name, "type": s_type, "circuit": "Dynamic Test Circuit", "part": 1 + (step // 40)},
         "weather": {"air": str(20 + bucket % 5), "track": str(30 + bucket % 10), "hum": "50", "rain": step > 90},
+        "message": "DRS ENABLED" if step < 60 else "YELLOW FLAG IN SECTOR 2",
         "track": status,
         "laps": {"current": 1 + bucket, "total": 50},
         "timing": mock_timing,
@@ -522,7 +598,7 @@ async def signalr_worker():
             conn = Connection(SIGNALR_URL, session=session)
             hub = conn.register_hub("Streaming")
             async def on_connect():
-                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "Heartbeat"]
+                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]
                 hub.server.invoke("Subscribe", topics)
                 logger.info("Subscribed to F1 topics")
             conn.connected += on_connect

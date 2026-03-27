@@ -8,11 +8,13 @@ static lv_obj_t * header;
 static lv_obj_t * header_logo;
 static lv_obj_t * info_label;
 static lv_obj_t * track_label;
-static lv_obj_t * weather_label;
+static lv_obj_t * message_label;
 
 static View active_view = VIEW_MAIN;
 static bool sim_mode = false;
+static bool portrait_mode = false;
 static uint8_t brightness = 255;
+static RotationCallback rotation_cb = nullptr;
 
 struct DriverPos {
     char name[4];
@@ -65,6 +67,8 @@ static lv_obj_t * last_race_summary_label;
 static lv_obj_t * next_flag_img;
 static lv_obj_t * last_flag_img;
 static lv_obj_t * winner_flag_img;
+static lv_obj_t * sim_cb;
+static lv_obj_t * port_cb;
 
 // Other View Objects
 static lv_obj_t * results_table;
@@ -91,6 +95,14 @@ static void sim_event_handler(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
     if(code == LV_EVENT_VALUE_CHANGED) {
         ui_set_sim_mode(lv_obj_has_state(obj, LV_STATE_CHECKED));
+    }
+}
+
+static void portrait_event_handler(lv_event_t * e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    if(code == LV_EVENT_VALUE_CHANGED) {
+        ui_set_portrait_mode(lv_obj_has_state(obj, LV_STATE_CHECKED));
     }
 }
 
@@ -178,6 +190,8 @@ void ui_init() {
     lv_obj_set_style_bg_color(header, lv_color_hex(0x000000), 0);
     lv_obj_set_style_border_width(header, 0, 0);
     lv_obj_set_scrollbar_mode(header, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_clear_flag(header, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
     header_logo = lv_img_create(header);
     lv_img_set_src(header_logo, &f1_logo_small);
@@ -188,18 +202,24 @@ void ui_init() {
     lv_obj_set_style_text_font(info_label, &f1font_12, 0);
     lv_obj_set_style_text_color(info_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 60, 0);
+    lv_obj_set_width(info_label, 150);
+    lv_label_set_long_mode(info_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     track_label = lv_label_create(header);
     lv_label_set_text(track_label, "-");
     lv_obj_set_style_text_font(track_label, &f1font_12, 0);
     lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(track_label, LV_ALIGN_TOP_RIGHT, 0, 0);
+    lv_obj_set_width(track_label, 100);
+    lv_obj_set_style_text_align(track_label, LV_TEXT_ALIGN_RIGHT, 0);
 
-    weather_label = lv_label_create(header);
-    lv_label_set_text(weather_label, "AIR: - / TRACK: -");
-    lv_obj_set_style_text_font(weather_label, &f1font_12, 0);
-    lv_obj_set_style_text_color(weather_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(weather_label, LV_ALIGN_TOP_LEFT, 60, 20);
+    message_label = lv_label_create(header);
+    lv_label_set_text(message_label, "");
+    lv_obj_set_style_text_font(message_label, &f1font_12, 0);
+    lv_obj_set_style_text_color(message_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(message_label, LV_ALIGN_TOP_LEFT, 60, 20);
+    lv_obj_set_width(message_label, 250);
+    lv_label_set_long_mode(message_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     // Initialize View Containers
     for (int i = 0; i < 8; i++) {
@@ -232,11 +252,17 @@ void ui_init() {
     lv_obj_align(tz_dd, LV_ALIGN_TOP_MID, 0, 40);
     lv_obj_add_event_cb(tz_dd, tz_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
-    lv_obj_t * sim_cb = lv_checkbox_create(settings_cont);
+    sim_cb = lv_checkbox_create(settings_cont);
     lv_checkbox_set_text(sim_cb, "Simulation Mode");
     lv_obj_set_style_text_color(sim_cb, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(sim_cb, LV_ALIGN_TOP_MID, 0, 85);
+    lv_obj_align(sim_cb, LV_ALIGN_TOP_MID, -60, 85);
     lv_obj_add_event_cb(sim_cb, sim_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+
+    port_cb = lv_checkbox_create(settings_cont);
+    lv_checkbox_set_text(port_cb, "Portrait");
+    lv_obj_set_style_text_color(port_cb, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_align(port_cb, LV_ALIGN_TOP_MID, 70, 85);
+    lv_obj_add_event_cb(port_cb, portrait_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
 
     lv_obj_t * bright_label = lv_label_create(settings_cont);
     lv_label_set_text(bright_label, "Brightness:");
@@ -265,8 +291,8 @@ void ui_init() {
     lv_obj_set_style_text_color(timing_table, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_pad_left(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_style_pad_right(timing_table, 2, LV_PART_ITEMS);
-    lv_obj_set_style_pad_top(2, LV_PART_ITEMS);
-    lv_obj_set_style_pad_bottom(2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_top(timing_table, 2, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(timing_table, 2, LV_PART_ITEMS);
     lv_obj_set_size(timing_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(timing_table, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_add_event_cb(timing_table, table_draw_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
@@ -364,8 +390,8 @@ void ui_init() {
     calendar_table = lv_table_create(view_containers[VIEW_CALENDAR]);
     lv_obj_set_style_text_font(calendar_table, &f1font_12, 0);
     lv_obj_set_style_text_color(calendar_table, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_pad_top(5, LV_PART_ITEMS);
-    lv_obj_set_style_pad_bottom(5, LV_PART_ITEMS);
+    lv_obj_set_style_pad_top(calendar_table, 5, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(calendar_table, 5, LV_PART_ITEMS);
     lv_obj_set_size(calendar_table, 320, LV_SIZE_CONTENT);
     lv_table_set_col_cnt(calendar_table, 2);
     lv_table_set_col_width(calendar_table, 0, 225);
@@ -388,8 +414,8 @@ void ui_init() {
     event_detail_table = lv_table_create(view_containers[VIEW_EVENT_DETAIL]);
     lv_obj_set_style_text_font(event_detail_table, &f1font_12, 0);
     lv_obj_set_style_text_color(event_detail_table, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_pad_top(7, LV_PART_ITEMS);
-    lv_obj_set_style_pad_bottom(7, LV_PART_ITEMS);
+    lv_obj_set_style_pad_top(event_detail_table, 7, LV_PART_ITEMS);
+    lv_obj_set_style_pad_bottom(event_detail_table, 7, LV_PART_ITEMS);
     lv_obj_set_size(event_detail_table, 320, LV_SIZE_CONTENT);
     lv_obj_align(event_detail_table, LV_ALIGN_TOP_MID, 0, 40);
     lv_table_set_col_cnt(event_detail_table, 2);
@@ -409,17 +435,39 @@ void ui_set_sim_mode(bool enabled) {
     Serial.println(enabled ? "ENABLED" : "DISABLED");
 
     // Sync checkbox if it exists
-    if (view_containers[VIEW_SETTINGS]) {
-        lv_obj_t * cb = lv_obj_get_child(view_containers[VIEW_SETTINGS], 2);
-        if (cb && lv_obj_check_type(cb, &lv_checkbox_class)) {
-            if (enabled) lv_obj_add_state(cb, LV_STATE_CHECKED);
-            else lv_obj_clear_state(cb, LV_STATE_CHECKED);
-        }
+    if (sim_cb) {
+        if (enabled) lv_obj_add_state(sim_cb, LV_STATE_CHECKED);
+        else lv_obj_clear_state(sim_cb, LV_STATE_CHECKED);
     }
 }
 
 bool ui_get_sim_mode() {
     return sim_mode;
+}
+
+void ui_set_portrait_mode(bool enabled) {
+    portrait_mode = enabled;
+    Preferences prefs;
+    prefs.begin("f1-app", false);
+    prefs.putBool("port", enabled);
+    prefs.end();
+    Serial.print("Portrait mode: ");
+    Serial.println(enabled ? "ENABLED" : "DISABLED");
+
+    // Sync checkbox if it exists
+    if (port_cb) {
+        if (enabled) lv_obj_add_state(port_cb, LV_STATE_CHECKED);
+        else lv_obj_clear_state(port_cb, LV_STATE_CHECKED);
+    }
+
+    // Force layout update if in main view
+    if (active_view == VIEW_MAIN) {
+        ui_set_view(VIEW_MAIN);
+    }
+}
+
+bool ui_get_portrait_mode() {
+    return portrait_mode;
 }
 
 void ui_set_brightness(uint8_t val) {
@@ -469,15 +517,47 @@ View ui_get_view() {
 
 void ui_set_view(View view) {
     active_view = view;
+
+    bool is_portrait = (view == VIEW_MAIN && portrait_mode);
+    if (rotation_cb) rotation_cb(is_portrait);
+    uint16_t w = is_portrait ? 240 : 320;
+    uint16_t h = is_portrait ? 320 : 240;
+
+    // Update Global Header
+    lv_obj_set_size(header, w, 50);
+    lv_obj_set_width(message_label, w - 70);
+    lv_obj_set_width(info_label, w - 160); // logo(60) + info + track(100) = w
+
     for (int i = 0; i < 8; i++) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_size(view_containers[i], w, h - 50);
     }
     lv_obj_clear_flag(view_containers[view], LV_OBJ_FLAG_HIDDEN);
+
+    // Update Main View Widgets for rotation
+    if (view == VIEW_MAIN) {
+        lv_obj_set_width(timing_table, w);
+        lv_obj_set_width(idle_container, w);
+        lv_obj_set_width(next_race_summary_label, w - 50);
+        lv_obj_set_width(last_race_summary_label, w - 50);
+
+        if (is_portrait) {
+            lv_table_set_col_width(timing_table, 0, 40);
+            lv_table_set_col_width(timing_table, 1, 60);
+            lv_table_set_col_width(timing_table, 2, 70);
+            lv_table_set_col_width(timing_table, 3, 70);
+        } else {
+            lv_table_set_col_width(timing_table, 0, 45);
+            lv_table_set_col_width(timing_table, 1, 100);
+            lv_table_set_col_width(timing_table, 2, 85);
+            lv_table_set_col_width(timing_table, 3, 90);
+        }
+    }
 
     // Reset header for non-main views if needed
     if (view != VIEW_MAIN) {
         lv_label_set_text(track_label, "");
-        lv_label_set_text(weather_label, "");
+        lv_label_set_text(message_label, "");
         switch(view) {
             case VIEW_SETTINGS: lv_label_set_text(info_label, "Settings"); break;
             case VIEW_RESULTS: lv_label_set_text(info_label, "LAST RESULTS"); break;
@@ -508,11 +588,20 @@ void ui_update_status(const JsonObject& data) {
         else if (strstr(track_status, "Safety")) lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFAA00), 0);
         else lv_obj_set_style_text_color(track_label, lv_color_hex(0xFFFFFF), 0);
 
-        const char* air_temp = (const char*)(data["weather"]["air"] | "-");
-        const char* track_temp = (const char*)(data["weather"]["track"] | "-");
-        char weather_buf[64];
-        snprintf(weather_buf, sizeof(weather_buf), "AIR: %sC / TRACK: %sC", air_temp, track_temp);
-        lv_label_set_text(weather_label, weather_buf);
+        const char* msg = (const char*)(data["message"] | "");
+        lv_label_set_text(message_label, msg);
+
+        const char* session_name = (const char*)(data["session"]["name"] | "");
+        bool is_quali = (strstr(session_name, "Quali") != NULL);
+        int part = data["session"]["part"] | 0;
+
+        if (is_quali) {
+            lv_table_set_cell_value(timing_table, 0, 2, "BEST");
+            lv_table_set_cell_value(timing_table, 0, 3, "GAP");
+        } else {
+            lv_table_set_cell_value(timing_table, 0, 2, "GAP");
+            lv_table_set_cell_value(timing_table, 0, 3, "INT");
+        }
 
         JsonArray timing = data["timing"];
         lv_table_set_row_cnt(timing_table, timing.size() + 1);
@@ -522,7 +611,20 @@ void ui_update_status(const JsonObject& data) {
             const char* name = (const char*)(entry["name"] | "");
             if (!name) name = "";
             int pos = atoi((const char*)(entry["pos"] | "99"));
-            lv_table_set_cell_value(timing_table, row, 0, (const char*)(entry["pos"] | "-"));
+
+            // Handle drop zones in Qualifying
+            char pos_buf[16];
+            if (is_quali) {
+                // 2026 F1 Quali: 22 cars, Q1 (drops 6 at P17-22), Q2 (drops 6 at P11-16)
+                if ((part == 1 && pos > 16) || (part == 2 && pos > 10)) {
+                    snprintf(pos_buf, sizeof(pos_buf), "#FF0000 %d#", pos);
+                } else {
+                    snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+                }
+            } else {
+                snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+            }
+            lv_table_set_cell_value(timing_table, row, 0, pos_buf);
 
             // Find previous position
             int p_pos = -1;
@@ -549,8 +651,13 @@ void ui_update_status(const JsonObject& data) {
             }
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
-            lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
-            lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
+            if (is_quali) {
+                lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
+                lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
+            } else {
+                lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
+                lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
+            }
             row++;
         }
 
@@ -576,7 +683,7 @@ void ui_update_status(const JsonObject& data) {
             lv_label_set_text(info_label, "OFF SESSION");
         }
         lv_label_set_text(track_label, "-");
-        lv_label_set_text(weather_label, "");
+        lv_label_set_text(message_label, "");
 
         // Update Next Race Summary
         JsonObject upcoming = data["upcoming"];
@@ -761,6 +868,10 @@ void ui_update_event_detail(const JsonObject& data) {
 
 void ui_show_message(const char* msg) {
     lv_label_set_text(info_label, msg);
+}
+
+void ui_set_rotation_cb(RotationCallback cb) {
+    rotation_cb = cb;
 }
 
 void ui_format_local_time(const char* iso_time, char* out_buf, size_t out_size) {
