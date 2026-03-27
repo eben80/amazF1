@@ -472,83 +472,140 @@ async def get_status():
 
 @app.get("/mock_status")
 async def get_mock_status():
-    """Return a dynamic fake live session for UI testing, loops every 120s"""
+    """Return a realistic dynamic simulated live session, loops every 10 minutes"""
     t = int(time.time())
-    step = t % 120
 
-    # Simulate track status changes
+    # 10 minute cycle (600 seconds) per session type
+    cycle_duration = 600
+    session_cycle = (t // cycle_duration)
+    step = t % cycle_duration
+
+    # Simulate track status changes (more infrequent)
     status = "Clear"
-    if 30 <= step < 50: status = "Yellow Flag"
-    elif 50 <= step < 80: status = "Safety Car"
-    elif 110 <= step: status = "Red Flag"
+    if 120 <= step < 160: status = "Yellow Flag"
+    elif 300 <= step < 400: status = "Safety Car"
+    elif 550 <= step: status = "Red Flag"
 
-    # Define 2026 grid: 11 teams (including Cadillac), 22 drivers
-    drivers = [
-        ("VER", "Red Bull", "3671C6"), ("NOR", "McLaren", "FF8000"),
-        ("HAM", "Ferrari", "E80020"), ("RUS", "Mercedes", "27F4D2"),
-        ("LEC", "Ferrari", "E80020"), ("PIA", "McLaren", "FF8000"),
-        ("ALO", "Aston Martin", "229971"), ("GAS", "Alpine", "0093CC"),
-        ("HUL", "Haas", "B6BABD"), ("ALB", "Williams", "64C4FF"),
-        ("PER", "Red Bull", "3671C6"), ("TSU", "Racing Bulls", "6692FF"),
-        ("SAI", "Williams", "64C4FF"), ("STR", "Aston Martin", "229971"),
-        ("BEA", "Haas", "B6BABD"), ("MAG", "Haas", "B6BABD"),
-        ("BOT", "Kick Sauber", "52E252"), ("ZHO", "Kick Sauber", "52E252"),
-        ("OCO", "Cadillac", "FFFFFF"), ("LAW", "Racing Bulls", "6692FF"),
-        ("ANT", "Mercedes", "27F4D2"), ("DAR", "Cadillac", "FFFFFF")
+    # Define 2026 grid with realistic base performance offsets (seconds)
+    # (TLA, Team, TeamColor, BasePerformanceOffset)
+    drivers_data = [
+        ("NOR", "McLaren", "FF8000", 0.0),
+        ("PIA", "McLaren", "FF8000", 0.1),
+        ("VER", "Red Bull", "3671C6", 0.05),
+        ("HAD", "Red Bull", "3671C6", 0.5),
+        ("LEC", "Ferrari", "E80020", 0.1),
+        ("HAM", "Ferrari", "E80020", 0.15),
+        ("RUS", "Mercedes", "27F4D2", 0.2),
+        ("ANT", "Mercedes", "27F4D2", 0.3),
+        ("ALO", "Aston Martin", "229971", 0.4),
+        ("STR", "Aston Martin", "229971", 0.6),
+        ("GAS", "Alpine F1 Team", "0093CC", 0.7),
+        ("COL", "Alpine F1 Team", "0093CC", 0.8),
+        ("SAI", "Williams", "64C4FF", 0.5),
+        ("ALB", "Williams", "64C4FF", 0.6),
+        ("LAW", "RB F1 Team", "6692FF", 0.7),
+        ("LIN", "RB F1 Team", "6692FF", 0.9),
+        ("BEA", "Haas F1 Team", "B6BABD", 0.8),
+        ("OCO", "Haas F1 Team", "B6BABD", 0.75),
+        ("BOR", "Audi", "52E252", 1.0),
+        ("HUL", "Audi", "52E252", 0.9),
+        ("BOT", "Cadillac F1 Team", "FFFFFF", 1.1),
+        ("PER", "Cadillac F1 Team", "FFFFFF", 1.2)
     ]
 
-    # Deterministic "random" shuffle based on time bucket
-    bucket = step // 10
+    # Map drivers to numbers (using our DRIVER_MAPPING where possible)
+    drivers = []
+    for tla, team, col, perf in drivers_data:
+        # Find dnum from DRIVER_MAPPING
+        dnum = "99"
+        for k, v in DRIVER_MAPPING.items():
+            if v["abbrev"] == tla:
+                dnum = k
+                break
+        drivers.append({"tla": tla, "team": team, "color": col, "perf": perf, "num": dnum})
 
     # Simulate different session types
     session_types = [
         ("FP1", "Practice"), ("FP2", "Practice"), ("FP3", "Practice"),
-        ("Qualifying", "Qualifying"), ("Sprint Quali", "Qualifying"),
-        ("Sprint", "Race"), ("Race", "Race")
+        ("Qualifying 1", "Qualifying"), ("Qualifying 2", "Qualifying"), ("Qualifying 3", "Qualifying"),
+        ("Race", "Race")
     ]
-    s_name, s_type = session_types[(t // 30) % len(session_types)]
+    s_name, s_type = session_types[session_cycle % len(session_types)]
+
     import random
-    rng = random.Random(bucket)
-    indices = list(range(len(drivers)))
-    rng.shuffle(indices)
+    # Use session_cycle as seed for consistent ranking within a cycle,
+    # but add step-based jitter for position changes
+    rng = random.Random(session_cycle)
+
+    # Calculate simulated times
+    is_race = (s_type == "Race")
+    is_quali = (s_type == "Qualifying")
+    base_lap = 80.0 # 1:20.000
+
+    # Sort drivers by performance + some session-specific randomness
+    drivers.sort(key=lambda x: x["perf"] + rng.random() * 0.2)
 
     mock_timing = []
-    is_quali = "Quali" in s_name
 
-    for pos, idx in enumerate(indices):
-        name, team, color = drivers[idx]
-        gap = "LEADER" if pos == 0 else f"+{pos*0.1 + bucket/50:.3f}"
-        interval = "" if pos == 0 else f"+{0.05 + rng.random()/10:.3f}"
-        comp = "soft" if is_quali else ["soft", "medium", "hard"][rng.randint(0, 2)]
+    for pos_idx, d in enumerate(drivers):
+        pos = pos_idx + 1
+        # Dynamic jitter: occasionally swap positions
+        if not is_race and (t // 10) % 5 == 0 and pos_idx < len(drivers)-1:
+             if random.Random(t // 10).random() > 0.8:
+                 pos = pos_idx + 2
+             elif pos_idx > 0 and random.Random((t // 10) + 1).random() > 0.8:
+                 pos = pos_idx
 
-        # 2026 Quali elimination logic (6 cars in Q1 and Q2)
-        q2_time = "1:19.854" if pos < 16 else ""
-        q3_time = "1:19.234" if pos < 10 else ""
+        # In Pit simulation:
+        # Practice: 40% chance in pit. Quali: 30% chance. Race: 5% chance.
+        pit_chance = 0.4 if not is_race else 0.05
+        if is_quali: pit_chance = 0.3
+
+        # Seed pit status with driver num + step to make it stay in pit for a while
+        in_pit = (random.Random(int(d["num"]) + (step // 60)).random() < pit_chance)
+
+        # Calculate times
+        gap_val = (pos_idx * 0.15) + (d["perf"] * 0.5) + (rng.random() * 0.05)
+        interval_val = 0.1 + (rng.random() * 0.2)
+
+        best_time_sec = base_lap + d["perf"] + (rng.random() * 0.1)
+        last_time_sec = best_time_sec + (rng.random() * 0.5)
+
+        def fmt_time(s):
+            m = int(s // 60)
+            sec = s % 60
+            return f"{m}:{sec:06.3f}"
 
         mock_timing.append({
-            "num": str(idx+1),
-            "name": name,
-            "team": team,
-            "teamColor": color,
-            "pos": str(pos + 1),
-            "gap": gap,
-            "int": interval,
-            "last": "1:21.000",
-            "best": "1:20.543" if pos < 5 else "1:21.123",
-            "q1": "1:20.123",
-            "q2": q2_time,
-            "q3": q3_time,
-            "comp": comp,
-            "col": color
+            "num": d["num"],
+            "name": d["tla"],
+            "team": d["team"],
+            "teamColor": d["color"],
+            "pos": str(pos),
+            "gap": "LEADER" if pos_idx == 0 else f"+{gap_val:.3f}",
+            "int": "" if pos_idx == 0 else f"+{interval_val:.3f}",
+            "last": fmt_time(last_time_sec) if not in_pit else "",
+            "best": fmt_time(best_time_sec),
+            "comp": random.Random(int(d["num"]) + session_cycle).choice(["soft", "medium", "hard"]),
+            "pit": in_pit,
+            "col": d["color"]
         })
+
+    # Sort final list by position
+    mock_timing.sort(key=lambda x: int(x['pos']))
+
+    # Determine part (Q1/Q2/Q3 or FP1/FP2/FP3)
+    part = 1
+    if "2" in s_name: part = 2
+    elif "3" in s_name: part = 3
 
     return {
         "live": True,
-        "session": {"name": s_name, "type": s_type, "circuit": "Dynamic Test Circuit", "part": 1 + (step // 40)},
-        "weather": {"air": str(20 + bucket % 5), "track": str(30 + bucket % 10), "hum": "50", "rain": step > 90},
-        "message": "DRS ENABLED" if step < 60 else "YELLOW FLAG IN SECTOR 2",
+        "session": {"name": s_name, "type": s_type, "circuit": "Suzuka", "part": part},
+        "weather": {"air": "21.5", "track": "38.2", "hum": "45.2", "rain": False},
+        "message": "TRACK CLEAR" if status == "Clear" else "DEBRIS ON TRACK",
         "track": status,
-        "laps": {"current": 1 + bucket, "total": 50},
+        "laps": {"current": (step // 15) if is_race else 0, "total": 53 if is_race else 0},
         "timing": mock_timing,
         "upcoming": state.upcoming_race,
         "previous": state.previous_race
