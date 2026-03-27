@@ -269,6 +269,7 @@ async def on_feed(args):
                         if dnum not in state.timing_data: state.timing_data[dnum] = {}
                         td = state.timing_data[dnum]
                         if "Position" in line: td["pos"] = line["Position"]
+                        if "InPit" in line: td["pit"] = line["InPit"]
                         if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
                         elif "TimeDiffToFastest" in line: td["gap"] = line["TimeDiffToFastest"]
 
@@ -393,6 +394,7 @@ async def get_status():
             "q2": data.get("q2", ""),
             "q3": data.get("q3", ""),
             "comp": data.get("compound", ""),
+            "pit": data.get("pit", False),
             "col": drv_color
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)

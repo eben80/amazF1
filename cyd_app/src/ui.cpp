@@ -592,10 +592,12 @@ void ui_update_status(const JsonObject& data) {
         lv_label_set_text(message_label, msg);
 
         const char* session_name = (const char*)(data["session"]["name"] | "");
+        const char* session_type = (const char*)(data["session"]["type"] | "");
         bool is_quali = (strstr(session_name, "Quali") != NULL);
+        bool is_race = (strcmp(session_type, "Race") == 0);
         int part = data["session"]["part"] | 0;
 
-        if (is_quali) {
+        if (!is_race) {
             lv_table_set_cell_value(timing_table, 0, 2, "BEST");
             lv_table_set_cell_value(timing_table, 0, 3, "GAP");
         } else {
@@ -636,13 +638,17 @@ void ui_update_status(const JsonObject& data) {
             }
 
             const char* compound = (const char*)(entry["comp"] | "");
+            bool in_pit = entry["pit"] | false;
             char driver_name[64];
             int n_pos = 0;
+
+            const char* pit_prefix = in_pit ? "#FFAA00 [P]# " : "";
+
             if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s (%c)", name, c);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s (%c)", pit_prefix, name, c);
             } else {
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s", name);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s", pit_prefix, name);
             }
 
             if (p_pos != -1 && n_pos < sizeof(driver_name) - 10) {
@@ -651,7 +657,7 @@ void ui_update_status(const JsonObject& data) {
             }
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
-            if (is_quali) {
+            if (!is_race) {
                 lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
                 lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
             } else {
