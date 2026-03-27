@@ -20,10 +20,13 @@ import requests
 app = FastAPI()
 
 # --- Configuration ---
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+# Force LOG_LEVEL to DEBUG to see everything
+LOG_LEVEL = "DEBUG" 
 logger.remove()
 logger.add(sys.stderr, level=LOG_LEVEL)
 
+# Also capture the standard logging used by the SignalR library
+logging.basicConfig(level=logging.DEBUG)
 SIGNALR_URL = "https://livetiming.formula1.com/signalr"
 JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
@@ -211,13 +214,13 @@ async def fetch_race_schedule():
 
 # --- Message Handlers ---
 async def on_feed(args):
-    logger.info(f"on_feed raw args: {str(args)[:500]}...")
+    logger.debug(f"RAW SIGNALR DATA: {args}")
     try:
         topic = None
         for arg in args:
             if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
                 topic = arg
-                logger.info(f"SignalR Topic: {topic}")
+                logger.debug(f"SignalR Topic: {topic}")
                 continue
 
             if topic == "Heartbeat" or not topic:
@@ -227,16 +230,13 @@ async def on_feed(args):
             if isinstance(arg, (dict, str)) and len(str(arg)) > 2:
                 state.last_data_time = time.time()
                 state.is_live = True
-                logger.info(f"Live status updated, state.is_live={state.is_live}")
 
             if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
-                if not decoded:
-                    logger.warning(f"Could not decode data for topic {topic}")
-                    continue
+                if not decoded: continue
                 if isinstance(decoded, str): decoded = json.loads(decoded)
 
-                logger.info(f"Full Data for {topic}: {json.dumps(decoded)}")
+                logger.debug(f"Data for {topic}: {str(decoded)[:200]}...")
 
                 if topic == "TimingData":
                     lines = decoded.get("Lines", {})
@@ -309,7 +309,6 @@ async def on_feed(args):
 @app.get("/status")
 async def get_status():
     update_live_status()
-    logger.info(f"get_status: is_live={state.is_live}, timing_len={len(state.timing_data)}, session={state.session_info}")
 
     # Loosen live detection: if we have timing data OR session info (even if name is null), it's live
     has_timing = len(state.timing_data) > 0
