@@ -1049,13 +1049,23 @@ Page(BasePage({
 
     y += 45;
 
-    const timing_data = (data.timing || []).map(item => ({
-      pos: `P${item.pos}`,
-      name: item.name,
-      color: parseInt(item.teamColor || "FFFFFF", 16),
-      gap: item.gap || "",
-      comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
-    }));
+    const isRace = (data.session?.type === "Race");
+
+    const timing_data = (data.timing || []).map(item => {
+      let name = item.name || item.num;
+      if (item.pit) {
+        name = `P ${name}`;
+      }
+
+      return {
+        pos: `P${item.pos}`,
+        name: name,
+        color: parseInt(item.teamColor || "FFFFFF", 16),
+        val1: isRace ? (item.gap || "") : (item.best || ""),
+        val2: isRace ? (item.int || "") : (item.gap || ""),
+        comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
+      };
+    });
 
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
@@ -1071,10 +1081,11 @@ Page(BasePage({
           item_bg_radius: 8,
           text_view: [
             { x: 10, y: 10, w: 40, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
-            { x: 55, y: 8, w: 70, h: 32, key: 'name', color_key: 'color', text_size: 22, align_h: hmUI.align.LEFT },
-            { x: 230, y: 12, w: 100, h: 26, key: 'gap', color: COLORS.GRAY, text_size: 16, align_h: hmUI.align.RIGHT }
+            { x: 55, y: 8, w: 90, h: 32, key: 'name', color_key: 'color', text_size: 22, align_h: hmUI.align.LEFT },
+            { x: 145, y: 12, w: 85, h: 26, key: 'val1', color: COLORS.GRAY, text_size: 16, align_h: hmUI.align.RIGHT },
+            { x: 235, y: 12, w: 85, h: 26, key: 'val2', color: COLORS.YELLOW, text_size: 16, align_h: hmUI.align.RIGHT }
           ],
-          text_view_count: 3,
+          text_view_count: 4,
           image_view: [
             { x: 345, y: 13, w: 24, h: 24, key: 'comp' }
           ],
