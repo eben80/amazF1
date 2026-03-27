@@ -104,7 +104,9 @@ DRIVER_MAPPING = {
     "18": {"abbrev": "STR", "name": "Lance Stroll", "team": "Aston Martin", "color": "229971"}
 }
 
-# --- State ---
+# --- State Persistence ---
+STATE_FILE = "f1_state.json"
+
 class F1State:
     def __init__(self):
         self.last_data_time = 0
@@ -118,6 +120,52 @@ class F1State:
         self.upcoming_race = {}
         self.previous_race = {}
         self.race_control_message = ""
+
+    def save(self):
+        try:
+            data = {
+                "last_data_time": self.last_data_time,
+                "session_info": self.session_info,
+                "timing_data": self.timing_data,
+                "weather_data": self.weather_data,
+                "track_status": self.track_status,
+                "lap_count": self.lap_count,
+                "driver_list": self.driver_list,
+                "race_control_message": self.race_control_message,
+                "timestamp": time.time()
+            }
+            with open(STATE_FILE, 'w') as f:
+                json.dump(data, f)
+            logger.debug("State saved to disk")
+        except Exception as e:
+            logger.error(f"Error saving state: {e}")
+
+    def load(self):
+        if not os.path.exists(STATE_FILE):
+            return
+        try:
+            with open(STATE_FILE, 'r') as f:
+                data = json.load(f)
+
+            # Don't load if older than 12 hours
+            if time.time() - data.get("timestamp", 0) > 43200:
+                logger.info("Persisted state is too old, ignoring")
+                return
+
+            self.last_data_time = data.get("last_data_time", 0)
+            self.session_info = data.get("session_info", {})
+            self.timing_data = data.get("timing_data", {})
+            self.weather_data = data.get("weather_data", {})
+            self.track_status = data.get("track_status", "AllClear")
+            self.lap_count = data.get("lap_count", {"current": 0, "total": 0})
+            self.driver_list = data.get("driver_list", {})
+            self.race_control_message = data.get("race_control_message", "")
+
+            # Recalculate is_live
+            update_live_status()
+            logger.info("State recovered from disk")
+        except Exception as e:
+            logger.error(f"Error loading state: {e}")
 
 state = F1State()
 
@@ -242,6 +290,7 @@ async def on_feed(args):
     logger.debug(f"RAW SIGNALR DATA: {args}")
     try:
         topic = None
+        any_updates = False
         for arg in args:
             if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
                 topic = arg
@@ -255,6 +304,7 @@ async def on_feed(args):
             if isinstance(arg, (dict, str)) and len(str(arg)) > 2:
                 state.last_data_time = time.time()
                 state.is_live = True
+                any_updates = True
 
             if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
@@ -349,6 +399,10 @@ async def on_feed(args):
                                 state.race_control_message = list(messages.values())[-1].get("Message", "")
                         elif isinstance(messages, list):
                             state.race_control_message = messages[-1].get("Message", "")
+
+        if any_updates:
+            state.save()
+
     except Exception as e:
         logger.error(f"Error in on_feed: {e}")
 
@@ -657,6 +711,7 @@ async def signalr_worker():
 
 @app.on_event("startup")
 async def startup_event():
+    state.load()
     asyncio.create_task(signalr_worker())
     asyncio.create_task(fetch_race_schedule())
 
