@@ -611,7 +611,14 @@ void ui_update_status(const JsonObject& data) {
         int row = 1;
         for (JsonObject entry : timing) {
             const char* name = (const char*)(entry["name"] | "");
+            const char* num = (const char*)(entry["num"] | "");
+
+            // Use number if name is missing
+            if (!name || strlen(name) == 0) {
+                name = num;
+            }
             if (!name) name = "";
+
             int pos = atoi((const char*)(entry["pos"] | "99"));
 
             // Handle drop zones in Qualifying
