@@ -1123,8 +1123,10 @@ Page(BasePage({
           else if (currentPos > prevPos) name += " v";
       }
 
-      if (item.pit) {
-        name = `P ${name}`;
+      if (item.fin) {
+          name = `FIN ${name}`;
+      } else if (item.pit) {
+          name = `P ${name}`;
       }
 
       let posColor = COLORS.WHITE;

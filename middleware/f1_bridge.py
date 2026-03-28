@@ -332,6 +332,11 @@ async def on_feed(args):
                         if "Position" in line: td["pos"] = line["Position"]
                         if "InPit" in line: td["pit"] = line["InPit"]
                         if "PitOut" in line: td["out"] = line["PitOut"]
+
+                        # Status bitmask: 80=InPit, 64=Active, 68=Stopped, 128=Finished/Chequered
+                        status_val = line.get("Status", 0)
+                        if status_val & 128: td["finished"] = True
+                        elif status_val == 64: td["finished"] = False
                         if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
                         elif "TimeDiffToFastest" in line: td["gap"] = line["TimeDiffToFastest"]
 
@@ -465,9 +470,8 @@ async def get_status():
         best_time = data.get("best", "")
         part = session_info.get("part", 0)
         if "Quali" in session_info.get("name", ""):
-            if part == 1 and data.get("q1"): best_time = data["q1"]
-            elif part == 2 and data.get("q2"): best_time = data["q2"]
-            elif part == 3 and data.get("q3"): best_time = data["q3"]
+            # Pick the latest available segment time
+            best_time = data.get("q3") or data.get("q2") or data.get("q1") or data.get("best", "")
 
         sorted_timing.append({
             "num": dnum,
@@ -485,6 +489,7 @@ async def get_status():
             "comp": data.get("compound", ""),
             "pit": data.get("pit", False),
             "out": data.get("out", False),
+            "fin": data.get("finished", False),
             "col": drv_color
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
