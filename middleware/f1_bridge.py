@@ -386,6 +386,10 @@ async def on_feed(args):
                         if "Qualifying 2" in name or "Q2" in name: part = 2
                         elif "Qualifying 3" in name or "Q3" in name: part = 3
 
+                    # Ensure name is descriptive for Quali
+                    if name == "Qualifying":
+                        name = f"Qualifying {part}"
+
                     state.session_info = {
                         "name": name,
                         "type": decoded.get("Type"),
@@ -457,6 +461,14 @@ async def get_status():
         drv_team = dinfo_state.get("team") or dinfo_static.get("team") or "UNK"
         drv_color = dinfo_state.get("color") or dinfo_static.get("color") or "FFFFFF"
 
+        # Favor segment time for Quali
+        best_time = data.get("best", "")
+        part = session_info.get("part", 0)
+        if "Quali" in session_info.get("name", ""):
+            if part == 1 and data.get("q1"): best_time = data["q1"]
+            elif part == 2 and data.get("q2"): best_time = data["q2"]
+            elif part == 3 and data.get("q3"): best_time = data["q3"]
+
         sorted_timing.append({
             "num": dnum,
             "name": drv_name,
@@ -466,7 +478,7 @@ async def get_status():
             "gap": data.get("gap", ""),
             "int": data.get("int", ""),
             "last": data.get("last", ""),
-            "best": data.get("best", ""),
+            "best": best_time,
             "q1": data.get("q1", ""),
             "q2": data.get("q2", ""),
             "q3": data.get("q3", ""),
@@ -615,6 +627,9 @@ async def get_mock_status():
             "int": "" if pos_idx == 0 else f"+{interval_val:.3f}",
             "last": fmt_time(last_time_sec) if not in_pit else "",
             "best": fmt_time(best_time_sec),
+            "q1": fmt_time(best_time_sec) if "Qualifying" in s_name else "",
+            "q2": fmt_time(best_time_sec) if "Qualifying 2" in s_name or "Qualifying 3" in s_name else "",
+            "q3": fmt_time(best_time_sec) if "Qualifying 3" in s_name else "",
             "comp": random.Random(int(d["num"]) + session_cycle).choice(["soft", "medium", "hard"]),
             "pit": in_pit,
             "out": is_out,
