@@ -320,6 +320,7 @@ async def on_feed(args):
                         td = state.timing_data[dnum]
                         if "Position" in line: td["pos"] = line["Position"]
                         if "InPit" in line: td["pit"] = line["InPit"]
+                        if "PitOut" in line: td["out"] = line["PitOut"]
                         if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
                         elif "TimeDiffToFastest" in line: td["gap"] = line["TimeDiffToFastest"]
 
@@ -449,6 +450,7 @@ async def get_status():
             "q3": data.get("q3", ""),
             "comp": data.get("compound", ""),
             "pit": data.get("pit", False),
+            "out": data.get("out", False),
             "col": drv_color
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
@@ -562,7 +564,12 @@ async def get_mock_status():
         if is_quali: pit_chance = 0.3
 
         # Seed pit status with driver num + step to make it stay in pit for a while
-        in_pit = (random.Random(int(d["num"]) + (step // 60)).random() < pit_chance)
+        pit_seed = random.Random(int(d["num"]) + (step // 60))
+        in_pit = (pit_seed.random() < pit_chance)
+
+        # Out lap simulation: if not in pit, but was in pit in the previous minute-bucket
+        # (Simplified: 15% of non-pit drivers are on an out-lap)
+        is_out = not in_pit and (pit_seed.random() < 0.15)
 
         # Calculate times
         gap_val = (pos_idx * 0.15) + (d["perf"] * 0.5) + (rng.random() * 0.05)
@@ -588,6 +595,7 @@ async def get_mock_status():
             "best": fmt_time(best_time_sec),
             "comp": random.Random(int(d["num"]) + session_cycle).choice(["soft", "medium", "hard"]),
             "pit": in_pit,
+            "out": is_out,
             "col": d["color"]
         })
 

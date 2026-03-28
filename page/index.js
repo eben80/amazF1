@@ -1125,6 +1125,8 @@ Page(BasePage({
 
       if (item.pit) {
         name = `P ${name}`;
+      } else if (item.out) {
+        name = `OUT ${name}`;
       }
 
       let posColor = COLORS.WHITE;

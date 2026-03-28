@@ -646,10 +646,11 @@ void ui_update_status(const JsonObject& data) {
 
             const char* compound = (const char*)(entry["comp"] | "");
             bool in_pit = entry["pit"] | false;
+            bool is_out = entry["out"] | false;
             char driver_name[64];
             int n_pos = 0;
 
-            const char* pit_prefix = in_pit ? "#FFAA00 [P]# " : "";
+            const char* pit_prefix = in_pit ? "#FFAA00 [P]# " : (is_out ? "#FFFF00 [OUT]# " : "");
 
             if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
