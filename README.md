@@ -102,6 +102,7 @@ The app automatically toggles between **Live Timing** during sessions and an **I
 *   **Team Colors:** Driver names and team titles rendered in their official 2026 HEX colors.
 *   **Haptic/Visual Alerts:** Watch vibrates and CYD LED flashes (Red/Yellow/Orange) during track status changes (SC, VSC, Red Flag).
 *   **Auto-Refresh:** Smart 5-second polling ensures the data is always fresh during live sessions.
+*   **Robust Driver Mapping:** Static fallbacks for the 2026 grid ensure readable names and team colors even during partial data updates.
 
 ### 🏎️ Idle Dashboard Mode
 *   **Next Race:** Comprehensive summary of the upcoming GP, including circuit details and country flags.

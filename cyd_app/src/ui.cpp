@@ -29,6 +29,7 @@ struct TZMapping {
 };
 
 LV_IMG_DECLARE(f1_logo_small);
+LV_IMG_DECLARE(new_f1_logo);
 
 static const TZMapping tz_map[] = {
     {"UTC UTC", "UTC0"},
@@ -194,8 +195,8 @@ void ui_init() {
     lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
     header_logo = lv_img_create(header);
-    lv_img_set_src(header_logo, &f1_logo_small);
-    lv_obj_align(header_logo, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_img_set_src(header_logo, &new_f1_logo);
+    lv_obj_align(header_logo, LV_ALIGN_TOP_LEFT, 0, 4);
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
