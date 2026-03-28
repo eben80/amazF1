@@ -104,3 +104,4 @@ The ESP32-2432S028 includes several onboard components. Below is the standard GP
 - **Touch Screen Not Working:** Ensure you have selected the correct environment for your hardware. MicroUSB-only models (XPT2046) use `cyd`, while USB-C or Hybrid models (GT911) typically require `cyd2usb` or `cyd-v2-v3`.
 - **WiFi Configuration:** If the portal doesn't open automatically, navigate to `192.168.4.1` in your browser while connected to the `F1-Timing-Display` AP.
 - **No Data Displayed:** Confirm that the Python bridge middleware is running and that your CYD has internet access to reach the configured `BRIDGE_URL`.
+- **Viewing Logs:** Connect your CYD to a computer via USB and use a serial monitor (like the one built into PlatformIO) set to **115200 baud**. The app logs boot details, WiFi status, filesystem assets, and data fetch results.

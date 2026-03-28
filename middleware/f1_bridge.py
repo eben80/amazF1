@@ -110,6 +110,7 @@ STATE_FILE = "f1_state.json"
 class F1State:
     def __init__(self):
         self.last_data_time = 0
+        self.session_key = 0
         self.session_info = {}
         self.timing_data = {}
         self.weather_data = {}
@@ -125,6 +126,7 @@ class F1State:
         try:
             data = {
                 "last_data_time": self.last_data_time,
+                "session_key": self.session_key,
                 "session_info": self.session_info,
                 "timing_data": self.timing_data,
                 "weather_data": self.weather_data,
@@ -153,6 +155,7 @@ class F1State:
                 return
 
             self.last_data_time = data.get("last_data_time", 0)
+            self.session_key = data.get("session_key", 0)
             self.session_info = data.get("session_info", {})
             self.timing_data = data.get("timing_data", {})
             self.weather_data = data.get("weather_data", {})
@@ -184,10 +187,18 @@ def decode_message(payload):
 
 def update_live_status():
     now = time.time()
-    if now - state.last_data_time < 300:
+    diff = now - state.last_data_time
+    if diff < 300:
         state.is_live = True
     else:
         state.is_live = False
+
+    # Clear session-specific data if no live data for > 3 hours
+    if diff > 10800 and state.timing_data:
+        logger.info("No live data for > 3 hours, clearing session data")
+        state.timing_data = {}
+        state.lap_count = {"current": 0, "total": 0}
+        state.race_control_message = ""
 
 def get_team_color(name):
     if not name:
@@ -355,6 +366,17 @@ async def on_feed(args):
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
                 elif topic == "SessionInfo":
+                    # Detect session change
+                    new_key = decoded.get("Key", 0)
+                    if new_key != 0 and state.session_key != 0 and new_key != state.session_key:
+                        logger.info(f"Session change detected: {state.session_key} -> {new_key}. Clearing timing data.")
+                        state.timing_data = {}
+                        state.lap_count = {"current": 0, "total": 0}
+                        state.race_control_message = ""
+
+                    if new_key != 0:
+                        state.session_key = new_key
+
                     # Determine part (e.g., Q1/Q2/Q3 or FP1/FP2/FP3)
                     name = decoded.get("Name") or decoded.get("SessionName")
                     part = decoded.get("Number") or 1
