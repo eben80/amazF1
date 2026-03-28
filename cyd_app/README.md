@@ -4,8 +4,12 @@ This subfolder contains the firmware for the **ESP32-2432S028**, popularly known
 
 ## 🚀 Key Features
 
-- **Live Data Visualizer:** Integrated with the official F1 SignalR feed via a Python middleware.
-- **Dynamic Tables:** Timing tower, standings, and results pages automatically resize to display all available drivers/teams.
+- **Live Data Visualizer:** Integrated with the official F1 SignalR feed via a Python middleware (supports Base64+Zlib decoding).
+- **Adaptive Dashboards:** Automatically switches headers (BEST/GAP vs GAP/INT) and logic based on session type (Race, Practice, Quali).
+- **2026 Grid Ready:** Pre-mapped driver names, teams, and colors for the 2026 season (Norris #1, Verstappen #3).
+- **Real-time Status:** Visual indicators for Pit status (`[P]`) and out-laps (`OUT LAP`), plus race control messages.
+- **Position Change Tracking:** Real-time up/down arrows show position fluctuations during the session.
+- **Dynamic Tables:** Timing tower, standings, and results pages automatically resize to display the full 22-car field.
 - **Interactive Calendar:** Drill into any season event with a single touch to view detailed session timings (FP, Quali, Race) in your local timezone.
 - **Smart Timezones:** Built-in city-based timezone selector (e.g., "London GMT/BST", "New York EST/EDT") that persists between reboots.
 - **Pro UI Layout:** Optimized column widths (45px positions, right-aligned points), official F1 logo in the header, and sentence-case headers.
