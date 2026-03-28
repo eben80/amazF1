@@ -325,6 +325,12 @@ async def on_feed(args):
                 logger.debug(f"Data for {topic}: {str(decoded)[:200]}...")
 
                 if topic == "TimingData":
+                    if "SessionPart" in decoded:
+                        state.session_info["part"] = decoded["SessionPart"]
+                        # Ensure name reflects part if generic
+                        if state.session_info.get("name") == "Qualifying":
+                             state.session_info["name"] = f"Qualifying {decoded['SessionPart']}"
+
                     lines = decoded.get("Lines", {})
                     for dnum, line in lines.items():
                         if dnum not in state.timing_data: state.timing_data[dnum] = {}
@@ -332,6 +338,7 @@ async def on_feed(args):
                         if "Position" in line: td["pos"] = line["Position"]
                         if "InPit" in line: td["pit"] = line["InPit"]
                         if "PitOut" in line: td["out"] = line["PitOut"]
+                        if "KnockedOut" in line: td["knocked"] = line["KnockedOut"]
 
                         # Status bitmask: 80=InPit, 64=Active, 68=Stopped, 128=Finished/Chequered
                         status_val = line.get("Status", 0)
@@ -346,7 +353,14 @@ async def on_feed(args):
                         if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
                         if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
 
-                        # Qualifying segments
+                        # BestLapTimes dictionary (segment specific)
+                        blts = line.get("BestLapTimes", {})
+                        if blts:
+                            if "1" in blts and blts["1"].get("Value"): td["q1"] = blts["1"]["Value"]
+                            if "2" in blts and blts["2"].get("Value"): td["q2"] = blts["2"]["Value"]
+                            if "3" in blts and blts["3"].get("Value"): td["q3"] = blts["3"]["Value"]
+
+                        # Qualifying segments via Stats fallback
                         stats = line.get("Stats", [])
                         if stats:
                             for s in stats:
@@ -470,8 +484,15 @@ async def get_status():
         best_time = data.get("best", "")
         part = session_info.get("part", 0)
         if "Quali" in session_info.get("name", ""):
-            # Pick the latest available segment time
-            best_time = data.get("q3") or data.get("q2") or data.get("q1") or data.get("best", "")
+            is_knocked = data.get("knocked", False)
+            if is_knocked:
+                 # Pick the latest available segment time
+                 best_time = data.get("q3") or data.get("q2") or data.get("q1") or data.get("best", "")
+            else:
+                 # Only show the best time for the CURRENT segment
+                 if part == 1: best_time = data.get("q1", "")
+                 elif part == 2: best_time = data.get("q2", "")
+                 elif part == 3: best_time = data.get("q3", "")
 
         sorted_timing.append({
             "num": dnum,
