@@ -650,7 +650,7 @@ void ui_update_status(const JsonObject& data) {
             char driver_name[64];
             int n_pos = 0;
 
-            const char* pit_prefix = in_pit ? "#FFAA00 [P]# " : (is_out ? "#FFFF00 [OUT]# " : "");
+            const char* pit_prefix = in_pit ? "#FFAA00 [P]# " : "";
 
             if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
@@ -666,7 +666,11 @@ void ui_update_status(const JsonObject& data) {
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
             if (!is_race) {
-                lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
+                if (is_out) {
+                    lv_table_set_cell_value(timing_table, row, 2, "OUT LAP");
+                } else {
+                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
+                }
                 lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
             } else {
                 lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));

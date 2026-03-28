@@ -1125,8 +1125,6 @@ Page(BasePage({
 
       if (item.pit) {
         name = `P ${name}`;
-      } else if (item.out) {
-        name = `OUT ${name}`;
       }
 
       let posColor = COLORS.WHITE;
@@ -1136,12 +1134,19 @@ Page(BasePage({
         }
       }
 
+      let val1 = "";
+      if (isRace) {
+          val1 = item.gap || "";
+      } else {
+          val1 = item.out ? "OUT LAP" : (item.best || "");
+      }
+
       return {
         pos: `P${item.pos}`,
         name: name,
         color: parseInt(item.teamColor || "FFFFFF", 16),
         posColor: posColor,
-        val1: isRace ? (item.gap || "") : (item.best || ""),
+        val1: val1,
         val2: isRace ? (item.int || "") : (item.gap || ""),
         comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
       };
