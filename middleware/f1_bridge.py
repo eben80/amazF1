@@ -303,7 +303,7 @@ async def on_feed(args):
         topic = None
         any_updates = False
         for arg in args:
-            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats"]:
+            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats", "FastestLaps"]:
                 topic = arg
                 logger.debug(f"SignalR Topic: {topic}")
                 continue
@@ -459,6 +459,20 @@ async def on_feed(args):
                         if pb and isinstance(pb, dict):
                             td["best_lap_pos"] = pb.get("Position")
 
+                elif topic == "FastestLaps":
+                    # The 'decoded' for FastestLaps usually contains a list of lines
+                    lines = decoded.get("Lines", []) if isinstance(decoded, dict) else []
+                    for line in lines:
+                        stats = line.get("Stats", [])
+                        for s in stats:
+                            if s.get("Position") == 1:
+                                state.session_info["fastest_lap"] = {
+                                    "driver": line.get("DriverNumber"),
+                                    "time": line.get("Value"),
+                                    "lap": line.get("Lap")
+                                }
+                                logger.info(f"🏆 NEW SESSION RECORD: {line.get('Value')} by {line.get('DriverNumber')}")
+
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
                 elif topic == "SessionInfo":
@@ -571,6 +585,10 @@ async def get_status():
                  elif part == 2: best_time = data.get("q2", "")
                  elif part == 3: best_time = data.get("q3", "")
 
+        is_fastest = (data.get("best_lap_pos") == 1)
+        if not is_fastest and state.session_info.get("fastest_lap"):
+            is_fastest = (state.session_info["fastest_lap"].get("driver") == dnum)
+
         sorted_timing.append({
             "num": dnum,
             "name": drv_name,
@@ -589,7 +607,7 @@ async def get_status():
             "out": data.get("out", False),
             "fin": data.get("finished", False),
             "retired": data.get("retired", False),
-            "fastest": data.get("best_lap_pos") == 1,
+            "fastest": is_fastest,
             "col": drv_color
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
@@ -913,7 +931,7 @@ async def signalr_worker():
             conn = Connection(SIGNALR_URL, session=session)
             hub = conn.register_hub("Streaming")
             async def on_connect():
-                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats"]
+                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats", "FastestLaps"]
                 hub.server.invoke("Subscribe", topics)
                 logger.info("Subscribed to F1 topics")
             conn.connected += on_connect
