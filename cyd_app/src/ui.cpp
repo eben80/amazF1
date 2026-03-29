@@ -654,7 +654,7 @@ void ui_update_status(const JsonObject& data) {
             int n_pos = 0;
 
             const char* pit_prefix = is_fin ? "#00FF00 FIN# " : (in_pit ? "#FFAA00 [P]# " : "");
-            const char* fastest_color = is_fastest ? "#FF00FF " : "";
+            const char* fastest_color = is_fastest ? "#FF00FF" : "";
             const char* fastest_suffix = is_fastest ? "#" : "";
 
             if (compound && strlen(compound) > 0) {

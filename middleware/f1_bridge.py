@@ -373,18 +373,27 @@ async def on_feed(args):
                                     if "Q2" in str(s.get("Text", "")): td["q2"] = s["Time"]
                                     if "Q3" in str(s.get("Text", "")): td["q3"] = s["Time"]
 
-                        stints = line.get("Stints", [])
+                        stints = line.get("Stints")
                         if stints:
-                            last_stint = list(stints.values())[-1] if isinstance(stints, dict) else stints[-1]
-                            compound = last_stint.get("Compound")
-                            if compound:
-                                compound = compound.upper()
-                                if "SOFT" in compound: td["compound"] = "soft"
-                                elif "MEDIUM" in compound: td["compound"] = "medium"
-                                elif "HARD" in compound: td["compound"] = "hard"
-                                elif "INTER" in compound: td["compound"] = "intermediate"
-                                elif "WET" in compound: td["compound"] = "wet"
-                                else: td["compound"] = compound.lower()
+                            try:
+                                if isinstance(stints, dict):
+                                    # Get the stint with the highest numeric key
+                                    last_key = max(stints.keys(), key=lambda x: int(x))
+                                    last_stint = stints[last_key]
+                                else:
+                                    last_stint = stints[-1]
+
+                                compound = last_stint.get("Compound")
+                                if compound:
+                                    compound = compound.upper()
+                                    if "SOFT" in compound: td["compound"] = "soft"
+                                    elif "MEDIUM" in compound: td["compound"] = "medium"
+                                    elif "HARD" in compound: td["compound"] = "hard"
+                                    elif "INTER" in compound: td["compound"] = "intermediate"
+                                    elif "WET" in compound: td["compound"] = "wet"
+                                    else: td["compound"] = compound.lower()
+                            except (ValueError, IndexError):
+                                pass
 
                 elif topic == "TimingAppData":
                     lines = decoded.get("Lines", {})
