@@ -32,12 +32,12 @@ JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
 # --- Mappings ---
 TRACK_STATUS_MAP = {
-    "1": "Clear",
+    "1": "All Clear",
     "2": "Yellow Flag",
-    "4": "Safety Car",
-    "5": "Red Flag",
-    "6": "VSC",
-    "7": "VSC Ending"
+    "4": "Safety Car",           # Full Safety Car (Physical)
+    "5": "Red Flag",             # Session Suspended
+    "6": "Virtual Safety Car",
+    "7": "VSC Ending",           # The "VSC Ending" notification
 }
 FLAG_MAPPING = {
     "British": "🇬🇧", "German": "🇩🇪", "Italian": "🇮🇹", "Monegasque": "🇲🇨",
@@ -631,7 +631,7 @@ async def get_mock_status():
     step = t % cycle_duration
 
     # Simulate track status changes (more infrequent)
-    status = "Clear"
+    status = "All Clear"
     if 120 <= step < 160: status = "Yellow Flag"
     elif 300 <= step < 400: status = "Safety Car"
     elif 550 <= step: status = "Red Flag"
@@ -769,7 +769,7 @@ async def get_mock_status():
         "live": True,
         "session": {"name": s_name, "type": s_type, "circuit": "Suzuka", "part": part},
         "weather": {"air": "21.5", "track": "38.2", "hum": "45.2", "rain": False},
-        "message": "TRACK CLEAR" if status == "Clear" else "DEBRIS ON TRACK",
+        "message": "TRACK CLEAR" if status == "All Clear" else "DEBRIS ON TRACK",
         "track": status,
         "laps": {"current": (step // 15) if is_race else 0, "total": 53 if is_race else 0},
         "timing": mock_timing,
