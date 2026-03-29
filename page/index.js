@@ -1137,19 +1137,34 @@ Page(BasePage({
       }
 
       let val1 = "";
+      let val2 = "";
       if (isRace) {
-          val1 = item.gap || "";
+          if (item.pit) {
+              val1 = "PIT";
+          } else if (item.out) {
+              val1 = "OUT";
+          } else {
+              val1 = item.gap || "";
+          }
+          val2 = item.int || "";
       } else {
           val1 = item.out ? "OUT LAP" : (item.best || "");
+          if (item.pit) {
+              val2 = "PIT";
+          } else if (item.out) {
+              val2 = "OUT";
+          } else {
+              val2 = item.gap || "";
+          }
       }
 
       return {
         pos: `P${item.pos}`,
         name: name,
-        color: parseInt(item.teamColor || "FFFFFF", 16),
+        color: item.fastest ? 0xFF00FF : parseInt(item.teamColor || "FFFFFF", 16),
         posColor: posColor,
         val1: val1,
-        val2: isRace ? (item.int || "") : (item.gap || ""),
+        val2: val2,
         comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
       };
     });
