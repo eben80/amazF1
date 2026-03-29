@@ -362,12 +362,36 @@ async def on_feed(args):
                             td["finished"] = True
                         
                         # Gap and Interval Data
-                        if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
-                        if "IntervalToNext" in line: td["int"] = line["IntervalToNext"]
+                        if "GapToLeader" in line:
+                            gap = line["GapToLeader"]
+                            td["gap"] = gap.get("Value") if isinstance(gap, dict) else gap
+
+                        # Try IntervalToNext then IntervalToPositionAhead as fallbacks
+                        interval = line.get("IntervalToNext") or line.get("IntervalToPositionAhead")
+                        if interval:
+                            td["int"] = interval.get("Value") if isinstance(interval, dict) else interval
                         
                         # Last and Best Lap Times
-                        if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
-                        if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
+                        if "LastLapTime" in line:
+                            last = line["LastLapTime"]
+                            td["last"] = last.get("Value") if isinstance(last, dict) else last
+                        if "BestLapTime" in line:
+                            best = line["BestLapTime"]
+                            td["best"] = best.get("Value") if isinstance(best, dict) else best
+
+                        # Tyre Compound (extracted from Stints)
+                        stints = line.get("Stints")
+                        if stints:
+                            # Stints can be a list or a dict indexed by stint number
+                            last_stint = {}
+                            if isinstance(stints, list) and len(stints) > 0:
+                                last_stint = stints[-1]
+                            elif isinstance(stints, dict) and len(stints) > 0:
+                                stint_keys = sorted(stints.keys(), key=lambda x: int(x) if x.isdigit() else 0)
+                                last_stint = stints[stint_keys[-1]]
+
+                            if "Compound" in last_stint:
+                                td["compound"] = last_stint["Compound"].lower()
 
                         # Qualifying Segment Times (BestLapTimes dictionary)
                         blts = line.get("BestLapTimes", {})
@@ -425,6 +449,25 @@ async def on_feed(args):
                         if "TeamName" in info: state.driver_list[dnum]["team"] = info["TeamName"]
                         if "TeamColour" in info: state.driver_list[dnum]["color"] = info["TeamColour"]
                         if "Tla" in info: state.driver_list[dnum]["abbrev"] = info["Tla"]
+
+                elif topic == "RaceControlMessages":
+                    msgs = decoded.get("Messages", {})
+                    if msgs:
+                        # Messages are often a dict of dicts; get the latest one
+                        # If keys are numeric strings, we want the highest key
+                        sorted_keys = sorted(msgs.keys(), key=lambda x: int(x) if x.isdigit() else 0)
+                        if sorted_keys:
+                            latest_msg = msgs[sorted_keys[-1]].get("Message", "")
+                            if latest_msg:
+                                state.race_control_message = latest_msg
+                                logger.info(f"Race Control: {latest_msg}")
+                                any_updates = True
+
+                elif topic == "TrackStatus":
+                    status_code = str(decoded.get("Status", "1"))
+                    state.track_status = TRACK_STATUS_MAP.get(status_code, "Clear")
+                    logger.info(f"Track Status: {state.track_status}")
+                    any_updates = True
 
         # Step 3: Persist the state to disk if updates occurred
         if any_updates:
