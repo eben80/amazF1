@@ -1125,7 +1125,7 @@ Page(BasePage({
 
       if (item.fin) {
           name = `FIN ${name}`;
-      } else if (item.pit) {
+      } else if (!isRace && item.pit) {
           name = `P ${name}`;
       }
 
@@ -1139,10 +1139,10 @@ Page(BasePage({
       let val1 = "";
       let val2 = "";
       if (isRace) {
-          if (item.pit) {
-              val1 = "PIT";
-          } else if (item.out) {
+          if (item.retired) {
               val1 = "OUT";
+          } else if (item.pit) {
+              val1 = "PIT";
           } else {
               val1 = item.gap || "";
           }

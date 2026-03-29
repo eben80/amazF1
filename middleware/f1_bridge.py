@@ -340,10 +340,13 @@ async def on_feed(args):
                         if "PitOut" in line: td["out"] = line["PitOut"]
                         if "KnockedOut" in line: td["knocked"] = line["KnockedOut"]
 
-                        # Status bitmask: 80=InPit, 64=Active, 68=Stopped, 128=Finished/Chequered
+                        # Status bitmask: 80=InPit, 64=Active, 68=Stopped, 128=Finished/Chequered, 1=Retired (sometimes)
                         status_val = line.get("Status", 0)
                         if status_val & 128: td["finished"] = True
                         elif status_val == 64: td["finished"] = False
+
+                        if "Retired" in line: td["retired"] = line["Retired"]
+                        elif "Stopped" in line: td["retired"] = line["Stopped"]
 
                         # Gap and Interval handling with dictionary/string flexibility
                         gap = line.get("GapToLeader") or line.get("TimeDiffToFastest")
@@ -561,6 +564,7 @@ async def get_status():
             "pit": data.get("pit", False),
             "out": data.get("out", False),
             "fin": data.get("finished", False),
+            "retired": data.get("retired", False),
             "fastest": data.get("best_lap_pos") == 1,
             "col": drv_color
         })
@@ -678,9 +682,11 @@ async def get_mock_status():
         pit_seed = random.Random(int(d["num"]) + (step // 60))
         in_pit = (pit_seed.random() < pit_chance)
 
-        # Out lap simulation: if not in pit, but was in pit in the previous minute-bucket
-        # (Simplified: 15% of non-pit drivers are on an out-lap)
-        is_out = not in_pit and (pit_seed.random() < 0.15)
+        # Retired simulation (only in Race)
+        is_retired = is_race and pos > 20 and (step > 400) # Last 2 drivers retired after 400s
+
+        # Out lap simulation: only in Practice/Qualifying
+        is_out = not is_race and not in_pit and (pit_seed.random() < 0.15)
 
         # Calculate times
         gap_val = (pos_idx * 0.15) + (d["perf"] * 0.5) + (rng.random() * 0.05)
@@ -710,6 +716,7 @@ async def get_mock_status():
             "comp": random.Random(int(d["num"]) + session_cycle).choice(["soft", "medium", "hard"]),
             "pit": in_pit,
             "out": is_out,
+            "retired": is_retired,
             "fastest": (pos_idx == 1), # Mock P2 as having the fastest lap
             "col": d["color"]
         })
