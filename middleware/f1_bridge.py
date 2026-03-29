@@ -478,22 +478,32 @@ async def on_feed(args):
                     if new_key != 0:
                         state.session_key = new_key
 
-                    # Determine part (e.g., Q1/Q2/Q3 or FP1/FP2/FP3)
-                    name = decoded.get("Name") or decoded.get("SessionName")
+                    # Extract identifying strings
+                    name = decoded.get("Name") or decoded.get("SessionName") or ""
+                    s_type = decoded.get("Type") or ""
+
+                    if not name:
+                        name = s_type
+
+                    # Part Detection: Initialize part
                     part = decoded.get("Number") or 1
 
-                    # Fallback to name parsing if Number is missing
-                    if part == 1 and name:
-                        if "Qualifying 2" in name or "Q2" in name: part = 2
-                        elif "Qualifying 3" in name or "Q3" in name: part = 3
+                    # SQ Support and Part Detection improvement
+                    if part == 1:
+                        if any(q in name for q in ["Qualifying 2", "Q2", "SQ2", "Sprint Quali 2"]):
+                            part = 2
+                        elif any(q in name for q in ["Qualifying 3", "Q3", "SQ3", "Sprint Quali 3"]):
+                            part = 3
 
-                    # Ensure name is descriptive for Quali
-                    if name == "Qualifying":
+                    # Descriptive Naming
+                    if any(sq in name for sq in ["SQ", "Sprint Quali", "Sprint Qualifying"]):
+                        name = f"Sprint Qualifying {part}"
+                    elif name == "Qualifying" or name in ["Q1", "Q2", "Q3"]:
                         name = f"Qualifying {part}"
 
                     state.session_info = {
                         "name": name,
-                        "type": decoded.get("Type"),
+                        "type": s_type,
                         "circuit": decoded.get("Meeting", {}).get("Circuit", {}).get("ShortName") or decoded.get("CircuitName"),
                         "status": decoded.get("SessionStatus") or decoded.get("Status"),
                         "part": part
