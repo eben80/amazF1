@@ -341,18 +341,21 @@ async def on_feed(args):
                         if "KnockedOut" in line: td["knocked"] = line["KnockedOut"]
 
                         # Status bitmask:
-                        # 64 = Active, 128 = Finished, 0 = Retired/DNS
+                        # 64 = Active, 128 = Finished, 16/2 = In Pit, 8/0 = Retired/Out
                         if "Status" in line:
                             status_val = line["Status"]
-                            if status_val == 0:
-                                td["retired"] = True
+
+                            is_active = bool(status_val & 64)
+                            in_pits = bool(status_val & 16) or bool(status_val & 2)
+                            is_retired = bool(status_val & 8) or (status_val == 0)
+                            is_finished = bool(status_val & 128)
+
+                            td["pit"] = in_pits
+                            td["retired"] = is_retired
+                            td["finished"] = is_finished
+
+                            if is_retired:
                                 td["pos"] = "DNF"
-                            elif status_val & 128:
-                                td["finished"] = True
-                                td["retired"] = False
-                            elif status_val & 64:
-                                td["finished"] = False
-                                td["retired"] = False
 
                         if "Retired" in line and line["Retired"]:
                             td["retired"] = True
