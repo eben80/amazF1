@@ -91,11 +91,18 @@ The app uses assets located in the `assets/` directory. Replace the placeholders
 The app automatically toggles between **Live Timing** during sessions and an **Idle Dashboard** during off-periods.
 
 ### 🏁 Live Timing Mode
-*   **Full Timing Tower:** Real-time positions for the entire field (up to 20 drivers on CYD).
-*   **Team Colors:** Driver names and team titles rendered in their official HEX colors.
-*   **Gap to Leader:** Live intervals and gaps updated every 5-30 seconds.
-*   **Tire Compounds:** Visual status of tire compounds (Soft, Medium, Hard, Inter, Wet).
-*   **Auto-Refresh:** Smart polling ensures the data is always fresh during live sessions.
+*   **Adaptive Timing Tower:**
+    *   **Race:** Displays Gap to Leader and Interval to Next.
+    *   **Practice/Qualifying:** Displays Best Lap and Gap to Fastest.
+*   **Real-time Indicators:**
+    *   **Pit Status:** Drivers in the pit are marked with a `[P]` prefix.
+    *   **Track Activity:** Drivers on an out-lap display `OUT LAP` in the timing column.
+    *   **Position Tracking:** Real-time up/down arrows (`^`/`v`) show position changes during the session.
+*   **Race Control:** Circularly scrolling display of the latest race control messages in the header.
+*   **Team Colors:** Driver names and team titles rendered in their official 2026 HEX colors.
+*   **Haptic/Visual Alerts:** Watch vibrates and CYD LED flashes (Red/Yellow/Orange) during track status changes (SC, VSC, Red Flag).
+*   **Auto-Refresh:** Smart 5-second polling ensures the data is always fresh during live sessions.
+*   **Robust Driver Mapping:** Static fallbacks for the 2026 grid ensure readable names and team colors even during partial data updates.
 
 ### 🏎️ Idle Dashboard Mode
 *   **Next Race:** Comprehensive summary of the upcoming GP, including circuit details and country flags.
@@ -113,8 +120,13 @@ The app automatically toggles between **Live Timing** during sessions and an **I
 
 ---
 
-## 🛠️ Data Stack
-*   **SignalR:** Real-time data stream from official F1 servers.
+## 🛠️ Data Stack & Reliability
+*   **SignalR:** High-frequency data stream from official F1 servers (Base64 + Zlib decoded).
 *   **Jolpica/Ergast API:** Historical results, standings, and schedule data.
-*   **FastAPI Middleware:** Python bridge that simplifies and merges data for the watch.
-*   **ZML Framework:** Facilitates communication between the watch and the phone's side service.
+*   **FastAPI Middleware:** Python bridge that aggregates multiple streams into a single JSON endpoint.
+*   **State Persistence:** The middleware automatically saves session state to `f1_state.json`. If the service restarts mid-session, it recovers the last known data instantly (expires after 12 hours).
+*   **ZML Framework:** Robust communication bridge between the smartwatch and the mobile "Side Service".
+
+## 📊 Logging & Debugging
+*   **Middleware Logs:** The bridge uses `loguru` and standard `logging` to provide detailed debug info about SignalR topic updates.
+*   **Watch Logs:** Uses the `@zos/utils` Logger. View logs via the Zepp app's developer mode or Zeus CLI.

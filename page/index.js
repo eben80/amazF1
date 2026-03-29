@@ -1,5 +1,6 @@
 import * as hmUI from "@zos/ui";
 import * as display from "@zos/display";
+import * as sensor from "@zos/sensor";
 import { getDeviceInfo } from "@zos/device";
 import { onGesture, GESTURE_LEFT, GESTURE_RIGHT, GESTURE_DOWN, onKey, KEY_BACK, KEY_EVENT_UP } from "@zos/interaction";
 import { push } from "@zos/router";
@@ -35,7 +36,9 @@ Page(BasePage({
     resultsData: null,
     DEVICE_WIDTH: 390,
     currentView: "main",
-    testMode: false
+    testMode: false,
+    prevPositions: {},
+    lastTrackStatus: ""
   },
 
   onInit() {
@@ -847,6 +850,22 @@ Page(BasePage({
     });
   },
 
+  shortenSession(name, type) {
+    if (!name) return type?.toUpperCase() || "LIVE";
+    const n = name.toUpperCase();
+    if (n.includes("PRACTICE 1") || n.includes("FP1")) return "FP1";
+    if (n.includes("PRACTICE 2") || n.includes("FP2")) return "FP2";
+    if (n.includes("PRACTICE 3") || n.includes("FP3")) return "FP3";
+    if (n.includes("QUALIFYING 1") || n.includes("Q1")) return "Q1";
+    if (n.includes("QUALIFYING 2") || n.includes("Q2")) return "Q2";
+    if (n.includes("QUALIFYING 3") || n.includes("Q3")) return "Q3";
+    if (n.includes("QUALIFYING")) return "QUALY";
+    if (n.includes("SPRINT QUALI")) return "SQ";
+    if (n.includes("SPRINT")) return "SPRINT";
+    if (n.includes("RACE")) return "RACE";
+    return n.substring(0, 10);
+  },
+
   // =========================
   // MAIN UI
   // =========================
@@ -1015,20 +1034,21 @@ Page(BasePage({
     }
 
     // LIVE
-    let y = SAFE_TOP;
+    let y = 10;
 
+    // Session Short Name
     this.rootGroup.createWidget(hmUI.widget.TEXT, {
-      x: LAYOUT.X,
+      x: 10,
       y,
-      w: 100,
-      h: 40,
-      text: "🔴 LIVE",
+      w: 120,
+      h: 30,
+      text: this.shortenSession(data.session?.name, data.session?.type),
       color: COLORS.RED,
       text_size: 24,
       align_h: hmUI.align.LEFT
     });
 
-    // Track Status
+    // Track Status & Haptics
     let status_color = COLORS.WHITE;
     const status = data.track || "";
     if (status.includes("Yellow")) status_color = COLORS.YELLOW;
@@ -1036,26 +1056,110 @@ Page(BasePage({
     else if (status.includes("Clear") || status.includes("Normal")) status_color = 0x00FF00;
     else if (status.includes("SC") || status.includes("Safety")) status_color = COLORS.YELLOW;
 
+    if (status !== this.state.lastTrackStatus && this.state.lastTrackStatus !== "") {
+        const vibrate = sensor.createSensor(sensor.id.VIBRATE);
+        vibrate.stop();
+        vibrate.scene = 24; // Alert scene
+        vibrate.start();
+    }
+    this.state.lastTrackStatus = status;
+
     this.rootGroup.createWidget(hmUI.widget.TEXT, {
-      x: 120,
+      x: 130,
       y,
       w: 250,
-      h: 40,
+      h: 30,
       text: status.toUpperCase(),
       color: status_color,
       text_size: 20,
       align_h: hmUI.align.RIGHT
     });
 
-    y += 45;
+    y += 32;
 
-    const timing_data = (data.timing || []).map(item => ({
-      pos: `P${item.pos}`,
-      name: item.name,
-      color: parseInt(item.teamColor || "FFFFFF", 16),
-      gap: item.gap || "",
-      comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
-    }));
+    // Race Control Message
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+        x: 10,
+        y,
+        w: 370,
+        h: 24,
+        text: data.message || "",
+        color: COLORS.WHITE,
+        text_size: 16,
+        text_style: hmUI.text_style.CHAR_WRAP
+    });
+
+    y += 28;
+
+    const isRace = (data.session?.type === "Race");
+    const isQuali = (data.session?.name?.includes("Quali"));
+    const part = data.session?.part || 0;
+
+    // Table Header
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: 10, y: y, w: 40, h: 26, text: "P", color: COLORS.GRAY, text_size: 16
+    });
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: 55, y: y, w: 100, h: 26, text: "DRV", color: COLORS.GRAY, text_size: 16
+    });
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: 155, y: y, w: 110, h: 26, text: isRace ? "GAP" : "BEST", color: COLORS.GRAY, text_size: 16, align_h: hmUI.align.RIGHT
+    });
+    this.rootGroup.createWidget(hmUI.widget.TEXT, {
+      x: 270, y: y, w: 90, h: 26, text: isRace ? "INT" : "GAP", color: COLORS.GRAY, text_size: 16, align_h: hmUI.align.RIGHT
+    });
+
+    y += 28;
+
+    const timing_data = (data.timing || []).map(item => {
+      const num = item.num;
+      let name = item.name || num;
+      const currentPos = parseInt(item.pos);
+
+      // Position Change Tracking
+      const prevPos = this.state.prevPositions[num];
+      if (prevPos !== undefined) {
+          if (currentPos < prevPos) name += " ^";
+          else if (currentPos > prevPos) name += " v";
+      }
+
+      if (item.fin) {
+          name = `FIN ${name}`;
+      } else if (item.pit) {
+          name = `P ${name}`;
+      }
+
+      let posColor = COLORS.WHITE;
+      if (isQuali) {
+        if ((part === 1 && currentPos > 16) || (part === 2 && currentPos > 10)) {
+          posColor = COLORS.RED;
+        }
+      }
+
+      let val1 = "";
+      if (isRace) {
+          val1 = item.gap || "";
+      } else {
+          val1 = item.out ? "OUT LAP" : (item.best || "");
+      }
+
+      return {
+        pos: `P${item.pos}`,
+        name: name,
+        color: parseInt(item.teamColor || "FFFFFF", 16),
+        posColor: posColor,
+        val1: val1,
+        val2: isRace ? (item.int || "") : (item.gap || ""),
+        comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
+      };
+    });
+
+    // Save positions for next cycle
+    const newPositions = {};
+    (data.timing || []).forEach(item => {
+        newPositions[item.num] = parseInt(item.pos);
+    });
+    this.state.prevPositions = newPositions;
 
     this.rootGroup.createWidget(hmUI.widget.SCROLL_LIST, {
       x: 0,
@@ -1071,10 +1175,11 @@ Page(BasePage({
           item_bg_radius: 8,
           text_view: [
             { x: 10, y: 10, w: 40, h: 30, key: 'pos', color: COLORS.WHITE, text_size: 18 },
-            { x: 55, y: 8, w: 70, h: 32, key: 'name', color_key: 'color', text_size: 22, align_h: hmUI.align.LEFT },
-            { x: 230, y: 12, w: 100, h: 26, key: 'gap', color: COLORS.GRAY, text_size: 16, align_h: hmUI.align.RIGHT }
+            { x: 55, y: 8, w: 90, h: 32, key: 'name', color_key: 'color', text_size: 22, align_h: hmUI.align.LEFT },
+            { x: 145, y: 12, w: 85, h: 26, key: 'val1', color: COLORS.GRAY, text_size: 16, align_h: hmUI.align.RIGHT },
+            { x: 235, y: 12, w: 85, h: 26, key: 'val2', color: COLORS.YELLOW, text_size: 16, align_h: hmUI.align.RIGHT }
           ],
-          text_view_count: 3,
+          text_view_count: 4,
           image_view: [
             { x: 345, y: 13, w: 24, h: 24, key: 'comp' }
           ],
