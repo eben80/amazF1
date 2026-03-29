@@ -399,7 +399,11 @@ async def on_feed(args):
                                 else:
                                     last_stint = stints[-1]
 
-                                compound = last_stint.get("Compound")
+                                if isinstance(last_stint, str):
+                                    compound = last_stint
+                                else:
+                                    compound = last_stint.get("Compound")
+
                                 if compound:
                                     compound = compound.upper()
                                     if "SOFT" in compound: td["compound"] = "soft"
@@ -427,7 +431,11 @@ async def on_feed(args):
                                 else:
                                     last_stint = stints[-1]
 
-                                compound = last_stint.get("Compound")
+                                if isinstance(last_stint, str):
+                                    compound = last_stint
+                                else:
+                                    compound = last_stint.get("Compound")
+
                                 if compound:
                                     compound = compound.upper()
                                     if "SOFT" in compound: td["compound"] = "soft"
