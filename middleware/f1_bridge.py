@@ -149,7 +149,7 @@ class F1State:
             with open(STATE_FILE, 'r') as f:
                 data = json.load(f)
 
-            # Ensure data is fresh (within 12 hours)
+            # Don't load if older than 12 hours
             if time.time() - data.get("timestamp", 0) > 43200:
                 logger.info("Persisted state is too old, ignoring")
                 return
@@ -157,16 +157,16 @@ class F1State:
             self.last_data_time = data.get("last_data_time", 0)
             self.session_key = data.get("session_key", 0)
             self.session_info = data.get("session_info", {})
-            # JSON keys are always strings; ensure our dictionary handles them correctly
-            self.timing_data = {str(k): v for k, v in data.get("timing_data", {}).items()}
+            self.timing_data = data.get("timing_data", {})
             self.weather_data = data.get("weather_data", {})
             self.track_status = data.get("track_status", "AllClear")
             self.lap_count = data.get("lap_count", {"current": 0, "total": 0})
             self.driver_list = data.get("driver_list", {})
             self.race_control_message = data.get("race_control_message", "")
 
+            # Recalculate is_live
             update_live_status()
-            logger.info(f"State recovered. Current Session Key: {self.session_key}")
+            logger.info("State recovered from disk")
         except Exception as e:
             logger.error(f"Error loading state: {e}")
 
@@ -298,135 +298,154 @@ async def fetch_race_schedule():
 
 # --- Message Handlers ---
 async def on_feed(args):
-    """
-    Processes the raw SignalR feed. 
-    Handles topic identification, Base64 decoding/decompression, 
-    and state updates for the 2026 F1 season.
-    """
     logger.debug(f"RAW SIGNALR DATA: {args}")
     try:
         topic = None
         any_updates = False
-
-        # Step 1: Identify the topic within the SignalR argument list
         for arg in args:
             if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
                 topic = arg
                 logger.debug(f"SignalR Topic: {topic}")
                 continue
 
-            # Skip heartbeats or arguments without a defined topic
             if topic == "Heartbeat" or not topic:
                 continue
 
-            # Step 2: Validate and Decode the payload
+            # Check if it's actual data and not an empty update
             if isinstance(arg, (dict, str)) and len(str(arg)) > 2:
-                # Update global live status flags
                 state.last_data_time = time.time()
                 state.is_live = True
                 any_updates = True
 
-                # Decode Base64/Zlib strings into JSON dictionaries
+            if isinstance(arg, (dict, str)):
                 decoded = arg if isinstance(arg, dict) else decode_message(arg)
-                if not decoded:
-                    continue
-                if isinstance(decoded, str):
-                    decoded = json.loads(decoded)
+                if not decoded: continue
+                if isinstance(decoded, str): decoded = json.loads(decoded)
 
                 logger.debug(f"Data for {topic}: {str(decoded)[:200]}...")
 
-                # --- Topic Specific Logic ---
-
                 if topic == "TimingData":
-                    # Capture Q1/Q2/Q3 Phase from the TimingData root
                     if "SessionPart" in decoded:
                         state.session_info["part"] = decoded["SessionPart"]
-                    
+                        # Ensure name reflects part if generic
+                        if state.session_info.get("name") == "Qualifying":
+                             state.session_info["name"] = f"Qualifying {decoded['SessionPart']}"
+
                     lines = decoded.get("Lines", {})
                     for dnum, line in lines.items():
-                        dnum_str = str(dnum)
-                        if dnum_str not in state.timing_data:
-                            state.timing_data[dnum_str] = {}
-                        
-                        td = state.timing_data[dnum_str]
-                        
-                        # Update Telemetry Status
+                        if dnum not in state.timing_data: state.timing_data[dnum] = {}
+                        td = state.timing_data[dnum]
                         if "Position" in line: td["pos"] = line["Position"]
                         if "InPit" in line: td["pit"] = line["InPit"]
                         if "PitOut" in line: td["out"] = line["PitOut"]
                         if "KnockedOut" in line: td["knocked"] = line["KnockedOut"]
-                        
-                        # Bitmask Handling: 128 indicates 'Finished' (Chequered Flag)
+
+                        # Status bitmask: 80=InPit, 64=Active, 68=Stopped, 128=Finished/Chequered
                         status_val = line.get("Status", 0)
-                        if status_val & 128:
-                            td["finished"] = True
-                        
-                        # Gap and Interval Data
+                        if status_val & 128: td["finished"] = True
+                        elif status_val == 64: td["finished"] = False
                         if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
+                        elif "TimeDiffToFastest" in line: td["gap"] = line["TimeDiffToFastest"]
+
                         if "IntervalToNext" in line: td["int"] = line["IntervalToNext"]
-                        
-                        # Last and Best Lap Times
+                        elif "TimeDiffToPositionAhead" in line: td["int"] = line["TimeDiffToPositionAhead"]
+
                         if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
                         if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
 
-                        # Qualifying Segment Times (BestLapTimes dictionary)
+                        # BestLapTimes dictionary (segment specific)
                         blts = line.get("BestLapTimes", {})
                         if blts:
-                            for p_key in ["1", "2", "3"]:
-                                if p_key in blts and blts[p_key].get("Value"):
-                                    td[f"q{p_key}"] = blts[p_key]["Value"]
+                            if "1" in blts and blts["1"].get("Value"): td["q1"] = blts["1"]["Value"]
+                            if "2" in blts and blts["2"].get("Value"): td["q2"] = blts["2"]["Value"]
+                            if "3" in blts and blts["3"].get("Value"): td["q3"] = blts["3"]["Value"]
 
-                        # Qualifying Fallback (Stats labels)
+                        # Qualifying segments via Stats fallback
                         stats = line.get("Stats", [])
                         if stats:
                             for s in stats:
                                 if "Time" in s:
-                                    txt = str(s.get("Text", ""))
-                                    if "Q1" in txt: td["q1"] = s["Time"]
-                                    if "Q2" in txt: td["q2"] = s["Time"]
-                                    if "Q3" in txt: td["q3"] = s["Time"]
+                                    if "Q1" in str(s.get("Text", "")): td["q1"] = s["Time"]
+                                    if "Q2" in str(s.get("Text", "")): td["q2"] = s["Time"]
+                                    if "Q3" in str(s.get("Text", "")): td["q3"] = s["Time"]
+
+                        stints = line.get("Stints", [])
+                        if stints:
+                            last_stint = list(stints.values())[-1] if isinstance(stints, dict) else stints[-1]
+                            compound = last_stint.get("Compound")
+                            if compound:
+                                compound = compound.upper()
+                                if "SOFT" in compound: td["compound"] = "soft"
+                                elif "MEDIUM" in compound: td["compound"] = "medium"
+                                elif "HARD" in compound: td["compound"] = "hard"
+                                elif "INTER" in compound: td["compound"] = "intermediate"
+                                elif "WET" in compound: td["compound"] = "wet"
+                                else: td["compound"] = compound.lower()
 
                 elif topic == "WeatherData":
-                    state.weather_data = {
-                        "air": decoded.get("AirTemp"),
-                        "track": decoded.get("TrackTemp"),
-                        "hum": decoded.get("Humidity"),
-                        "rain": decoded.get("Rainfall") == "1"
-                    }
-
+                    state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
                 elif topic == "SessionInfo":
-                    # Detect new session to clear stale data
+                    # Detect session change
                     new_key = decoded.get("Key", 0)
                     if new_key != 0 and state.session_key != 0 and new_key != state.session_key:
-                        logger.info("New Session Key detected. Resetting timing data.")
+                        logger.info(f"Session change detected: {state.session_key} -> {new_key}. Clearing timing data.")
                         state.timing_data = {}
+                        state.lap_count = {"current": 0, "total": 0}
+                        state.race_control_message = ""
+
                     if new_key != 0:
                         state.session_key = new_key
 
-                    state.session_info.update({
-                        "name": decoded.get("Name") or decoded.get("SessionName"),
+                    # Determine part (e.g., Q1/Q2/Q3 or FP1/FP2/FP3)
+                    name = decoded.get("Name") or decoded.get("SessionName")
+                    part = decoded.get("Number") or 1
+
+                    # Fallback to name parsing if Number is missing
+                    if part == 1 and name:
+                        if "Qualifying 2" in name or "Q2" in name: part = 2
+                        elif "Qualifying 3" in name or "Q3" in name: part = 3
+
+                    # Ensure name is descriptive for Quali
+                    if name == "Qualifying":
+                        name = f"Qualifying {part}"
+
+                    state.session_info = {
+                        "name": name,
                         "type": decoded.get("Type"),
+                        "circuit": decoded.get("Meeting", {}).get("Circuit", {}).get("ShortName") or decoded.get("CircuitName"),
                         "status": decoded.get("SessionStatus") or decoded.get("Status"),
-                        "circuit": decoded.get("Meeting", {}).get("Circuit", {}).get("ShortName")
-                    })
-
-                elif topic == "LapCount":
-                    state.lap_count = {
-                        "current": decoded.get("CurrentLap"),
-                        "total": decoded.get("TotalLaps")
+                        "part": part
                     }
-
+                elif topic == "LapCount":
+                    state.lap_count = {"current": decoded.get("CurrentLap"), "total": decoded.get("TotalLaps")}
                 elif topic == "DriverList":
                     for dnum, info in decoded.items():
                         if dnum not in state.driver_list:
+                            # Pre-fill with static mapping if available
                             state.driver_list[dnum] = DRIVER_MAPPING.get(dnum, {}).copy()
-                        
+
+                        # Only update if key exists in info, otherwise keep old value
                         if "FullName" in info: state.driver_list[dnum]["name"] = info["FullName"]
                         if "TeamName" in info: state.driver_list[dnum]["team"] = info["TeamName"]
                         if "TeamColour" in info: state.driver_list[dnum]["color"] = info["TeamColour"]
                         if "Tla" in info: state.driver_list[dnum]["abbrev"] = info["Tla"]
+                elif topic == "TrackStatus":
+                    status_code = decoded.get("Status", "1")
+                    state.track_status = TRACK_STATUS_MAP.get(status_code, "Normal/Clear")
+                elif topic == "RaceControlMessages":
+                    messages = decoded.get("Messages", {})
+                    if messages:
+                        if isinstance(messages, dict):
+                            # Get the latest message (highest key if they are numeric strings)
+                            try:
+                                latest_idx = max(messages.keys(), key=lambda x: int(x))
+                                state.race_control_message = messages[latest_idx].get("Message", "")
+                            except Exception:
+                                # Fallback if keys are not integers
+                                state.race_control_message = list(messages.values())[-1].get("Message", "")
+                        elif isinstance(messages, list):
+                            state.race_control_message = messages[-1].get("Message", "")
 
-        # Step 3: Persist the state to disk if updates occurred
         if any_updates:
             state.save()
 
