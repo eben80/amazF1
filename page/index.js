@@ -1114,42 +1114,59 @@ Page(BasePage({
     const timing_data = (data.timing || []).map(item => {
       const num = item.num;
       let name = item.name || num;
+      const posStr = `${item.pos}`;
+      const isDNF = posStr === "DNF";
       const currentPos = parseInt(item.pos);
 
       // Position Change Tracking
       const prevPos = this.state.prevPositions[num];
-      if (prevPos !== undefined) {
+      if (!isDNF && prevPos !== undefined) {
           if (currentPos < prevPos) name += " ^";
           else if (currentPos > prevPos) name += " v";
       }
 
       if (item.fin) {
           name = `FIN ${name}`;
-      } else if (item.pit) {
+      } else if (!isRace && item.pit) {
           name = `P ${name}`;
       }
 
       let posColor = COLORS.WHITE;
-      if (isQuali) {
+      if (isQuali && !isDNF) {
         if ((part === 1 && currentPos > 16) || (part === 2 && currentPos > 10)) {
           posColor = COLORS.RED;
         }
       }
 
       let val1 = "";
+      let val2 = "";
       if (isRace) {
-          val1 = item.gap || "";
+          if (item.retired) {
+              val1 = "OUT";
+          } else if (item.pit) {
+              val1 = "PIT";
+          } else {
+              val1 = item.gap || "";
+          }
+          val2 = item.int || "";
       } else {
           val1 = item.out ? "OUT LAP" : (item.best || "");
+          if (item.pit) {
+              val2 = "PIT";
+          } else if (item.out) {
+              val2 = "OUT";
+          } else {
+              val2 = item.gap || "";
+          }
       }
 
       return {
-        pos: `P${item.pos}`,
+        pos: isDNF ? "DNF" : `P${item.pos}`,
         name: name,
-        color: parseInt(item.teamColor || "FFFFFF", 16),
+        color: item.fastest ? 0xFF00FF : parseInt(item.teamColor || "FFFFFF", 16),
         posColor: posColor,
         val1: val1,
-        val2: isRace ? (item.int || "") : (item.gap || ""),
+        val2: val2,
         comp: item.comp ? `${item.comp.toLowerCase()}.png` : ""
       };
     });

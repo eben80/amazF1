@@ -620,19 +620,20 @@ void ui_update_status(const JsonObject& data) {
             }
             if (!name) name = "";
 
-            int pos = atoi((const char*)(entry["pos"] | "99"));
+            const char* pos_str = (const char*)(entry["pos"] | "99");
+            int pos = atoi(pos_str);
 
             // Handle drop zones in Qualifying
             char pos_buf[16];
-            if (is_quali) {
+            if (is_quali && strcmp(pos_str, "DNF") != 0) {
                 // 2026 F1 Quali: 22 cars, Q1 (drops 6 at P17-22), Q2 (drops 6 at P11-16)
                 if ((part == 1 && pos > 16) || (part == 2 && pos > 10)) {
-                    snprintf(pos_buf, sizeof(pos_buf), "#FF0000 %d#", pos);
+                    snprintf(pos_buf, sizeof(pos_buf), "#FF0000 %s#", pos_str);
                 } else {
-                    snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+                    snprintf(pos_buf, sizeof(pos_buf), "%s", pos_str);
                 }
             } else {
-                snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+                snprintf(pos_buf, sizeof(pos_buf), "%s", pos_str);
             }
             lv_table_set_cell_value(timing_table, row, 0, pos_buf);
 
@@ -649,16 +650,20 @@ void ui_update_status(const JsonObject& data) {
             bool in_pit = entry["pit"] | false;
             bool is_out = entry["out"] | false;
             bool is_fin = entry["fin"] | false;
+            bool is_retired = entry["retired"] | false;
+            bool is_fastest = entry["fastest"] | false;
             char driver_name[64];
             int n_pos = 0;
 
-            const char* pit_prefix = is_fin ? "#00FF00 FIN# " : (in_pit ? "#FFAA00 [P]# " : "");
+            const char* pit_prefix = is_fin ? "#00FF00 FIN# " : (!is_race && in_pit ? "#FFAA00 [P]# " : "");
+            const char* fastest_color = is_fastest ? "#FF00FF" : "";
+            const char* fastest_suffix = is_fastest ? "#" : "";
 
             if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s (%c)", pit_prefix, name, c);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s (%c)", pit_prefix, fastest_color, name, fastest_suffix, c);
             } else {
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s", pit_prefix, name);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s", pit_prefix, fastest_color, name, fastest_suffix);
             }
 
             if (p_pos != -1 && n_pos < sizeof(driver_name) - 10) {
@@ -670,12 +675,22 @@ void ui_update_status(const JsonObject& data) {
             if (!is_race) {
                 if (is_out) {
                     lv_table_set_cell_value(timing_table, row, 2, "OUT LAP");
+                    lv_table_set_cell_value(timing_table, row, 3, "OUT");
+                } else if (in_pit) {
+                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
+                    lv_table_set_cell_value(timing_table, row, 3, "PIT");
                 } else {
                     lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
+                    lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
                 }
-                lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
             } else {
-                lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
+                if (is_retired) {
+                    lv_table_set_cell_value(timing_table, row, 2, "OUT");
+                } else if (in_pit) {
+                    lv_table_set_cell_value(timing_table, row, 2, "PIT");
+                } else {
+                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
+                }
                 lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
             }
             row++;

@@ -303,7 +303,7 @@ async def on_feed(args):
         topic = None
         any_updates = False
         for arg in args:
-            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
+            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats", "FastestLaps"]:
                 topic = arg
                 logger.debug(f"SignalR Topic: {topic}")
                 continue
@@ -340,15 +340,38 @@ async def on_feed(args):
                         if "PitOut" in line: td["out"] = line["PitOut"]
                         if "KnockedOut" in line: td["knocked"] = line["KnockedOut"]
 
-                        # Status bitmask: 80=InPit, 64=Active, 68=Stopped, 128=Finished/Chequered
-                        status_val = line.get("Status", 0)
-                        if status_val & 128: td["finished"] = True
-                        elif status_val == 64: td["finished"] = False
-                        if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
-                        elif "TimeDiffToFastest" in line: td["gap"] = line["TimeDiffToFastest"]
+                        # Status bitmask:
+                        # 64 = Active, 128 = Finished, 16/2 = In Pit, 8/0 = Retired/Out
+                        if "Status" in line:
+                            status_val = line["Status"]
 
-                        if "IntervalToNext" in line: td["int"] = line["IntervalToNext"]
-                        elif "TimeDiffToPositionAhead" in line: td["int"] = line["TimeDiffToPositionAhead"]
+                            is_active = bool(status_val & 64)
+                            in_pits = bool(status_val & 16) or bool(status_val & 2)
+                            is_retired = bool(status_val & 8) or (status_val == 0)
+                            is_finished = bool(status_val & 128)
+
+                            td["pit"] = in_pits
+                            td["retired"] = is_retired
+                            td["finished"] = is_finished
+
+                            if is_retired:
+                                td["pos"] = "DNF"
+
+                        if "Retired" in line and line["Retired"]:
+                            td["retired"] = True
+                            td["pos"] = "DNF"
+                        elif "Stopped" in line and line["Stopped"]:
+                            td["retired"] = True
+                            td["pos"] = "DNF"
+
+                        # Gap and Interval handling with dictionary/string flexibility
+                        gap = line.get("GapToLeader") or line.get("TimeDiffToFastest")
+                        if gap:
+                            td["gap"] = gap.get("Value") if isinstance(gap, dict) else gap
+
+                        interval = line.get("IntervalToNext") or line.get("TimeDiffToPositionAhead") or line.get("IntervalToPositionAhead")
+                        if interval:
+                            td["int"] = interval.get("Value") if isinstance(interval, dict) else interval
 
                         if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
                         if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
@@ -369,18 +392,86 @@ async def on_feed(args):
                                     if "Q2" in str(s.get("Text", "")): td["q2"] = s["Time"]
                                     if "Q3" in str(s.get("Text", "")): td["q3"] = s["Time"]
 
-                        stints = line.get("Stints", [])
+                        stints = line.get("Stints")
                         if stints:
-                            last_stint = list(stints.values())[-1] if isinstance(stints, dict) else stints[-1]
-                            compound = last_stint.get("Compound")
-                            if compound:
-                                compound = compound.upper()
-                                if "SOFT" in compound: td["compound"] = "soft"
-                                elif "MEDIUM" in compound: td["compound"] = "medium"
-                                elif "HARD" in compound: td["compound"] = "hard"
-                                elif "INTER" in compound: td["compound"] = "intermediate"
-                                elif "WET" in compound: td["compound"] = "wet"
-                                else: td["compound"] = compound.lower()
+                            try:
+                                if isinstance(stints, dict):
+                                    # Get the stint with the highest numeric key
+                                    last_key = max(stints.keys(), key=lambda x: int(x))
+                                    last_stint = stints[last_key]
+                                else:
+                                    last_stint = stints[-1]
+
+                                if isinstance(last_stint, str):
+                                    compound = last_stint
+                                else:
+                                    compound = last_stint.get("Compound")
+
+                                if compound:
+                                    compound = compound.upper()
+                                    if "SOFT" in compound: td["compound"] = "soft"
+                                    elif "MEDIUM" in compound: td["compound"] = "medium"
+                                    elif "HARD" in compound: td["compound"] = "hard"
+                                    elif "INTER" in compound: td["compound"] = "intermediate"
+                                    elif "WET" in compound: td["compound"] = "wet"
+                                    else: td["compound"] = compound.lower()
+                            except (ValueError, IndexError):
+                                pass
+
+                elif topic == "TimingAppData":
+                    lines = decoded.get("Lines", {})
+                    for dnum, line in lines.items():
+                        if dnum not in state.timing_data: state.timing_data[dnum] = {}
+                        td = state.timing_data[dnum]
+                        stints = line.get("Stints")
+                        if stints:
+                            # stints can be a list or a dict with numeric keys
+                            try:
+                                if isinstance(stints, dict):
+                                    # Get the stint with the highest key
+                                    last_key = max(stints.keys(), key=lambda x: int(x))
+                                    last_stint = stints[last_key]
+                                else:
+                                    last_stint = stints[-1]
+
+                                if isinstance(last_stint, str):
+                                    compound = last_stint
+                                else:
+                                    compound = last_stint.get("Compound")
+
+                                if compound:
+                                    compound = compound.upper()
+                                    if "SOFT" in compound: td["compound"] = "soft"
+                                    elif "MEDIUM" in compound: td["compound"] = "medium"
+                                    elif "HARD" in compound: td["compound"] = "hard"
+                                    elif "INTER" in compound: td["compound"] = "intermediate"
+                                    elif "WET" in compound: td["compound"] = "wet"
+                                    else: td["compound"] = compound.lower()
+                            except (ValueError, IndexError):
+                                continue
+
+                elif topic == "TimingStats":
+                    lines = decoded.get("Lines", {})
+                    for dnum, line in lines.items():
+                        if dnum not in state.timing_data: state.timing_data[dnum] = {}
+                        td = state.timing_data[dnum]
+                        pb = line.get("PersonalBestLapTime")
+                        if pb and isinstance(pb, dict):
+                            td["best_lap_pos"] = pb.get("Position")
+
+                elif topic == "FastestLaps":
+                    # The 'decoded' for FastestLaps usually contains a list of lines
+                    lines = decoded.get("Lines", []) if isinstance(decoded, dict) else []
+                    for line in lines:
+                        stats = line.get("Stats", [])
+                        for s in stats:
+                            if s.get("Position") == 1:
+                                state.session_info["fastest_lap"] = {
+                                    "driver": line.get("DriverNumber"),
+                                    "time": line.get("Value"),
+                                    "lap": line.get("Lap")
+                                }
+                                logger.info(f"🏆 NEW SESSION RECORD: {line.get('Value')} by {line.get('DriverNumber')}")
 
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
@@ -494,6 +585,10 @@ async def get_status():
                  elif part == 2: best_time = data.get("q2", "")
                  elif part == 3: best_time = data.get("q3", "")
 
+        is_fastest = (data.get("best_lap_pos") == 1)
+        if not is_fastest and state.session_info.get("fastest_lap"):
+            is_fastest = (state.session_info["fastest_lap"].get("driver") == dnum)
+
         sorted_timing.append({
             "num": dnum,
             "name": drv_name,
@@ -511,6 +606,8 @@ async def get_status():
             "pit": data.get("pit", False),
             "out": data.get("out", False),
             "fin": data.get("finished", False),
+            "retired": data.get("retired", False),
+            "fastest": is_fastest,
             "col": drv_color
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
@@ -627,9 +724,14 @@ async def get_mock_status():
         pit_seed = random.Random(int(d["num"]) + (step // 60))
         in_pit = (pit_seed.random() < pit_chance)
 
-        # Out lap simulation: if not in pit, but was in pit in the previous minute-bucket
-        # (Simplified: 15% of non-pit drivers are on an out-lap)
-        is_out = not in_pit and (pit_seed.random() < 0.15)
+        # Retired simulation (only in Race)
+        is_retired = is_race and pos > 20 and (step > 400) # Last 2 drivers retired after 400s
+
+        # Out lap simulation: only in Practice/Qualifying
+        is_out = not is_race and not in_pit and (pit_seed.random() < 0.15)
+
+        mock_pos = str(pos)
+        if is_retired: mock_pos = "DNF"
 
         # Calculate times
         gap_val = (pos_idx * 0.15) + (d["perf"] * 0.5) + (rng.random() * 0.05)
@@ -648,7 +750,7 @@ async def get_mock_status():
             "name": d["tla"],
             "team": d["team"],
             "teamColor": d["color"],
-            "pos": str(pos),
+            "pos": mock_pos,
             "gap": "LEADER" if pos_idx == 0 else f"+{gap_val:.3f}",
             "int": "" if pos_idx == 0 else f"+{interval_val:.3f}",
             "last": fmt_time(last_time_sec) if not in_pit else "",
@@ -659,6 +761,8 @@ async def get_mock_status():
             "comp": random.Random(int(d["num"]) + session_cycle).choice(["soft", "medium", "hard"]),
             "pit": in_pit,
             "out": is_out,
+            "retired": is_retired,
+            "fastest": (pos_idx == 1), # Mock P2 as having the fastest lap
             "col": d["color"]
         })
 
@@ -827,7 +931,7 @@ async def signalr_worker():
             conn = Connection(SIGNALR_URL, session=session)
             hub = conn.register_hub("Streaming")
             async def on_connect():
-                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]
+                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats", "FastestLaps"]
                 hub.server.invoke("Subscribe", topics)
                 logger.info("Subscribed to F1 topics")
             conn.connected += on_connect
