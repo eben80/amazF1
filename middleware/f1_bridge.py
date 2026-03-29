@@ -303,7 +303,7 @@ async def on_feed(args):
         topic = None
         any_updates = False
         for arg in args:
-            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]:
+            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats"]:
                 topic = arg
                 logger.debug(f"SignalR Topic: {topic}")
                 continue
@@ -344,11 +344,15 @@ async def on_feed(args):
                         status_val = line.get("Status", 0)
                         if status_val & 128: td["finished"] = True
                         elif status_val == 64: td["finished"] = False
-                        if "GapToLeader" in line: td["gap"] = line["GapToLeader"]
-                        elif "TimeDiffToFastest" in line: td["gap"] = line["TimeDiffToFastest"]
 
-                        if "IntervalToNext" in line: td["int"] = line["IntervalToNext"]
-                        elif "TimeDiffToPositionAhead" in line: td["int"] = line["TimeDiffToPositionAhead"]
+                        # Gap and Interval handling with dictionary/string flexibility
+                        gap = line.get("GapToLeader") or line.get("TimeDiffToFastest")
+                        if gap:
+                            td["gap"] = gap.get("Value") if isinstance(gap, dict) else gap
+
+                        interval = line.get("IntervalToNext") or line.get("TimeDiffToPositionAhead") or line.get("IntervalToPositionAhead")
+                        if interval:
+                            td["int"] = interval.get("Value") if isinstance(interval, dict) else interval
 
                         if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
                         if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
@@ -381,6 +385,43 @@ async def on_feed(args):
                                 elif "INTER" in compound: td["compound"] = "intermediate"
                                 elif "WET" in compound: td["compound"] = "wet"
                                 else: td["compound"] = compound.lower()
+
+                elif topic == "TimingAppData":
+                    lines = decoded.get("Lines", {})
+                    for dnum, line in lines.items():
+                        if dnum not in state.timing_data: state.timing_data[dnum] = {}
+                        td = state.timing_data[dnum]
+                        stints = line.get("Stints")
+                        if stints:
+                            # stints can be a list or a dict with numeric keys
+                            try:
+                                if isinstance(stints, dict):
+                                    # Get the stint with the highest key
+                                    last_key = max(stints.keys(), key=lambda x: int(x))
+                                    last_stint = stints[last_key]
+                                else:
+                                    last_stint = stints[-1]
+
+                                compound = last_stint.get("Compound")
+                                if compound:
+                                    compound = compound.upper()
+                                    if "SOFT" in compound: td["compound"] = "soft"
+                                    elif "MEDIUM" in compound: td["compound"] = "medium"
+                                    elif "HARD" in compound: td["compound"] = "hard"
+                                    elif "INTER" in compound: td["compound"] = "intermediate"
+                                    elif "WET" in compound: td["compound"] = "wet"
+                                    else: td["compound"] = compound.lower()
+                            except (ValueError, IndexError):
+                                continue
+
+                elif topic == "TimingStats":
+                    lines = decoded.get("Lines", {})
+                    for dnum, line in lines.items():
+                        if dnum not in state.timing_data: state.timing_data[dnum] = {}
+                        td = state.timing_data[dnum]
+                        pb = line.get("PersonalBestLapTime")
+                        if pb and isinstance(pb, dict):
+                            td["best_lap_pos"] = pb.get("Position")
 
                 elif topic == "WeatherData":
                     state.weather_data = {"air": decoded.get("AirTemp"), "track": decoded.get("TrackTemp"), "hum": decoded.get("Humidity"), "rain": decoded.get("Rainfall") == "1"}
@@ -511,6 +552,7 @@ async def get_status():
             "pit": data.get("pit", False),
             "out": data.get("out", False),
             "fin": data.get("finished", False),
+            "fastest": data.get("best_lap_pos") == 1,
             "col": drv_color
         })
     sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
@@ -659,6 +701,7 @@ async def get_mock_status():
             "comp": random.Random(int(d["num"]) + session_cycle).choice(["soft", "medium", "hard"]),
             "pit": in_pit,
             "out": is_out,
+            "fastest": (pos_idx == 1), # Mock P2 as having the fastest lap
             "col": d["color"]
         })
 
@@ -827,7 +870,7 @@ async def signalr_worker():
             conn = Connection(SIGNALR_URL, session=session)
             hub = conn.register_hub("Streaming")
             async def on_connect():
-                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat"]
+                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "TimingStats"]
                 hub.server.invoke("Subscribe", topics)
                 logger.info("Subscribed to F1 topics")
             conn.connected += on_connect
