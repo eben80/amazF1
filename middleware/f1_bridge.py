@@ -340,13 +340,26 @@ async def on_feed(args):
                         if "PitOut" in line: td["out"] = line["PitOut"]
                         if "KnockedOut" in line: td["knocked"] = line["KnockedOut"]
 
-                        # Status bitmask: 80=InPit, 64=Active, 68=Stopped, 128=Finished/Chequered, 1=Retired (sometimes)
-                        status_val = line.get("Status", 0)
-                        if status_val & 128: td["finished"] = True
-                        elif status_val == 64: td["finished"] = False
+                        # Status bitmask:
+                        # 64 = Active, 128 = Finished, 0 = Retired/DNS
+                        if "Status" in line:
+                            status_val = line["Status"]
+                            if status_val == 0:
+                                td["retired"] = True
+                                td["pos"] = "DNF"
+                            elif status_val & 128:
+                                td["finished"] = True
+                                td["retired"] = False
+                            elif status_val & 64:
+                                td["finished"] = False
+                                td["retired"] = False
 
-                        if "Retired" in line: td["retired"] = line["Retired"]
-                        elif "Stopped" in line: td["retired"] = line["Stopped"]
+                        if "Retired" in line and line["Retired"]:
+                            td["retired"] = True
+                            td["pos"] = "DNF"
+                        elif "Stopped" in line and line["Stopped"]:
+                            td["retired"] = True
+                            td["pos"] = "DNF"
 
                         # Gap and Interval handling with dictionary/string flexibility
                         gap = line.get("GapToLeader") or line.get("TimeDiffToFastest")
@@ -688,6 +701,9 @@ async def get_mock_status():
         # Out lap simulation: only in Practice/Qualifying
         is_out = not is_race and not in_pit and (pit_seed.random() < 0.15)
 
+        mock_pos = str(pos)
+        if is_retired: mock_pos = "DNF"
+
         # Calculate times
         gap_val = (pos_idx * 0.15) + (d["perf"] * 0.5) + (rng.random() * 0.05)
         interval_val = 0.1 + (rng.random() * 0.2)
@@ -705,7 +721,7 @@ async def get_mock_status():
             "name": d["tla"],
             "team": d["team"],
             "teamColor": d["color"],
-            "pos": str(pos),
+            "pos": mock_pos,
             "gap": "LEADER" if pos_idx == 0 else f"+{gap_val:.3f}",
             "int": "" if pos_idx == 0 else f"+{interval_val:.3f}",
             "last": fmt_time(last_time_sec) if not in_pit else "",

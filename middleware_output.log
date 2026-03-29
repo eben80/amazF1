@@ -1,0 +1,18 @@
+/app/middleware/f1_bridge.py:915: DeprecationWarning:
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+
+  @app.on_event("startup")
+DEBUG:asyncio:Using selector: EpollSelector
+INFO:     Started server process [5864]
+INFO:     Waiting for application startup.
+2026-03-29 07:21:31.842 | ERROR    | __main__:signalr_worker:912 - SignalR worker error: 'NoneType' object is not callable
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60164 - "GET /mock_status HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [5864]

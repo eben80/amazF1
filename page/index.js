@@ -1114,11 +1114,13 @@ Page(BasePage({
     const timing_data = (data.timing || []).map(item => {
       const num = item.num;
       let name = item.name || num;
+      const posStr = `${item.pos}`;
+      const isDNF = posStr === "DNF";
       const currentPos = parseInt(item.pos);
 
       // Position Change Tracking
       const prevPos = this.state.prevPositions[num];
-      if (prevPos !== undefined) {
+      if (!isDNF && prevPos !== undefined) {
           if (currentPos < prevPos) name += " ^";
           else if (currentPos > prevPos) name += " v";
       }
@@ -1130,7 +1132,7 @@ Page(BasePage({
       }
 
       let posColor = COLORS.WHITE;
-      if (isQuali) {
+      if (isQuali && !isDNF) {
         if ((part === 1 && currentPos > 16) || (part === 2 && currentPos > 10)) {
           posColor = COLORS.RED;
         }
@@ -1159,7 +1161,7 @@ Page(BasePage({
       }
 
       return {
-        pos: `P${item.pos}`,
+        pos: isDNF ? "DNF" : `P${item.pos}`,
         name: name,
         color: item.fastest ? 0xFF00FF : parseInt(item.teamColor || "FFFFFF", 16),
         posColor: posColor,

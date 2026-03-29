@@ -620,19 +620,20 @@ void ui_update_status(const JsonObject& data) {
             }
             if (!name) name = "";
 
-            int pos = atoi((const char*)(entry["pos"] | "99"));
+            const char* pos_str = (const char*)(entry["pos"] | "99");
+            int pos = atoi(pos_str);
 
             // Handle drop zones in Qualifying
             char pos_buf[16];
-            if (is_quali) {
+            if (is_quali && strcmp(pos_str, "DNF") != 0) {
                 // 2026 F1 Quali: 22 cars, Q1 (drops 6 at P17-22), Q2 (drops 6 at P11-16)
                 if ((part == 1 && pos > 16) || (part == 2 && pos > 10)) {
-                    snprintf(pos_buf, sizeof(pos_buf), "#FF0000 %d#", pos);
+                    snprintf(pos_buf, sizeof(pos_buf), "#FF0000 %s#", pos_str);
                 } else {
-                    snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+                    snprintf(pos_buf, sizeof(pos_buf), "%s", pos_str);
                 }
             } else {
-                snprintf(pos_buf, sizeof(pos_buf), "%d", pos);
+                snprintf(pos_buf, sizeof(pos_buf), "%s", pos_str);
             }
             lv_table_set_cell_value(timing_table, row, 0, pos_buf);
 
