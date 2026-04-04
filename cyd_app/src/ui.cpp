@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <time.h>
+#include "images.h"
 
 static lv_obj_t * screen;
 static lv_obj_t * header;
@@ -735,9 +736,14 @@ void ui_update_status(const JsonObject& data) {
 
             const char* code = upcoming["flagCode"] | "un";
             if (strlen(code) == 0) code = "un";
-            static char next_path[64];
-            snprintf(next_path, sizeof(next_path), "S:/%s.png", code);
-            lv_img_set_src(next_flag_img, next_path);
+            const lv_img_dsc_t* next_img = get_image_by_code(code);
+            if (next_img) {
+                lv_img_set_src(next_flag_img, next_img);
+            } else {
+                static char next_path[64];
+                snprintf(next_path, sizeof(next_path), "S:/%s.png", code);
+                lv_img_set_src(next_flag_img, next_path);
+            }
         }
 
         // Update Last Race Summary
@@ -753,15 +759,25 @@ void ui_update_status(const JsonObject& data) {
 
             const char* raceCode = previous["flagCode"] | "un";
             if (strlen(raceCode) == 0) raceCode = "un";
-            static char last_path[64];
-            snprintf(last_path, sizeof(last_path), "S:/%s.png", raceCode);
-            lv_img_set_src(last_flag_img, last_path);
+            const lv_img_dsc_t* last_img = get_image_by_code(raceCode);
+            if (last_img) {
+                lv_img_set_src(last_flag_img, last_img);
+            } else {
+                static char last_path[64];
+                snprintf(last_path, sizeof(last_path), "S:/%s.png", raceCode);
+                lv_img_set_src(last_flag_img, last_path);
+            }
 
             const char* winCode = previous["winnerFlagCode"] | "un";
             if (strlen(winCode) == 0) winCode = "un";
-            static char win_path[64];
-            snprintf(win_path, sizeof(win_path), "S:/%s.png", winCode);
-            lv_img_set_src(winner_flag_img, win_path);
+            const lv_img_dsc_t* win_img = get_image_by_code(winCode);
+            if (win_img) {
+                lv_img_set_src(winner_flag_img, win_img);
+            } else {
+                static char win_path[64];
+                snprintf(win_path, sizeof(win_path), "S:/%s.png", winCode);
+                lv_img_set_src(winner_flag_img, win_path);
+            }
         }
     }
 }
