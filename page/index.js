@@ -677,7 +677,7 @@ Page(BasePage({
       w: LAYOUT.W,
       h: 70,
       text: `${race.flag} ${race.name}\n${race.circuit}`,
-      color: COLORS.RED,
+      color: COLORS.WHITE,
       text_size: 20,
       align_h: hmUI.align.CENTER_H
     });
@@ -970,7 +970,7 @@ Page(BasePage({
           w: LAYOUT.W,
           h: 30,
           text: `${data.upcoming.date?.split("T")[0]}`,
-          color: COLORS.GRAY,
+          color: COLORS.WHITE,
           text_size: 18,
           align_h: hmUI.align.CENTER_H
         });
@@ -1024,7 +1024,7 @@ Page(BasePage({
           w: LAYOUT.W,
           h: 30,
           text: `${data.previous.team}`,
-          color: data.previous.teamColor || COLORS.WHITE,
+          color: COLORS.WHITE,
           text_size: 18,
           align_h: hmUI.align.CENTER_H
         });

@@ -793,7 +793,7 @@ async def get_mock_status():
             "pit": in_pit,
             "out": is_out,
             "retired": is_retired,
-            "fastest": (pos_idx == 1), # Mock P2 as having the fastest lap
+            "fastest": (pos_idx == 1) if (s_type == "Race" or "Sprint" in s_name) else False,
             "col": d["color"]
         })
 

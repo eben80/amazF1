@@ -320,6 +320,7 @@ void ui_init() {
     next_race_summary_label = lv_label_create(idle_container);
     lv_obj_align(next_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 0);
     lv_obj_set_style_text_font(next_race_summary_label, &f1font_12, 0);
+    lv_obj_set_style_text_color(next_race_summary_label, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_long_mode(next_race_summary_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(next_race_summary_label, 270);
 
@@ -328,6 +329,7 @@ void ui_init() {
     last_race_summary_label = lv_label_create(idle_container);
     lv_obj_align(last_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 70);
     lv_obj_set_style_text_font(last_race_summary_label, &f1font_12, 0);
+    lv_obj_set_style_text_color(last_race_summary_label, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_long_mode(last_race_summary_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(last_race_summary_label, 270);
     winner_flag_img = lv_img_create(idle_container);
@@ -772,7 +774,7 @@ void ui_update_next_race(const JsonObject& data) {
     JsonObject upcoming = data["upcoming"];
     if (!upcoming.isNull()) {
         char buf[512];
-        int pos = snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s\n\n",
+        int pos = snprintf(buf, sizeof(buf), "%s\n%s\n\n",
                            (const char*)(upcoming["name"] | ""),
                            (const char*)(upcoming["circuit"] | ""));
 
@@ -883,7 +885,7 @@ void ui_update_calendar(const JsonObject& data) {
 
 void ui_update_event_detail(const JsonObject& data) {
     char buf[512];
-    snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s",
+    snprintf(buf, sizeof(buf), "%s\n%s",
                        (const char*)(data["name"] | "-"),
                        (const char*)(data["circuit"] | "-"));
     lv_label_set_text(event_detail_header_label, buf);
