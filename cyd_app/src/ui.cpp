@@ -29,7 +29,7 @@ struct TZMapping {
     const char * tz;
 };
 
-// LV_IMG_DECLARE(f1_logo_small);
+LV_IMG_DECLARE(f1_logo_small);
 LV_IMG_DECLARE(new_f1_logo);
 
 static const TZMapping tz_map[] = {
@@ -780,8 +780,8 @@ bool ui_update_status(const JsonObject& data) {
                 lv_img_set_src(winner_flag_img, win_path);
             }
         }
-    return is_live;
     }
+    return is_live;
 }
 
 void ui_update_next_race(const JsonObject& data) {
