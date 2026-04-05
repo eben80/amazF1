@@ -197,14 +197,14 @@ void ui_init() {
 
     header_logo = lv_img_create(header);
     lv_img_set_src(header_logo, &new_f1_logo);
-    lv_obj_align(header_logo, LV_ALIGN_TOP_LEFT, 4, 4);
+    lv_obj_align(header_logo, LV_ALIGN_TOP_LEFT, 0, 4);
 
     info_label = lv_label_create(header);
     lv_label_set_text(info_label, "F1 LIVE TIMING");
     lv_obj_set_style_text_font(info_label, &f1font_12, 0);
     lv_obj_set_style_text_color(info_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 80, 0);
-    lv_obj_set_width(info_label, 140);
+    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 75, 0);
+    lv_obj_set_width(info_label, 145);
     lv_label_set_long_mode(info_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     track_label = lv_label_create(header);
@@ -219,8 +219,8 @@ void ui_init() {
     lv_label_set_text(message_label, "");
     lv_obj_set_style_text_font(message_label, &f1font_12, 0);
     lv_obj_set_style_text_color(message_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(message_label, LV_ALIGN_TOP_LEFT, 80, 20);
-    lv_obj_set_width(message_label, 230);
+    lv_obj_align(message_label, LV_ALIGN_TOP_LEFT, 75, 20);
+    lv_obj_set_width(message_label, 240);
     lv_label_set_long_mode(message_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     // Initialize View Containers
@@ -527,8 +527,8 @@ void ui_set_view(View view) {
 
     // Update Global Header
     lv_obj_set_size(header, w, 50);
-    lv_obj_set_width(message_label, w - 90);
-    lv_obj_set_width(info_label, w - 180); // logo(60) + info + track(100) = w
+    lv_obj_set_width(message_label, w - 85);
+    lv_obj_set_width(info_label, w - 175); // logo(60) + info + track(100) = w
 
     for (int i = 0; i < 8; i++) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
@@ -573,8 +573,9 @@ void ui_set_view(View view) {
     }
 }
 
-void ui_update_status(const JsonObject& data) {
-    if (data["live"].as<bool>()) {
+bool ui_update_status(const JsonObject& data) {
+    bool is_live = data["live"] | false;
+    if (is_live) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
 
@@ -779,6 +780,7 @@ void ui_update_status(const JsonObject& data) {
                 lv_img_set_src(winner_flag_img, win_path);
             }
         }
+    return is_live;
     }
 }
 

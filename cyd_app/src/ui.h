@@ -25,7 +25,7 @@ void ui_set_portrait_mode(bool enabled);
 bool ui_get_portrait_mode();
 void ui_set_brightness(uint8_t val);
 uint8_t ui_get_brightness();
-void ui_update_status(const JsonObject& data);
+bool ui_update_status(const JsonObject& data);
 void ui_update_next_race(const JsonObject& data);
 void ui_update_results(const JsonObject& data);
 void ui_update_standings(const JsonObject& data);
