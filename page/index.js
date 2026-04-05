@@ -354,7 +354,7 @@ Page(BasePage({
         w: 120,
         h: 26,
         text: s.name,
-        color: COLORS.YELLOW,
+        color: COLORS.WHITE,
         text_size: 18
       });
 

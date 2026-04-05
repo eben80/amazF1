@@ -354,6 +354,7 @@ void ui_init() {
     // --- VIEW_NEXT_RACE setup ---
     next_race_details_label = lv_label_create(view_containers[VIEW_NEXT_RACE]);
     lv_obj_align(next_race_details_label, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_set_style_text_color(next_race_details_label, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_recolor(next_race_details_label, true);
     lv_label_set_long_mode(next_race_details_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(next_race_details_label, 300);
@@ -782,7 +783,7 @@ void ui_update_next_race(const JsonObject& data) {
         for (JsonObject s : sessions) {
             char local_time[32];
             ui_format_local_time(s["time"] | "", local_time, sizeof(local_time));
-            pos += snprintf(buf + pos, sizeof(buf) - pos, "#FFAA00 %s:# %s\n",
+            pos += snprintf(buf + pos, sizeof(buf) - pos, "%s: %s\n",
                             s["name"] | "", local_time);
         }
         lv_label_set_text(next_race_details_label, buf);
