@@ -29,7 +29,7 @@ struct TZMapping {
     const char * tz;
 };
 
-LV_IMG_DECLARE(f1_logo_small);
+// LV_IMG_DECLARE(f1_logo_small);
 LV_IMG_DECLARE(new_f1_logo);
 
 static const TZMapping tz_map[] = {
