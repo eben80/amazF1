@@ -303,7 +303,7 @@ async def on_feed(args):
         topic = None
         any_updates = False
         for arg in args:
-            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps"]:
+            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps", "TimingStats"]:
                 topic = arg
                 logger.debug(f"SignalR Topic: {topic}")
                 continue
@@ -449,6 +449,20 @@ async def on_feed(args):
                                     else: td["compound"] = compound.lower()
                             except (ValueError, IndexError):
                                 continue
+
+                elif topic == "TimingStats":
+                    lines = decoded.get("Lines", {})
+                    for dnum, line in lines.items():
+                        if dnum not in state.timing_data: state.timing_data[dnum] = {}
+                        pb = line.get("PersonalBestLapTime", {})
+                        if "Position" in pb:
+                            state.timing_data[dnum]["best_lap_pos"] = pb["Position"]
+                            if pb["Position"] == 1:
+                                state.session_info["fastest_lap"] = {
+                                    "driver": dnum,
+                                    "time": pb.get("Value"),
+                                    "lap": pb.get("Lap")
+                                }
 
                 elif topic == "FastestLaps":
                     # The 'decoded' for FastestLaps usually contains a list of lines
@@ -938,7 +952,7 @@ async def signalr_worker():
             conn = Connection(SIGNALR_URL, session=session)
             hub = conn.register_hub("Streaming")
             async def on_connect():
-                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps"]
+                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps", "TimingStats"]
                 hub.server.invoke("Subscribe", topics)
                 logger.info("Subscribed to F1 topics")
             conn.connected += on_connect

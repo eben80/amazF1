@@ -657,14 +657,14 @@ bool ui_update_status(const JsonObject& data) {
             int n_pos = 0;
 
             const char* pit_prefix = is_fin ? "#00FF00 FIN# " : (!is_race && in_pit ? "#FFAA00 [P]# " : "");
-            const char* fastest_color = is_fastest ? "#FF00FF" : "";
-            const char* fastest_suffix = is_fastest ? "#" : "";
+            const char* fastest_tag_start = is_fastest ? "#FF00FF " : "";
+            const char* fastest_tag_end = is_fastest ? "#" : "";
 
             if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s (%c)", pit_prefix, fastest_color, name, fastest_suffix, c);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s (%c)", pit_prefix, fastest_tag_start, name, fastest_tag_end, c);
             } else {
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s", pit_prefix, fastest_color, name, fastest_suffix);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s", pit_prefix, fastest_tag_start, name, fastest_tag_end);
             }
 
             if (p_pos != -1 && n_pos < sizeof(driver_name) - 10) {
