@@ -21,12 +21,12 @@ app = FastAPI()
 
 # --- Configuration ---
 # Force LOG_LEVEL to DEBUG to see everything
-LOG_LEVEL = "DEBUG" 
+LOG_LEVEL = "INFO" 
 logger.remove()
 logger.add(sys.stderr, level=LOG_LEVEL)
 
 # Also capture the standard logging used by the SignalR library
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 SIGNALR_URL = "https://livetiming.formula1.com/signalr"
 JOLPICA_BASE = "https://api.jolpi.ca/ergast/f1"
 
