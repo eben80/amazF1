@@ -222,8 +222,7 @@ bool fetch_data() {
 
             if (!error) {
                 JsonObject data = doc.as<JsonObject>();
-                bool live_now = data["live"] | false;
-                if (live_now) {
+                if (data["live"].as<bool>()) {
                     update_led_status(data["track"] | "");
                 } else {
                     current_led_status = LED_OFF;
@@ -248,7 +247,6 @@ bool fetch_data() {
     } else {
         ui_show_message("WIFI ERROR");
     }
-    return is_live;
 }
 
 // Gesture Handling
@@ -343,7 +341,7 @@ void setup() {
     fs_drv.tell_cb = fs_tell;
     lv_fs_drv_register(&fs_drv);
 
-    lv_png_init();
+
     ui_init();
     ui_set_rotation_cb(handle_rotation);
 

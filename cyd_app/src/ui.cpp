@@ -204,7 +204,7 @@ void ui_init() {
     lv_obj_set_style_text_font(info_label, &f1font_12, 0);
     lv_obj_set_style_text_color(info_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 75, 0);
-    lv_obj_set_width(info_label, 145);
+    lv_obj_set_width(info_label, 150);
     lv_label_set_long_mode(info_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     track_label = lv_label_create(header);
@@ -220,7 +220,7 @@ void ui_init() {
     lv_obj_set_style_text_font(message_label, &f1font_12, 0);
     lv_obj_set_style_text_color(message_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_align(message_label, LV_ALIGN_TOP_LEFT, 75, 20);
-    lv_obj_set_width(message_label, 240);
+    lv_obj_set_width(message_label, 250);
     lv_label_set_long_mode(message_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
     // Initialize View Containers
@@ -527,7 +527,7 @@ void ui_set_view(View view) {
 
     // Update Global Header
     lv_obj_set_size(header, w, 50);
-    lv_obj_set_width(message_label, w - 85);
+    lv_obj_set_width(message_label, w - 75);
     lv_obj_set_width(info_label, w - 175); // logo(60) + info + track(100) = w
 
     for (int i = 0; i < 8; i++) {
@@ -574,8 +574,7 @@ void ui_set_view(View view) {
 }
 
 bool ui_update_status(const JsonObject& data) {
-    bool is_live = data["live"] | false;
-    if (is_live) {
+    if (data["live"].as<bool>()) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
 
@@ -738,13 +737,8 @@ bool ui_update_status(const JsonObject& data) {
             const char* code = upcoming["flagCode"] | "un";
             if (strlen(code) == 0) code = "un";
             const lv_img_dsc_t* next_img = get_image_by_code(code);
-            if (next_img) {
-                lv_img_set_src(next_flag_img, next_img);
-            } else {
-                static char next_path[64];
-                snprintf(next_path, sizeof(next_path), "S:/%s.png", code);
-                lv_img_set_src(next_flag_img, next_path);
-            }
+            if (!next_img) next_img = get_image_by_code("un");
+            if (next_img) lv_img_set_src(next_flag_img, next_img);
         }
 
         // Update Last Race Summary
@@ -761,27 +755,17 @@ bool ui_update_status(const JsonObject& data) {
             const char* raceCode = previous["flagCode"] | "un";
             if (strlen(raceCode) == 0) raceCode = "un";
             const lv_img_dsc_t* last_img = get_image_by_code(raceCode);
-            if (last_img) {
-                lv_img_set_src(last_flag_img, last_img);
-            } else {
-                static char last_path[64];
-                snprintf(last_path, sizeof(last_path), "S:/%s.png", raceCode);
-                lv_img_set_src(last_flag_img, last_path);
-            }
+            if (!last_img) last_img = get_image_by_code("un");
+            if (last_img) lv_img_set_src(last_flag_img, last_img);
 
             const char* winCode = previous["winnerFlagCode"] | "un";
             if (strlen(winCode) == 0) winCode = "un";
             const lv_img_dsc_t* win_img = get_image_by_code(winCode);
-            if (win_img) {
-                lv_img_set_src(winner_flag_img, win_img);
-            } else {
-                static char win_path[64];
-                snprintf(win_path, sizeof(win_path), "S:/%s.png", winCode);
-                lv_img_set_src(winner_flag_img, win_path);
-            }
+            if (!win_img) win_img = get_image_by_code("un");
+            if (win_img) lv_img_set_src(winner_flag_img, win_img);
         }
     }
-    return is_live;
+    return data["live"].as<bool>();
 }
 
 void ui_update_next_race(const JsonObject& data) {
