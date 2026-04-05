@@ -783,7 +783,7 @@ void ui_update_next_race(const JsonObject& data) {
         for (JsonObject s : sessions) {
             char local_time[32];
             ui_format_local_time(s["time"] | "", local_time, sizeof(local_time));
-            pos += snprintf(buf + pos, sizeof(buf) - pos, "%s: %s\n",
+            pos += snprintf(buf + pos, sizeof(buf) - pos, "#FFAA00 %s:# %s\n",
                             s["name"] | "", local_time);
         }
         lv_label_set_text(next_race_details_label, buf);
