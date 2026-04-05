@@ -564,11 +564,15 @@ async def get_status():
 
     sorted_timing = []
     for dnum, data in state.timing_data.items():
+        if not dnum or str(dnum) == "#":
+            continue
         # Get info from state, fallback to static mapping, then to defaults
         dinfo_state = state.driver_list.get(dnum, {})
         dinfo_static = DRIVER_MAPPING.get(dnum, {})
 
         drv_name = dinfo_state.get("abbrev") or dinfo_static.get("abbrev") or dinfo_state.get("name") or dinfo_static.get("name") or dnum
+        if drv_name == "#":
+            drv_name = dnum
         drv_team = dinfo_state.get("team") or dinfo_static.get("team") or "UNK"
         drv_color = dinfo_state.get("color") or dinfo_static.get("color") or "FFFFFF"
 
@@ -591,7 +595,7 @@ async def get_status():
             is_fastest = (state.session_info["fastest_lap"].get("driver") == dnum)
 
         sorted_timing.append({
-            "num": dnum,
+            "num": str(dnum),
             "name": drv_name,
             "team": drv_team,
             "teamColor": drv_color,
@@ -611,7 +615,7 @@ async def get_status():
             "fastest": is_fastest,
             "col": drv_color
         })
-    sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
+    sorted_timing.sort(key=lambda x: int(str(x['pos']).strip()) if str(x['pos']).strip().isdigit() else 99)
 
     # If session is over, indicate it
     track_display = state.track_status
@@ -678,6 +682,8 @@ async def get_mock_status():
     for tla, team, col, perf in drivers_data:
         # Find dnum from DRIVER_MAPPING
         dnum = "99"
+        if tla == "#":
+            continue
         for k, v in DRIVER_MAPPING.items():
             if v["abbrev"] == tla:
                 dnum = k
@@ -747,8 +753,8 @@ async def get_mock_status():
             return f"{m}:{sec:06.3f}"
 
         mock_timing.append({
-            "num": d["num"],
-            "name": d["tla"],
+            "num": str(d["num"]),
+            "name": d["tla"] if d["tla"] != "#" else str(d["num"]),
             "team": d["team"],
             "teamColor": d["color"],
             "pos": mock_pos,
@@ -768,7 +774,7 @@ async def get_mock_status():
         })
 
     # Sort final list by position
-    mock_timing.sort(key=lambda x: int(x['pos']))
+    mock_timing.sort(key=lambda x: int(str(x['pos']).strip()) if str(x['pos']).strip().isdigit() else 99)
 
     # Determine part (Q1/Q2/Q3 or FP1/FP2/FP3)
     part = 1
