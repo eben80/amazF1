@@ -373,7 +373,17 @@ async def on_feed(args):
                         if interval:
                             td["int"] = interval.get("Value") if isinstance(interval, dict) else interval
 
-                        if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
+                        if "LastLapTime" in line:
+                            llt = line["LastLapTime"]
+                            td["last"] = llt.get("Value")
+                            if llt.get("OverallFastest"):
+                                state.session_info["fastest_lap"] = {
+                                    "driver": dnum,
+                                    "time": llt.get("Value"),
+                                    "lap": line.get("NumberOfLaps")
+                                }
+                                logger.info(f"🏆 NEW OVERALL FASTEST LAP: {llt.get('Value')} by {dnum}")
+
                         if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
 
                         # BestLapTimes dictionary (segment specific)
