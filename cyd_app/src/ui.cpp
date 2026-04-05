@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <Preferences.h>
 #include <time.h>
+#include "images.h"
 
 static lv_obj_t * screen;
 static lv_obj_t * header;
@@ -28,7 +29,7 @@ struct TZMapping {
     const char * tz;
 };
 
-LV_IMG_DECLARE(f1_logo_small);
+// LV_IMG_DECLARE(f1_logo_small);
 LV_IMG_DECLARE(new_f1_logo);
 
 static const TZMapping tz_map[] = {
@@ -202,7 +203,7 @@ void ui_init() {
     lv_label_set_text(info_label, "F1 LIVE TIMING");
     lv_obj_set_style_text_font(info_label, &f1font_12, 0);
     lv_obj_set_style_text_color(info_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 60, 0);
+    lv_obj_align(info_label, LV_ALIGN_TOP_LEFT, 75, 0);
     lv_obj_set_width(info_label, 150);
     lv_label_set_long_mode(info_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
@@ -218,7 +219,7 @@ void ui_init() {
     lv_label_set_text(message_label, "");
     lv_obj_set_style_text_font(message_label, &f1font_12, 0);
     lv_obj_set_style_text_color(message_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_align(message_label, LV_ALIGN_TOP_LEFT, 60, 20);
+    lv_obj_align(message_label, LV_ALIGN_TOP_LEFT, 75, 20);
     lv_obj_set_width(message_label, 250);
     lv_label_set_long_mode(message_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
 
@@ -526,8 +527,8 @@ void ui_set_view(View view) {
 
     // Update Global Header
     lv_obj_set_size(header, w, 50);
-    lv_obj_set_width(message_label, w - 70);
-    lv_obj_set_width(info_label, w - 160); // logo(60) + info + track(100) = w
+    lv_obj_set_width(message_label, w - 75);
+    lv_obj_set_width(info_label, w - 175); // logo(60) + info + track(100) = w
 
     for (int i = 0; i < 8; i++) {
         lv_obj_add_flag(view_containers[i], LV_OBJ_FLAG_HIDDEN);
@@ -572,7 +573,7 @@ void ui_set_view(View view) {
     }
 }
 
-void ui_update_status(const JsonObject& data) {
+bool ui_update_status(const JsonObject& data) {
     if (data["live"].as<bool>()) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
@@ -735,9 +736,9 @@ void ui_update_status(const JsonObject& data) {
 
             const char* code = upcoming["flagCode"] | "un";
             if (strlen(code) == 0) code = "un";
-            static char next_path[64];
-            snprintf(next_path, sizeof(next_path), "S:/%s.png", code);
-            lv_img_set_src(next_flag_img, next_path);
+            const lv_img_dsc_t* next_img = get_image_by_code(code);
+            if (!next_img) next_img = get_image_by_code("un");
+            if (next_img) lv_img_set_src(next_flag_img, next_img);
         }
 
         // Update Last Race Summary
@@ -753,17 +754,18 @@ void ui_update_status(const JsonObject& data) {
 
             const char* raceCode = previous["flagCode"] | "un";
             if (strlen(raceCode) == 0) raceCode = "un";
-            static char last_path[64];
-            snprintf(last_path, sizeof(last_path), "S:/%s.png", raceCode);
-            lv_img_set_src(last_flag_img, last_path);
+            const lv_img_dsc_t* last_img = get_image_by_code(raceCode);
+            if (!last_img) last_img = get_image_by_code("un");
+            if (last_img) lv_img_set_src(last_flag_img, last_img);
 
             const char* winCode = previous["winnerFlagCode"] | "un";
             if (strlen(winCode) == 0) winCode = "un";
-            static char win_path[64];
-            snprintf(win_path, sizeof(win_path), "S:/%s.png", winCode);
-            lv_img_set_src(winner_flag_img, win_path);
+            const lv_img_dsc_t* win_img = get_image_by_code(winCode);
+            if (!win_img) win_img = get_image_by_code("un");
+            if (win_img) lv_img_set_src(winner_flag_img, win_img);
         }
     }
+    return data["live"].as<bool>();
 }
 
 void ui_update_next_race(const JsonObject& data) {

@@ -193,7 +193,8 @@ void update_led_status(const char* status) {
 }
 
 // Data Fetching
-void fetch_data() {
+bool fetch_data() {
+    bool is_live = false;
     View view = ui_get_view();
     const char* url;
     switch(view) {
@@ -234,7 +235,7 @@ void fetch_data() {
                     case VIEW_CALENDAR: ui_update_calendar(data); break;
                     case VIEW_NEXT_RACE: ui_update_next_race(data); break;
                     case VIEW_MAIN:
-                    default: ui_update_status(data); break;
+                    default: is_live = ui_update_status(data); break;
                 }
             } else {
                 ui_show_message("JSON ERROR");
@@ -340,7 +341,7 @@ void setup() {
     fs_drv.tell_cb = fs_tell;
     lv_fs_drv_register(&fs_drv);
 
-    lv_png_init();
+
     ui_init();
     ui_set_rotation_cb(handle_rotation);
 
@@ -369,6 +370,7 @@ void setup() {
 unsigned long last_poll = 0;
 static unsigned long last_flash = 0;
 static bool flash_state = false;
+static bool effective_live = true;
 
 void loop() {
     lv_timer_handler();
@@ -408,9 +410,12 @@ void loop() {
         }
     }
 
-    if (ui_get_view() == VIEW_MAIN && (millis() - last_poll > POLL_INTERVAL)) {
-        fetch_data();
-        last_poll = millis();
+    if (ui_get_view() == VIEW_MAIN) {
+        unsigned long interval = effective_live ? POLL_INTERVAL : 60000;
+        if (millis() - last_poll > interval) {
+            effective_live = fetch_data();
+            last_poll = millis();
+        }
     }
     delay(5);
 }
