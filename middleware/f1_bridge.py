@@ -303,7 +303,7 @@ async def on_feed(args):
         topic = None
         any_updates = False
         for arg in args:
-            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps"]:
+            if arg in ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps", "TimingStats"]:
                 topic = arg
                 logger.debug(f"SignalR Topic: {topic}")
                 continue
@@ -373,7 +373,17 @@ async def on_feed(args):
                         if interval:
                             td["int"] = interval.get("Value") if isinstance(interval, dict) else interval
 
-                        if "LastLapTime" in line: td["last"] = line["LastLapTime"].get("Value")
+                        if "LastLapTime" in line:
+                            llt = line["LastLapTime"]
+                            td["last"] = llt.get("Value")
+                            if llt.get("OverallFastest"):
+                                state.session_info["fastest_lap"] = {
+                                    "driver": dnum,
+                                    "time": llt.get("Value"),
+                                    "lap": line.get("NumberOfLaps")
+                                }
+                                logger.info(f"🏆 NEW OVERALL FASTEST LAP: {llt.get('Value')} by {dnum}")
+
                         if "BestLapTime" in line: td["best"] = line["BestLapTime"].get("Value")
 
                         # BestLapTimes dictionary (segment specific)
@@ -449,6 +459,20 @@ async def on_feed(args):
                                     else: td["compound"] = compound.lower()
                             except (ValueError, IndexError):
                                 continue
+
+                elif topic == "TimingStats":
+                    lines = decoded.get("Lines", {})
+                    for dnum, line in lines.items():
+                        if dnum not in state.timing_data: state.timing_data[dnum] = {}
+                        pb = line.get("PersonalBestLapTime", {})
+                        if "Position" in pb:
+                            state.timing_data[dnum]["best_lap_pos"] = pb["Position"]
+                            if pb["Position"] == 1:
+                                state.session_info["fastest_lap"] = {
+                                    "driver": dnum,
+                                    "time": pb.get("Value"),
+                                    "lap": pb.get("Lap")
+                                }
 
                 elif topic == "FastestLaps":
                     # The 'decoded' for FastestLaps usually contains a list of lines
@@ -564,11 +588,15 @@ async def get_status():
 
     sorted_timing = []
     for dnum, data in state.timing_data.items():
+        if not dnum or str(dnum) == "#":
+            continue
         # Get info from state, fallback to static mapping, then to defaults
         dinfo_state = state.driver_list.get(dnum, {})
         dinfo_static = DRIVER_MAPPING.get(dnum, {})
 
         drv_name = dinfo_state.get("abbrev") or dinfo_static.get("abbrev") or dinfo_state.get("name") or dinfo_static.get("name") or dnum
+        if drv_name == "#":
+            drv_name = dnum
         drv_team = dinfo_state.get("team") or dinfo_static.get("team") or "UNK"
         drv_color = dinfo_state.get("color") or dinfo_static.get("color") or "FFFFFF"
 
@@ -591,7 +619,7 @@ async def get_status():
             is_fastest = (state.session_info["fastest_lap"].get("driver") == dnum)
 
         sorted_timing.append({
-            "num": dnum,
+            "num": str(dnum),
             "name": drv_name,
             "team": drv_team,
             "teamColor": drv_color,
@@ -611,7 +639,7 @@ async def get_status():
             "fastest": is_fastest,
             "col": drv_color
         })
-    sorted_timing.sort(key=lambda x: int(x['pos']) if str(x['pos']).isdigit() else 99)
+    sorted_timing.sort(key=lambda x: int(str(x['pos']).strip()) if str(x['pos']).strip().isdigit() else 99)
 
     # If session is over, indicate it
     track_display = state.track_status
@@ -678,6 +706,8 @@ async def get_mock_status():
     for tla, team, col, perf in drivers_data:
         # Find dnum from DRIVER_MAPPING
         dnum = "99"
+        if tla == "#":
+            continue
         for k, v in DRIVER_MAPPING.items():
             if v["abbrev"] == tla:
                 dnum = k
@@ -747,8 +777,8 @@ async def get_mock_status():
             return f"{m}:{sec:06.3f}"
 
         mock_timing.append({
-            "num": d["num"],
-            "name": d["tla"],
+            "num": str(d["num"]),
+            "name": d["tla"] if d["tla"] != "#" else str(d["num"]),
             "team": d["team"],
             "teamColor": d["color"],
             "pos": mock_pos,
@@ -763,12 +793,12 @@ async def get_mock_status():
             "pit": in_pit,
             "out": is_out,
             "retired": is_retired,
-            "fastest": (pos_idx == 1), # Mock P2 as having the fastest lap
+            "fastest": (pos_idx == 1) if (s_type == "Race" or "Sprint" in s_name) else False,
             "col": d["color"]
         })
 
     # Sort final list by position
-    mock_timing.sort(key=lambda x: int(x['pos']))
+    mock_timing.sort(key=lambda x: int(str(x['pos']).strip()) if str(x['pos']).strip().isdigit() else 99)
 
     # Determine part (Q1/Q2/Q3 or FP1/FP2/FP3)
     part = 1
@@ -932,7 +962,7 @@ async def signalr_worker():
             conn = Connection(SIGNALR_URL, session=session)
             hub = conn.register_hub("Streaming")
             async def on_connect():
-                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps"]
+                topics = ["TimingData", "WeatherData", "SessionInfo", "LapCount", "DriverList", "TrackStatus", "RaceControlMessages", "Heartbeat", "TimingAppData", "FastestLaps", "TimingStats"]
                 hub.server.invoke("Subscribe", topics)
                 logger.info("Subscribed to F1 topics")
             conn.connected += on_connect
