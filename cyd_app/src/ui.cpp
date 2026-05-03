@@ -320,6 +320,7 @@ void ui_init() {
     next_race_summary_label = lv_label_create(idle_container);
     lv_obj_align(next_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 0);
     lv_obj_set_style_text_font(next_race_summary_label, &f1font_12, 0);
+    lv_obj_set_style_text_color(next_race_summary_label, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_long_mode(next_race_summary_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(next_race_summary_label, 270);
 
@@ -328,6 +329,7 @@ void ui_init() {
     last_race_summary_label = lv_label_create(idle_container);
     lv_obj_align(last_race_summary_label, LV_ALIGN_TOP_LEFT, 45, 70);
     lv_obj_set_style_text_font(last_race_summary_label, &f1font_12, 0);
+    lv_obj_set_style_text_color(last_race_summary_label, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_long_mode(last_race_summary_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(last_race_summary_label, 270);
     winner_flag_img = lv_img_create(idle_container);
@@ -352,6 +354,7 @@ void ui_init() {
     // --- VIEW_NEXT_RACE setup ---
     next_race_details_label = lv_label_create(view_containers[VIEW_NEXT_RACE]);
     lv_obj_align(next_race_details_label, LV_ALIGN_TOP_MID, 0, 10);
+    lv_obj_set_style_text_color(next_race_details_label, lv_color_hex(0xFFFFFF), 0);
     lv_label_set_recolor(next_race_details_label, true);
     lv_label_set_long_mode(next_race_details_label, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(next_race_details_label, 300);
@@ -657,14 +660,14 @@ bool ui_update_status(const JsonObject& data) {
             int n_pos = 0;
 
             const char* pit_prefix = is_fin ? "#00FF00 FIN# " : (!is_race && in_pit ? "#FFAA00 [P]# " : "");
-            const char* fastest_color = is_fastest ? "#FF00FF" : "";
-            const char* fastest_suffix = is_fastest ? "#" : "";
+            const char* fastest_tag_start = is_fastest ? "#FF00FF " : "";
+            const char* fastest_tag_end = is_fastest ? "#" : "";
 
             if (compound && strlen(compound) > 0) {
                 char c = toupper(compound[0]);
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s (%c)", pit_prefix, fastest_color, name, fastest_suffix, c);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s (%c)", pit_prefix, fastest_tag_start, name, fastest_tag_end, c);
             } else {
-                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s", pit_prefix, fastest_color, name, fastest_suffix);
+                n_pos = snprintf(driver_name, sizeof(driver_name), "%s%s%s%s", pit_prefix, fastest_tag_start, name, fastest_tag_end);
             }
 
             if (p_pos != -1 && n_pos < sizeof(driver_name) - 10) {
@@ -772,7 +775,7 @@ void ui_update_next_race(const JsonObject& data) {
     JsonObject upcoming = data["upcoming"];
     if (!upcoming.isNull()) {
         char buf[512];
-        int pos = snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s\n\n",
+        int pos = snprintf(buf, sizeof(buf), "%s\n%s\n\n",
                            (const char*)(upcoming["name"] | ""),
                            (const char*)(upcoming["circuit"] | ""));
 
@@ -883,7 +886,7 @@ void ui_update_calendar(const JsonObject& data) {
 
 void ui_update_event_detail(const JsonObject& data) {
     char buf[512];
-    snprintf(buf, sizeof(buf), "#FF1801 %s#\n%s",
+    snprintf(buf, sizeof(buf), "%s\n%s",
                        (const char*)(data["name"] | "-"),
                        (const char*)(data["circuit"] | "-"));
     lv_label_set_text(event_detail_header_label, buf);
