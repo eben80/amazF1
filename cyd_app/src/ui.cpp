@@ -672,7 +672,7 @@ bool ui_update_status(const JsonObject& data) {
             char driver_name[64];
             int n_pos = 0;
 
-            const char* pit_prefix = is_fin ? "#00FF00 FIN# " : (!is_race && in_pit ? "#FFAA00 [P]# " : "");
+            const char* pit_prefix = is_fin ? "#00FF00 FIN# " : "";
             const char* fastest_tag_start = is_fastest ? "#FF00FF " : "";
             const char* fastest_tag_end = is_fastest ? "#" : "";
 
@@ -690,15 +690,18 @@ bool ui_update_status(const JsonObject& data) {
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
             if (!is_race) {
+                const char* best = (const char*)(entry["best"] | "-");
+                if (!best || strlen(best) == 0) best = "-";
+                lv_table_set_cell_value(timing_table, row, 2, best);
+
                 if (is_out) {
-                    lv_table_set_cell_value(timing_table, row, 2, "OUT LAP");
                     lv_table_set_cell_value(timing_table, row, 3, "OUT");
                 } else if (in_pit) {
-                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
                     lv_table_set_cell_value(timing_table, row, 3, "PIT");
                 } else {
-                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
-                    lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
+                    const char* gap = (const char*)(entry["gap"] | "-");
+                    if (!gap || strlen(gap) == 0) gap = "-";
+                    lv_table_set_cell_value(timing_table, row, 3, gap);
                 }
             } else {
                 if (is_retired) {
@@ -706,9 +709,13 @@ bool ui_update_status(const JsonObject& data) {
                 } else if (in_pit) {
                     lv_table_set_cell_value(timing_table, row, 2, "PIT");
                 } else {
-                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
+                    const char* gap = (const char*)(entry["gap"] | "-");
+                    if (!gap || strlen(gap) == 0) gap = "-";
+                    lv_table_set_cell_value(timing_table, row, 2, gap);
                 }
-                lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
+                const char* interval = (const char*)(entry["int"] | "-");
+                if (!interval || strlen(interval) == 0) interval = "-";
+                lv_table_set_cell_value(timing_table, row, 3, interval);
             }
             row++;
         }
