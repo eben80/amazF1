@@ -581,10 +581,6 @@ bool ui_update_status(const JsonObject& data) {
         lv_obj_add_flag(idle_container, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(timing_table, LV_OBJ_FLAG_HIDDEN);
 
-        if (active_view == VIEW_MAIN) {
-            lv_label_set_text(info_label, (const char*)(data["session"]["name"] | "-"));
-        }
-
         const char* track_status = (const char*)(data["track"] | "-");
         lv_label_set_text(track_label, track_status);
         if (strstr(track_status, "Clear")) lv_obj_set_style_text_color(track_label, lv_color_hex(0x00FF00), 0);
@@ -596,11 +592,28 @@ bool ui_update_status(const JsonObject& data) {
         const char* msg = (const char*)(data["message"] | "");
         lv_label_set_text(message_label, msg);
 
-        const char* session_name = (const char*)(data["session"]["name"] | "");
-        const char* session_type = (const char*)(data["session"]["type"] | "");
+        JsonObject session = data["session"];
+        const char* session_name = (const char*)(session["name"] | "");
+        const char* session_type = (const char*)(session["type"] | "");
+        const char* circuit = (const char*)(session["circuit"] | "");
+        int part = session["part"] | 0;
+
+        if (active_view == VIEW_MAIN) {
+            char session_short[32] = "";
+            if (strcmp(session_type, "Practice") == 0) snprintf(session_short, sizeof(session_short), "FP%d", part);
+            else if (strcmp(session_type, "Qualifying") == 0) snprintf(session_short, sizeof(session_short), "Q%d", part);
+            else if (strcmp(session_type, "Sprint Qualifying") == 0) snprintf(session_short, sizeof(session_short), "SQ%d", part);
+            else if (strcmp(session_type, "Sprint") == 0) snprintf(session_short, sizeof(session_short), "Sprint");
+            else if (strcmp(session_type, "Race") == 0) snprintf(session_short, sizeof(session_short), "Race");
+            else snprintf(session_short, sizeof(session_short), "%s", session_name);
+
+            char info_buf[96];
+            snprintf(info_buf, sizeof(info_buf), "%s %s", circuit, session_short);
+            lv_label_set_text(info_label, info_buf);
+        }
+
         bool is_quali = (strstr(session_name, "Quali") != NULL);
         bool is_race = (strcmp(session_type, "Race") == 0);
-        int part = data["session"]["part"] | 0;
 
         if (!is_race) {
             lv_table_set_cell_value(timing_table, 0, 2, "BEST");
@@ -659,7 +672,7 @@ bool ui_update_status(const JsonObject& data) {
             char driver_name[64];
             int n_pos = 0;
 
-            const char* pit_prefix = is_fin ? "#00FF00 FIN# " : (!is_race && in_pit ? "#FFAA00 [P]# " : "");
+            const char* pit_prefix = is_fin ? "#00FF00 FIN# " : "";
             const char* fastest_tag_start = is_fastest ? "#FF00FF " : "";
             const char* fastest_tag_end = is_fastest ? "#" : "";
 
@@ -677,15 +690,18 @@ bool ui_update_status(const JsonObject& data) {
             lv_table_set_cell_value(timing_table, row, 1, driver_name);
 
             if (!is_race) {
+                const char* best = (const char*)(entry["best"] | "-");
+                if (!best || strlen(best) == 0) best = "-";
+                lv_table_set_cell_value(timing_table, row, 2, best);
+
                 if (is_out) {
-                    lv_table_set_cell_value(timing_table, row, 2, "OUT LAP");
                     lv_table_set_cell_value(timing_table, row, 3, "OUT");
                 } else if (in_pit) {
-                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
                     lv_table_set_cell_value(timing_table, row, 3, "PIT");
                 } else {
-                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["best"] | "-"));
-                    lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["gap"] | "-"));
+                    const char* gap = (const char*)(entry["gap"] | "-");
+                    if (!gap || strlen(gap) == 0) gap = "-";
+                    lv_table_set_cell_value(timing_table, row, 3, gap);
                 }
             } else {
                 if (is_retired) {
@@ -693,9 +709,13 @@ bool ui_update_status(const JsonObject& data) {
                 } else if (in_pit) {
                     lv_table_set_cell_value(timing_table, row, 2, "PIT");
                 } else {
-                    lv_table_set_cell_value(timing_table, row, 2, (const char*)(entry["gap"] | "-"));
+                    const char* gap = (const char*)(entry["gap"] | "-");
+                    if (!gap || strlen(gap) == 0) gap = "-";
+                    lv_table_set_cell_value(timing_table, row, 2, gap);
                 }
-                lv_table_set_cell_value(timing_table, row, 3, (const char*)(entry["int"] | "-"));
+                const char* interval = (const char*)(entry["int"] | "-");
+                if (!interval || strlen(interval) == 0) interval = "-";
+                lv_table_set_cell_value(timing_table, row, 3, interval);
             }
             row++;
         }
